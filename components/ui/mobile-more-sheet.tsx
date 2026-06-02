@@ -4,7 +4,7 @@ import React, { useCallback, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import type { LucideIcon } from 'lucide-react';
 import {
-  Calendar,
+  CreditCard,
   MessageSquare,
   Presentation,
   BookOpen,
@@ -26,7 +26,7 @@ type SheetMenuItem = {
 };
 
 const moduleItems: SheetMenuItem[] = [
-  { icon: Calendar, label: 'Takvim', path: '/admin/calendar' },
+  { icon: CreditCard, label: 'Ödemeler', path: '/admin/payments' },
   { icon: MessageSquare, label: 'Mesajlar', path: '/admin/messages' },
   { icon: Presentation, label: 'Eğitmenler', path: '/admin/instructors' },
   { icon: BookOpen, label: 'Programlar', path: '/admin/programs' },
@@ -151,7 +151,7 @@ export function MobileMoreSheet({
         }}
         role="dialog"
         aria-modal="true"
-        aria-label="Daha fazla menü"
+        aria-label="Hesabım menüsü"
       >
         {/* Handle bar */}
         <div className="flex justify-center pt-3 pb-1">
@@ -161,7 +161,7 @@ export function MobileMoreSheet({
         {/* Header */}
         <div className="flex items-center justify-between px-5 pb-4 pt-2">
           <h2 className="font-rosmatika text-xl font-medium text-[#2E286C]">
-            Daha Fazla
+            Hesabım
           </h2>
           <button
             type="button"
