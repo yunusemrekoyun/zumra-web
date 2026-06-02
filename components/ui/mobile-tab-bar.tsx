@@ -3,7 +3,7 @@
 import React from 'react';
 import Link from 'next/link';
 import type { LucideIcon } from 'lucide-react';
-import { LayoutGrid, Users, GraduationCap, CreditCard, MoreHorizontal } from 'lucide-react';
+import { LayoutGrid, Users, GraduationCap, Calendar, CircleUserRound } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 /* ─── Tab definitions ─────────────────────────────────────────────── */
@@ -17,8 +17,8 @@ type MobileTab = {
 const tabs: MobileTab[] = [
   { icon: LayoutGrid, label: 'Ana Sayfa', path: '/admin' },
   { icon: Users, label: 'Leadler', path: '/admin/leads' },
+  { icon: Calendar, label: 'Takvim', path: '/admin/calendar' },
   { icon: GraduationCap, label: 'Öğrenciler', path: '/admin/students' },
-  { icon: CreditCard, label: 'Ödemeler', path: '/admin/payments' },
 ];
 
 /* ─── Props ───────────────────────────────────────────────────────── */
@@ -41,7 +41,7 @@ export function MobileTabBar({
   pathname,
   warmRoute,
 }: MobileTabBarProps) {
-  const isMoreActive = !tabs.some(
+  const isAccountActive = !tabs.some(
     (t) => pathname === t.path || (t.path !== '/admin' && pathname.startsWith(t.path)),
   );
 
@@ -99,38 +99,39 @@ export function MobileTabBar({
           );
         })}
 
-        {/* More button */}
+        {/* Hesabım button */}
         <button
           type="button"
           onClick={onMorePress}
           className={cn(
             'flex-1 flex flex-col items-center justify-center gap-1 transition-colors duration-200 relative',
-            isMoreActive
+            isAccountActive
               ? 'text-[#533089]'
               : 'text-[#2E286C]/40 active:text-[#2E286C]/70',
           )}
-          aria-label="Daha fazla menü"
+          aria-label="Hesabım menüsü"
         >
-          {isMoreActive && (
+          {isAccountActive && (
             <span className="absolute top-1.5 w-1 h-1 rounded-full bg-[#533089]" />
           )}
-          <MoreHorizontal
+          <CircleUserRound
             className={cn(
               'w-[22px] h-[22px] transition-transform duration-200',
-              isMoreActive && 'scale-110',
+              isAccountActive && 'scale-110',
             )}
-            strokeWidth={isMoreActive ? 2.4 : 1.8}
+            strokeWidth={isAccountActive ? 2.4 : 1.8}
           />
           <span
             className={cn(
               'text-[10px] leading-none tracking-wide',
-              isMoreActive ? 'font-bold' : 'font-medium',
+              isAccountActive ? 'font-bold' : 'font-medium',
             )}
           >
-            Daha Fazla
+            Hesabım
           </span>
         </button>
       </div>
     </nav>
   );
 }
+
