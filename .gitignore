@@ -106,3 +106,4 @@ database-debug.log
 .cache/
 tmp/
 temp/
+/.agent

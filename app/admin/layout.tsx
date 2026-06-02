@@ -16,13 +16,12 @@ import {
   Settings,
   Bell,
   Search,
-  Menu,
   LogOut,
   HelpCircle,
   Zap
 } from 'lucide-react';
-import { AdminDrawer } from './_components/admin-drawer';
 import { AdminRouteTransition, useAdminRouteNavigation } from './_components/admin-route-transition';
+import { MobileTabBar, MobileMoreSheet } from '@/components/ui';
 
 const menuItems = [
   { name: 'Dashboard', path: '/admin', icon: LayoutGrid },
@@ -39,22 +38,29 @@ const menuItems = [
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const { navigateWithTransition, warmRoute } = useAdminRouteNavigation(pathname);
-  const [isDrawerOpen, setIsDrawerOpen] = useState(false);
+  const [isMoreSheetOpen, setIsMoreSheetOpen] = useState(false);
 
   return (
     <div className="min-h-dvh lg:min-h-screen bg-[#EBE9F1] p-0 lg:p-4 flex items-stretch lg:items-center justify-center font-neubau text-[#2E286C]">
-      <AdminDrawer
-        isOpen={isDrawerOpen}
-        menuItems={menuItems}
-        navigateWithTransition={navigateWithTransition}
-        onClose={() => setIsDrawerOpen(false)}
+
+      {/* ── Mobile: Bottom Tab Bar + More Sheet ── */}
+      <MobileTabBar
         pathname={pathname}
+        navigateWithTransition={navigateWithTransition}
+        warmRoute={warmRoute}
+        onMorePress={() => setIsMoreSheetOpen(true)}
+      />
+      <MobileMoreSheet
+        isOpen={isMoreSheetOpen}
+        onClose={() => setIsMoreSheetOpen(false)}
+        pathname={pathname}
+        navigateWithTransition={navigateWithTransition}
         warmRoute={warmRoute}
       />
 
       <div className="w-full max-w-[1600px] h-dvh lg:h-[calc(100vh-2rem)] bg-[#F8F9FC] rounded-none lg:rounded-[2.5rem] shadow-[0_20px_60px_-15px_rgba(83,48,137,0.15)] flex overflow-hidden border border-white relative">
         
-        {/* Sidebar */}
+        {/* Sidebar — Desktop only */}
         <aside className="w-64 bg-[#F8F9FC] hidden lg:flex flex-col justify-between py-8 px-6 border-r border-black/[0.03] z-10 shrink-0">
           <div>
             <div className="flex items-center gap-3 mb-10 pl-2">
@@ -104,24 +110,16 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         {/* Main Content Area */}
         <div className="flex-1 flex flex-col min-w-0 bg-[#F4F5F8] relative">
           {/* Header */}
-          <header className="h-16 lg:h-24 px-4 sm:px-6 lg:px-10 flex items-center justify-between shrink-0 bg-transparent z-10 w-full gap-3">
-            <div className="flex items-center gap-3 lg:hidden">
-              <button
-                type="button"
-                aria-label="Menüyü aç"
-                onClick={() => setIsDrawerOpen(true)}
-                className="touch-button flex items-center justify-center rounded-2xl bg-white text-[#2E286C]/60 shadow-sm"
-              >
-                <Menu className="w-5 h-5" />
-              </button>
-              <div className="flex items-center gap-2">
-                <div className="w-8 h-8 rounded-xl bg-[#533089] text-white flex items-center justify-center shadow-lg shadow-[#533089]/20">
-                  <Zap className="w-5 h-5 fill-white" />
-                </div>
-                <span className="hidden sm:inline font-rosmatika font-bold text-2xl text-[#2E286C] tracking-tight">Zümra</span>
+          <header className="h-14 lg:h-24 px-4 sm:px-6 lg:px-10 flex items-center justify-between shrink-0 bg-transparent z-10 w-full gap-3">
+            {/* Mobile: Compact logo — no hamburger */}
+            <div className="flex items-center gap-2 lg:hidden">
+              <div className="w-7 h-7 rounded-lg bg-[#533089] text-white flex items-center justify-center shadow-md shadow-[#533089]/20">
+                <Zap className="w-4 h-4 fill-white" />
               </div>
+              <span className="font-rosmatika font-bold text-lg text-[#2E286C] tracking-tight">Zümra</span>
             </div>
 
+            {/* Desktop: Search bar */}
             <div className="relative group hidden md:block w-full max-w-sm lg:w-96">
               <Search className="w-4 h-4 absolute left-4 top-1/2 -translate-y-1/2 text-[#2E286C]/40 group-focus-within:text-[#533089] transition-colors" />
               <input 
@@ -135,22 +133,23 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
               </div>
             </div>
 
+            {/* Right side: notifications + profile */}
             <div className="flex items-center gap-2 lg:gap-6 ml-auto">
-              <button className="relative w-10 h-10 rounded-full bg-white flex items-center justify-center shadow-sm text-[#2E286C]/40 hover:text-[#533089] transition-colors">
+              <button className="relative w-9 h-9 lg:w-10 lg:h-10 rounded-full bg-white flex items-center justify-center shadow-sm text-[#2E286C]/40 hover:text-[#533089] transition-colors">
                 <MessageSquare className="w-4 h-4" />
               </button>
-              <button className="relative w-10 h-10 rounded-full bg-white flex items-center justify-center shadow-sm text-[#2E286C]/40 hover:text-[#533089] transition-colors">
+              <button className="relative w-9 h-9 lg:w-10 lg:h-10 rounded-full bg-white flex items-center justify-center shadow-sm text-[#2E286C]/40 hover:text-[#533089] transition-colors">
                 <Bell className="w-4 h-4" />
-                <span className="absolute top-0 right-0 w-3 h-3 bg-red-400 rounded-full border-2 border-white" />
+                <span className="absolute top-0 right-0 w-2.5 h-2.5 lg:w-3 lg:h-3 bg-red-400 rounded-full border-2 border-white" />
               </button>
               
-              <div className="flex items-center gap-3 cursor-pointer pl-4 border-l border-black/[0.05]">
+              <div className="flex items-center gap-3 cursor-pointer pl-3 lg:pl-4 border-l border-black/[0.05]">
                 <div className="text-right hidden sm:block">
                   <div className="text-sm font-bold text-[#2E286C]">Yunus Emre</div>
                   <div className="text-xs text-[#2E286C]/50 font-medium">@yunus_admin</div>
                 </div>
-                <div className="w-10 h-10 rounded-full bg-[#533089]/10 border-2 border-white shadow-sm overflow-hidden flex items-center justify-center">
-                  <span className="text-[#533089] font-bold text-sm">YE</span>
+                <div className="w-9 h-9 lg:w-10 lg:h-10 rounded-full bg-[#533089]/10 border-2 border-white shadow-sm overflow-hidden flex items-center justify-center">
+                  <span className="text-[#533089] font-bold text-xs lg:text-sm">YE</span>
                 </div>
               </div>
             </div>
@@ -167,3 +166,4 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     </div>
   );
 }
+
