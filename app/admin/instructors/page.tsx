@@ -1,5 +1,15 @@
-export default function EmptyAdminPage() {
+import { Presentation } from 'lucide-react';
+import { EmptyState, Button } from '@/components/ui';
+
+export default function InstructorsPage() {
   return (
-    <div className="min-h-[calc(100dvh-9rem)] lg:h-full flex items-center justify-center bg-white rounded-3xl border border-black/[0.02] p-6 lg:p-10 text-center text-[#2E286C]/40 font-medium">Bu modül yapım aşamasındadır.</div>
-  )
+    <div className="admin-page">
+      <EmptyState
+        icon={Presentation}
+        title="Eğitmenler"
+        description="Eğitmen kadronuzu bu modülden yönetebilir, ders programlarını atayabilirsiniz."
+        action={<Button variant="secondary" disabled>Yakında</Button>}
+      />
+    </div>
+  );
 }
