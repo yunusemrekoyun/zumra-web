@@ -1,23 +1,33 @@
 import React from 'react';
 import { Search, Filter, MoreHorizontal, GraduationCap, ChevronRight } from 'lucide-react';
 import Link from 'next/link';
+import { workspaceStudents } from '@/lib/domain';
 
 export default function StudentsPage() {
-  const students = [
-    { id: 1, name: 'Zeynep Kaya', lang: 'İngilizce', level: 'B1 Intermediate', instructor: 'Sarah Lee', progress: 65, active: true, next: 'Yarın, 14:00' },
-    { id: 2, name: 'Ayşe Demir', lang: 'Almanca', level: 'A1 Beginner', instructor: 'Anna Novak', progress: 20, active: true, next: 'Bugün, 18:00' },
-    { id: 3, name: 'Fatma Şahin', lang: 'Arapça', level: 'B2 Upper', instructor: 'Zümra Yılmaz', progress: 85, active: true, next: '26 Mart, 11:00' },
-    { id: 4, name: 'Elif Türkmen', lang: 'İngilizce', level: 'A2 Elemantary', instructor: 'Sarah Lee', progress: 40, active: false, next: '-' },
-    { id: 5, name: 'Nisa Çelik', lang: 'Fransızca', level: 'A1 Beginner', instructor: 'Camille B.', progress: 15, active: true, next: '28 Mart, 10:00' },
-    { id: 6, name: 'Merve Yıldız', lang: 'İngilizce', level: 'C1 Advanced', instructor: 'John Doe', progress: 95, active: true, next: 'Yarın, 09:00' },
-  ];
+  const students = workspaceStudents.map((student) => ({
+    id: student.id,
+    name: student.fullName,
+    lang: student.language,
+    level: student.level,
+    instructor: student.teacherIds.length ? 'Sarah Lee' : 'Atanacak',
+    progress: student.progress,
+    active: student.status === 'active',
+    next: student.nextSessionAt
+      ? new Intl.DateTimeFormat('tr-TR', {
+          day: 'numeric',
+          hour: '2-digit',
+          minute: '2-digit',
+          month: 'short',
+        }).format(new Date(student.nextSessionAt))
+      : '-',
+  }));
 
   return (
     <div className="admin-page">
       <div className="admin-page-header">
         <div>
           <h1 className="text-2xl lg:text-3xl font-rosmatika font-medium text-[#2E286C] mb-2">Öğrenciler</h1>
-          <p className="text-[#2E286C]/60 text-sm font-medium">Toplam 1480 aktif öğrenci yönetiliyor.</p>
+          <p className="text-[#2E286C]/60 text-sm font-medium">Toplam {students.length} öğrenci mock sistemde yönetiliyor.</p>
         </div>
         <button className="bg-[#2E286C] text-white px-5 py-2.5 rounded-2xl text-xs font-bold uppercase tracking-wider shadow-md hover:scale-105 transition-transform flex items-center justify-center gap-2">
           Öğrenci Ekle

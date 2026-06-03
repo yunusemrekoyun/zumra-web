@@ -3,46 +3,42 @@
 import React from 'react';
 import Link from 'next/link';
 import type { LucideIcon } from 'lucide-react';
-import { LayoutGrid, Users, GraduationCap, Calendar, CircleUserRound } from 'lucide-react';
+import { CircleUserRound } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
-/* ─── Tab definitions ─────────────────────────────────────────────── */
-
-type MobileTab = {
+export type MobileTabItem = {
   icon: LucideIcon;
   label: string;
   path: string;
 };
 
-const tabs: MobileTab[] = [
-  { icon: LayoutGrid, label: 'Ana Sayfa', path: '/admin' },
-  { icon: Users, label: 'Leadler', path: '/admin/leads' },
-  { icon: Calendar, label: 'Takvim', path: '/admin/calendar' },
-  { icon: GraduationCap, label: 'Öğrenciler', path: '/admin/students' },
-];
-
-/* ─── Props ───────────────────────────────────────────────────────── */
-
 type MobileTabBarProps = {
+  items: MobileTabItem[];
+  moreIcon?: LucideIcon;
+  moreLabel?: string;
   navigateWithTransition: (
     event: React.MouseEvent<HTMLAnchorElement>,
     targetPath: string,
   ) => void;
-  onMorePress: () => void;
+  onMorePress?: () => void;
   pathname: string;
+  rootPath: string;
   warmRoute: (targetPath: string) => void;
 };
 
-/* ─── Component ───────────────────────────────────────────────────── */
-
 export function MobileTabBar({
+  items,
+  moreIcon: MoreIcon = CircleUserRound,
+  moreLabel = 'Hesabım',
   navigateWithTransition,
   onMorePress,
   pathname,
+  rootPath,
   warmRoute,
 }: MobileTabBarProps) {
-  const isAccountActive = !tabs.some(
-    (t) => pathname === t.path || (t.path !== '/admin' && pathname.startsWith(t.path)),
+  const hasMoreButton = Boolean(onMorePress);
+  const isMoreActive = hasMoreButton && !items.some(
+    (item) => isRouteActive(pathname, item.path, rootPath),
   );
 
   return (
@@ -56,10 +52,8 @@ export function MobileTabBar({
       aria-label="Ana navigasyon"
     >
       <div className="flex items-stretch h-[var(--mobile-tab-bar-h)]">
-        {tabs.map((tab) => {
-          const isActive =
-            pathname === tab.path ||
-            (tab.path !== '/admin' && pathname.startsWith(tab.path));
+        {items.map((tab) => {
+          const isActive = isRouteActive(pathname, tab.path, rootPath);
 
           return (
             <Link
@@ -99,39 +93,43 @@ export function MobileTabBar({
           );
         })}
 
-        {/* Hesabım button */}
-        <button
-          type="button"
-          onClick={onMorePress}
-          className={cn(
-            'flex-1 flex flex-col items-center justify-center gap-1 transition-colors duration-200 relative',
-            isAccountActive
-              ? 'text-[#533089]'
-              : 'text-[#2E286C]/40 active:text-[#2E286C]/70',
-          )}
-          aria-label="Hesabım menüsü"
-        >
-          {isAccountActive && (
-            <span className="absolute top-1.5 w-1 h-1 rounded-full bg-[#533089]" />
-          )}
-          <CircleUserRound
+        {hasMoreButton && (
+          <button
+            type="button"
+            onClick={onMorePress}
             className={cn(
-              'w-[22px] h-[22px] transition-transform duration-200',
-              isAccountActive && 'scale-110',
+              'flex-1 flex flex-col items-center justify-center gap-1 transition-colors duration-200 relative',
+              isMoreActive
+                ? 'text-[#533089]'
+                : 'text-[#2E286C]/40 active:text-[#2E286C]/70',
             )}
-            strokeWidth={isAccountActive ? 2.4 : 1.8}
-          />
-          <span
-            className={cn(
-              'text-[10px] leading-none tracking-wide',
-              isAccountActive ? 'font-bold' : 'font-medium',
-            )}
+            aria-label={`${moreLabel} menüsü`}
           >
-            Hesabım
-          </span>
-        </button>
+            {isMoreActive && (
+              <span className="absolute top-1.5 w-1 h-1 rounded-full bg-[#533089]" />
+            )}
+            <MoreIcon
+              className={cn(
+                'w-[22px] h-[22px] transition-transform duration-200',
+                isMoreActive && 'scale-110',
+              )}
+              strokeWidth={isMoreActive ? 2.4 : 1.8}
+            />
+            <span
+              className={cn(
+                'text-[10px] leading-none tracking-wide',
+                isMoreActive ? 'font-bold' : 'font-medium',
+              )}
+            >
+              {moreLabel}
+            </span>
+          </button>
+        )}
       </div>
     </nav>
   );
 }
 
+function isRouteActive(pathname: string, itemPath: string, rootPath: string) {
+  return pathname === itemPath || (itemPath !== rootPath && pathname.startsWith(itemPath));
+}

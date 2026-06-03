@@ -3,6 +3,7 @@
 import React from 'react';
 import { Search, Plus, Phone, Mail, MoreHorizontal, MessageCircle, Clock, ChevronRight, FileText } from 'lucide-react';
 import { ResponsiveTabs } from '@/components/ui';
+import { workspaceLeads } from '@/lib/domain';
 
 const leadToneStyles = {
   amber: {
@@ -29,14 +30,23 @@ const leadToneStyles = {
 
 type LeadTone = keyof typeof leadToneStyles;
 
-const leads = [
-  { name: 'Ayşe Demir', lang: 'İngilizce A1', time: '10 dk', status: 'Yeni Başvuru', tone: 'emerald' as LeadTone, active: true },
-  { name: 'Fatma Kaya', lang: 'Arapça B1', time: '2 saat', status: 'Görüşüldü', tone: 'blue' as LeadTone, active: false },
-  { name: 'Zeynep Yılmaz', lang: 'İngilizce A2', time: 'Dün', status: 'Teklif Bekliyor', tone: 'amber' as LeadTone, active: false },
-  { name: 'Selin Şahin', lang: 'Almanca A1', time: 'Dün', status: 'Görüşülecek', tone: 'purple' as LeadTone, active: false },
-  { name: 'Elif Yıldız', lang: 'İngilizce C1', time: '2 gün', status: 'Kayıt Olumsuz', tone: 'gray' as LeadTone, active: false },
-  { name: 'Merve Çelik', lang: 'Fransızca A2', time: '3 gün', status: 'Görüşme Bekliyor', tone: 'purple' as LeadTone, active: false },
-];
+const leadStatusLabels = {
+  contacted: { label: 'Görüşüldü', tone: 'blue' as LeadTone },
+  converted: { label: 'Kayıt Oldu', tone: 'emerald' as LeadTone },
+  lost: { label: 'Kayıt Olumsuz', tone: 'gray' as LeadTone },
+  meeting_scheduled: { label: 'Görüşülecek', tone: 'purple' as LeadTone },
+  new: { label: 'Yeni Başvuru', tone: 'emerald' as LeadTone },
+  offer_pending: { label: 'Teklif Bekliyor', tone: 'amber' as LeadTone },
+};
+
+const leads = workspaceLeads.map((lead, index) => ({
+  name: lead.fullName,
+  lang: `${lead.interestedProgram}${lead.level ? ` ${lead.level}` : ''}`,
+  time: lead.lastActivityLabel,
+  status: leadStatusLabels[lead.status].label,
+  tone: leadStatusLabels[lead.status].tone,
+  active: index === 0,
+}));
 
 export default function LeadsPage() {
   const renderLeadList = (className = '') => (

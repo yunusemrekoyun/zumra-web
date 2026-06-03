@@ -6,10 +6,10 @@ import { Award, BookOpen, Headphones, Mic, PenLine } from 'lucide-react';
 /* ─── Data ────────────────────────────────────────────────────────── */
 
 const skills = [
-  { name: 'Speaking', icon: Mic, value: 72, tone: 'brand' as const },
-  { name: 'Listening', icon: Headphones, value: 65, tone: 'blue' as const },
-  { name: 'Reading', icon: BookOpen, value: 80, tone: 'emerald' as const },
-  { name: 'Writing', icon: PenLine, value: 55, tone: 'amber' as const },
+  { name: 'Speaking', icon: 'speaking', value: 72, tone: 'brand' as const },
+  { name: 'Listening', icon: 'listening', value: 65, tone: 'blue' as const },
+  { name: 'Reading', icon: 'reading', value: 80, tone: 'emerald' as const },
+  { name: 'Writing', icon: 'writing', value: 55, tone: 'amber' as const },
 ];
 
 const badges = [
@@ -53,7 +53,7 @@ export default function IlerlemePage() {
               {skills.map((skill) => (
                 <div key={skill.name} className="flex items-center gap-4">
                   <div className="w-9 h-9 rounded-xl bg-[#533089]/5 flex items-center justify-center shrink-0">
-                    <skill.icon className="w-4 h-4 text-[#533089]" />
+                    <SkillIcon name={skill.icon} />
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center justify-between mb-1.5">
@@ -108,4 +108,19 @@ export default function IlerlemePage() {
       </StaggerItem>
     </StaggerContainer>
   );
+}
+
+function SkillIcon({ name }: { name: string }) {
+  const className = 'w-4 h-4 text-[#533089]';
+
+  switch (name) {
+    case 'listening':
+      return <Headphones className={className} />;
+    case 'reading':
+      return <BookOpen className={className} />;
+    case 'writing':
+      return <PenLine className={className} />;
+    default:
+      return <Mic className={className} />;
+  }
 }
