@@ -2,18 +2,30 @@
 
 import { BookOpen, ArrowRight } from 'lucide-react';
 import { Card, SectionHeader, StreakBadge, LessonCard, Avatar, StaggerContainer, StaggerItem } from '@/components/ui';
+import { workspaceLessons, workspaceStudents } from '@/lib/domain';
 
 /* ─── Data ────────────────────────────────────────────────────────── */
 
-const upcomingLessons = [
-  { title: 'Speaking Practice', instructor: 'Sarah Lee', dateTime: 'Bugün, 14:00', status: 'upcoming' as const, topic: 'Everyday Scenarios' },
-  { title: 'Grammar Focus', instructor: 'Sarah Lee', dateTime: 'Yarın, 14:00', status: 'upcoming' as const, topic: 'Perfect Tenses' },
-];
-
-const recentLessons = [
-  { title: 'Listening Comprehension', instructor: 'Sarah Lee', dateTime: '28 Mart, 14:00', status: 'completed' as const, topic: 'News Articles' },
-  { title: 'Vocabulary Building', instructor: 'Sarah Lee', dateTime: '26 Mart, 14:00', status: 'completed' as const, topic: 'Academic Words' },
-];
+const currentStudent = workspaceStudents[0];
+const studentLessons = workspaceLessons.filter((lesson) => lesson.studentId === currentStudent.id);
+const upcomingLessons = studentLessons
+  .filter((lesson) => lesson.status === 'upcoming')
+  .map((lesson) => ({
+    title: lesson.title,
+    instructor: 'Sarah Lee',
+    dateTime: formatLessonDate(lesson.startsAt),
+    status: 'upcoming' as const,
+    topic: lesson.topic,
+  }));
+const recentLessons = studentLessons
+  .filter((lesson) => lesson.status === 'completed')
+  .map((lesson) => ({
+    title: lesson.title,
+    instructor: 'Sarah Lee',
+    dateTime: formatLessonDate(lesson.startsAt),
+    status: 'completed' as const,
+    topic: lesson.topic,
+  }));
 
 /* ─── Component ───────────────────────────────────────────────────── */
 
@@ -27,8 +39,8 @@ export default function StudentDashboard() {
             <div className="flex items-center gap-4 mb-4">
               <Avatar name="Zeynep Kaya" size="lg" variant="brand" className="border-4 border-white/20" />
               <div>
-                <h1 className="text-xl lg:text-2xl font-rosmatika font-medium text-white">Merhaba, Zeynep!</h1>
-                <p className="text-white/70 text-sm font-medium mt-0.5">B1 Intermediate • İngilizce</p>
+                <h1 className="text-xl lg:text-2xl font-rosmatika font-medium text-white">Merhaba, {currentStudent.fullName.split(' ')[0]}!</h1>
+                <p className="text-white/70 text-sm font-medium mt-0.5">{currentStudent.level} • {currentStudent.language}</p>
               </div>
             </div>
             <div className="flex items-center gap-4">
@@ -54,7 +66,9 @@ export default function StudentDashboard() {
           <div className="flex flex-col sm:flex-row sm:items-center gap-4">
             <div className="flex-1">
               <h3 className="font-bold text-[#2E286C] text-lg">Speaking Practice - Everyday Scenarios</h3>
-              <p className="text-sm text-[#2E286C]/50 font-medium mt-1">Sarah Lee • Bugün, 14:00</p>
+              <p className="text-sm text-[#2E286C]/50 font-medium mt-1">
+                Sarah Lee • {upcomingLessons[0]?.dateTime ?? 'Planlanacak'}
+              </p>
             </div>
             <div className="flex items-center gap-3">
               <div className="px-3 py-1.5 rounded-xl bg-blue-50 text-blue-700 text-xs font-bold border border-blue-100">
@@ -93,4 +107,13 @@ export default function StudentDashboard() {
       </StaggerItem>
     </StaggerContainer>
   );
+}
+
+function formatLessonDate(value: string) {
+  return new Intl.DateTimeFormat('tr-TR', {
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+    month: 'short',
+  }).format(new Date(value));
 }

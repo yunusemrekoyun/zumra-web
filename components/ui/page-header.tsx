@@ -10,7 +10,7 @@ type PageHeaderProps = {
 
 export function PageHeader({ action, className, description, title }: PageHeaderProps) {
   return (
-    <div className={cn('admin-page-header', className)}>
+    <div className={cn('workspace-page-header', className)}>
       <div>
         <h1 className="text-2xl lg:text-3xl font-rosmatika font-medium text-[#2E286C] mb-2">
           {title}

@@ -4,12 +4,6 @@ import React, { useCallback, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import type { LucideIcon } from 'lucide-react';
 import {
-  CreditCard,
-  MessageSquare,
-  Presentation,
-  BookOpen,
-  BarChart2,
-  Settings,
   HelpCircle,
   LogOut,
   ChevronRight,
@@ -17,46 +11,36 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
-/* ─── Menu definitions ────────────────────────────────────────────── */
-
-type SheetMenuItem = {
+export type SheetMenuItem = {
   icon: LucideIcon;
   label: string;
   path: string;
 };
 
-const moduleItems: SheetMenuItem[] = [
-  { icon: CreditCard, label: 'Ödemeler', path: '/admin/payments' },
-  { icon: MessageSquare, label: 'Mesajlar', path: '/admin/messages' },
-  { icon: Presentation, label: 'Eğitmenler', path: '/admin/instructors' },
-  { icon: BookOpen, label: 'Programlar', path: '/admin/programs' },
-  { icon: BarChart2, label: 'Raporlar', path: '/admin/reports' },
-];
-
-const accountItems: SheetMenuItem[] = [
-  { icon: Settings, label: 'Ayarlar', path: '/admin/settings' },
-];
-
-/* ─── Props ───────────────────────────────────────────────────────── */
-
 type MobileMoreSheetProps = {
+  accountItems?: SheetMenuItem[];
   isOpen: boolean;
+  moduleItems?: SheetMenuItem[];
   navigateWithTransition: (
     event: React.MouseEvent<HTMLAnchorElement>,
     targetPath: string,
   ) => void;
   onClose: () => void;
   pathname: string;
+  rootPath: string;
+  title?: string;
   warmRoute: (targetPath: string) => void;
 };
 
-/* ─── Component ───────────────────────────────────────────────────── */
-
 export function MobileMoreSheet({
+  accountItems = [],
   isOpen,
+  moduleItems = [],
   navigateWithTransition,
   onClose,
   pathname,
+  rootPath,
+  title = 'Hesabım',
   warmRoute,
 }: MobileMoreSheetProps) {
   const panelRef = useRef<HTMLDivElement>(null);
@@ -92,9 +76,7 @@ export function MobileMoreSheet({
   );
 
   const renderItem = (item: SheetMenuItem) => {
-    const isActive =
-      pathname === item.path ||
-      (item.path !== '/admin' && pathname.startsWith(item.path));
+    const isActive = isRouteActive(pathname, item.path, rootPath);
 
     return (
       <Link
@@ -161,7 +143,7 @@ export function MobileMoreSheet({
         {/* Header */}
         <div className="flex items-center justify-between px-5 pb-4 pt-2">
           <h2 className="font-rosmatika text-xl font-medium text-[#2E286C]">
-            Hesabım
+            {title}
           </h2>
           <button
             type="button"
@@ -176,17 +158,19 @@ export function MobileMoreSheet({
         {/* Scrollable content */}
         <div className="overflow-y-auto custom-scrollbar px-3 pb-6" style={{ maxHeight: 'calc(80dvh - 6rem)' }}>
           {/* Modules section */}
-          <div className="mb-2">
-            <p className="px-5 py-2 text-[10px] font-bold uppercase tracking-widest text-[#2E286C]/40">
-              Modüller
-            </p>
-            <div className="space-y-0.5">
-              {moduleItems.map(renderItem)}
+          {moduleItems.length > 0 && (
+            <div className="mb-2">
+              <p className="px-5 py-2 text-[10px] font-bold uppercase tracking-widest text-[#2E286C]/40">
+                Modüller
+              </p>
+              <div className="space-y-0.5">
+                {moduleItems.map(renderItem)}
+              </div>
             </div>
-          </div>
+          )}
 
           {/* Divider */}
-          <div className="mx-5 my-3 h-px bg-black/[0.04]" />
+          {moduleItems.length > 0 && <div className="mx-5 my-3 h-px bg-black/[0.04]" />}
 
           {/* Account section */}
           <div>
@@ -220,4 +204,8 @@ export function MobileMoreSheet({
       </div>
     </div>
   );
+}
+
+function isRouteActive(pathname: string, itemPath: string, rootPath: string) {
+  return pathname === itemPath || (itemPath !== rootPath && pathname.startsWith(itemPath));
 }

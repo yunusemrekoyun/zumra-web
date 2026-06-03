@@ -1,0 +1,122 @@
+import {
+  BarChart2,
+  BookOpen,
+  Calendar,
+  CircleUserRound,
+  CreditCard,
+  GraduationCap,
+  LayoutGrid,
+  MessageSquare,
+  Presentation,
+  Settings,
+  Target,
+  TrendingUp,
+  UserCheck,
+  Users,
+} from 'lucide-react';
+import type { WorkspaceConfig } from './types';
+
+export const workspaceConfigs = {
+  admin: {
+    scope: 'admin',
+    role: 'admin',
+    rootPath: '/admin',
+    maxWidthClass: 'max-w-[1600px]',
+    desktopNav: 'wide',
+    headerTitleFallback: 'Dashboard',
+    searchPlaceholder: 'Öğrenci, eğitmen veya mesaj ara...',
+    user: {
+      name: 'Yunus Emre',
+      handle: '@yunus_admin',
+      initials: 'YE',
+      roleLabel: 'Admin',
+    },
+    navItems: [
+      { label: 'Dashboard', path: '/admin', icon: LayoutGrid, mobile: 'tab' },
+      { label: 'Leadler', path: '/admin/leads', icon: Users, mobile: 'tab' },
+      { label: 'Takvim', path: '/admin/calendar', icon: Calendar, mobile: 'tab' },
+      { label: 'Öğrenciler', path: '/admin/students', icon: GraduationCap, mobile: 'tab' },
+      { label: 'Eğitmenler', path: '/admin/instructors', icon: Presentation, mobile: 'more' },
+      { label: 'Programlar', path: '/admin/programs', icon: BookOpen, mobile: 'more' },
+      { label: 'Mesajlar', path: '/admin/messages', icon: MessageSquare, mobile: 'more' },
+      { label: 'Ödemeler', path: '/admin/payments', icon: CreditCard, mobile: 'more' },
+      { label: 'Raporlar', path: '/admin/reports', icon: BarChart2, mobile: 'more' },
+    ],
+    accountItems: [
+      { label: 'Ayarlar', path: '/admin/settings', icon: Settings, mobile: 'more' },
+    ],
+  },
+  student: {
+    scope: 'student',
+    role: 'student',
+    rootPath: '/ogrenci',
+    maxWidthClass: 'max-w-[1200px]',
+    desktopNav: 'rail',
+    headerTitleFallback: 'Derslerim',
+    user: {
+      name: 'Zeynep Kaya',
+      handle: '@zeynep',
+      initials: 'ZK',
+      roleLabel: 'Öğrenci',
+    },
+    navItems: [
+      { label: 'Derslerim', path: '/ogrenci', icon: BookOpen, mobile: 'tab' },
+      { label: 'İlerleme', path: '/ogrenci/ilerleme', icon: TrendingUp, mobile: 'tab' },
+      { label: 'Mesajlar', path: '/ogrenci/mesajlar', icon: MessageSquare, mobile: 'tab' },
+      { label: 'Profil', path: '/ogrenci/profil', icon: CircleUserRound, mobile: 'tab' },
+    ],
+    accountItems: [],
+  },
+  advisor: {
+    scope: 'advisor',
+    role: 'advisor',
+    rootPath: '/danisman',
+    maxWidthClass: 'max-w-[1400px]',
+    desktopNav: 'wide',
+    headerTitleFallback: 'Danışman Paneli',
+    searchPlaceholder: 'Lead, öğrenci veya görüşme ara...',
+    user: {
+      name: 'Aylin Karaca',
+      handle: '@aylin_danisman',
+      initials: 'AK',
+      roleLabel: 'Danışman',
+    },
+    navItems: [
+      { label: 'Özet', path: '/danisman', icon: LayoutGrid, mobile: 'tab' },
+      { label: 'Leadlerim', path: '/danisman/leadler', icon: Users, mobile: 'tab' },
+      { label: 'Öğrencilerim', path: '/danisman/ogrenciler', icon: GraduationCap, mobile: 'tab' },
+      { label: 'Görüşmeler', path: '/danisman/gorusmeler', icon: Calendar, mobile: 'tab' },
+      { label: 'Teklifler', path: '/danisman/teklifler', icon: Target, mobile: 'more' },
+      { label: 'Mesajlar', path: '/danisman/mesajlar', icon: MessageSquare, mobile: 'more' },
+    ],
+    accountItems: [
+      { label: 'Ayarlar', path: '/danisman/ayarlar', icon: Settings, mobile: 'more' },
+    ],
+  },
+  teacher: {
+    scope: 'teacher',
+    role: 'teacher',
+    rootPath: '/ogretmen',
+    maxWidthClass: 'max-w-[1200px]',
+    desktopNav: 'rail',
+    headerTitleFallback: 'Öğretmen Paneli',
+    user: {
+      name: 'Sarah Lee',
+      handle: '@sarah_teacher',
+      initials: 'SL',
+      roleLabel: 'Öğretmen',
+    },
+    navItems: [
+      { label: 'Derslerim', path: '/ogretmen', icon: BookOpen, mobile: 'tab' },
+      { label: 'Öğrenciler', path: '/ogretmen/ogrenciler', icon: GraduationCap, mobile: 'tab' },
+      { label: 'Takvim', path: '/ogretmen/takvim', icon: Calendar, mobile: 'tab' },
+      { label: 'Mesajlar', path: '/ogretmen/mesajlar', icon: MessageSquare, mobile: 'tab' },
+      { label: 'Profil', path: '/ogretmen/profil', icon: UserCheck, mobile: 'more' },
+    ],
+    accountItems: [
+      { label: 'Ayarlar', path: '/ogretmen/ayarlar', icon: Settings, mobile: 'more' },
+    ],
+  },
+} satisfies Record<string, WorkspaceConfig>;
+
+export type WorkspaceConfigKey = keyof typeof workspaceConfigs;

@@ -1,21 +1,34 @@
 import { Users } from 'lucide-react';
 import { KpiCard, SectionHeader, Avatar, StatusChip, TimelineItem, Card } from '@/components/ui';
+import { workspaceLeads, workspaceMeetings, workspaceStudents } from '@/lib/domain';
 
 /* ─── Data ────────────────────────────────────────────────────────── */
 
-const leads = [
-  { name: 'Ayşe Demir', program: 'İngilizce • Genel', status: 'Yeni', time: '10 dk önce', tone: 'emerald' as const },
-  { name: 'Zeynep Yılmaz', program: 'Arapça • Konuşma', status: 'Görüşüldü', time: '1 saat önce', tone: 'blue' as const },
-  { name: 'Fatma Kaya', program: 'İngilizce • YDS', status: 'Teklif', time: '2 saat önce', tone: 'amber' as const },
-  { name: 'Elif Şahin', program: 'Almanca • A1', status: 'Yeni', time: '3 saat önce', tone: 'emerald' as const },
-];
+const leadStatusMeta = {
+  contacted: { label: 'Görüşüldü', tone: 'blue' as const },
+  converted: { label: 'Kayıt', tone: 'emerald' as const },
+  lost: { label: 'Olumsuz', tone: 'gray' as const },
+  meeting_scheduled: { label: 'Görüşme', tone: 'amber' as const },
+  new: { label: 'Yeni', tone: 'emerald' as const },
+  offer_pending: { label: 'Teklif', tone: 'amber' as const },
+};
 
-const schedule = [
-  { time: '10:00', title: 'Danışmanlık - Ayşe D.', tone: 'brand' as const },
-  { time: '11:30', title: 'Seviye Tespiti - Zeynep', tone: 'emerald' as const },
-  { time: '14:00', title: 'Ekip Toplantısı', tone: 'blue' as const },
-  { time: '16:00', title: 'Kayıt - Fatma K.', tone: 'amber' as const },
-];
+const leads = workspaceLeads.map((lead) => ({
+  name: lead.fullName,
+  program: `${lead.interestedProgram}${lead.level ? ` • ${lead.level}` : ''}`,
+  status: leadStatusMeta[lead.status].label,
+  time: lead.lastActivityLabel,
+  tone: leadStatusMeta[lead.status].tone,
+}));
+
+const schedule = workspaceMeetings.map((meeting) => ({
+  time: new Intl.DateTimeFormat('tr-TR', {
+    hour: '2-digit',
+    minute: '2-digit',
+  }).format(new Date(meeting.startsAt)),
+  title: meeting.title,
+  tone: 'brand' as const,
+}));
 
 /* ─── Component ───────────────────────────────────────────────────── */
 
@@ -32,17 +45,17 @@ export default function AdminPage() {
           variant="gradient"
           icon={Users}
           label="Toplam Öğrenci"
-          value="3,542"
+          value={workspaceStudents.length}
           trend={{ direction: 'up', label: '12% geçen aya göre' }}
         />
         <KpiCard
           label="Aktif Öğrenci"
-          value="1,480"
+          value={workspaceStudents.filter((student) => student.status === 'active').length}
           trend={{ direction: 'up', label: '4% geçen haftaya göre' }}
         />
         <KpiCard
           label="Yeni Başvuru (Bu Ay)"
-          value="342"
+          value={workspaceLeads.length}
           trend={{ label: 'Bekleyen 12', direction: 'neutral' }}
         />
         <KpiCard
