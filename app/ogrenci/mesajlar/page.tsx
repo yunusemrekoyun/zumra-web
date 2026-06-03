@@ -1,13 +1,13 @@
 import { MessageSquare } from 'lucide-react';
 import { EmptyState, Button } from '@/components/ui';
 
-export default function MessagesPage() {
+export default function StudentMessagesPage() {
   return (
     <div className="admin-page">
       <EmptyState
         icon={MessageSquare}
         title="Mesajlar"
-        description="Öğrenci ve eğitmenlerle iletişim modülü burada olacak. Bildirimler ve anlık mesajlaşma desteği."
+        description="Eğitmeninle ve akademi ile mesajlaşma modülü yakında burada olacak."
         action={<Button variant="secondary" disabled>Yakında</Button>}
       />
     </div>

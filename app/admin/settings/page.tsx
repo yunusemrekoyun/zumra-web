@@ -1,5 +1,15 @@
-export default function EmptyAdminPage() {
+import { Settings } from 'lucide-react';
+import { EmptyState, Button } from '@/components/ui';
+
+export default function SettingsPage() {
   return (
-    <div className="min-h-[calc(100dvh-9rem)] lg:h-full flex items-center justify-center bg-white rounded-3xl border border-black/[0.02] p-6 lg:p-10 text-center text-[#2E286C]/40 font-medium">Bu modül yapım aşamasındadır.</div>
-  )
+    <div className="admin-page">
+      <EmptyState
+        icon={Settings}
+        title="Ayarlar"
+        description="Genel ayarlar, bildirim tercihleri ve hesap yönetimi burada olacak."
+        action={<Button variant="secondary" disabled>Yakında</Button>}
+      />
+    </div>
+  );
 }
