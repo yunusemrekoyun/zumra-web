@@ -72,6 +72,11 @@ Desktop.ini
 .bolt/
 .replit/
 .idx/
+.codex/
+.claude/
+.openai/
+.mcp/
+.mcp.json
 assets/.aistudio/
 
 # Google AI Studio specific

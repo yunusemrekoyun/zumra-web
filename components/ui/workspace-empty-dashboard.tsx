@@ -1,4 +1,5 @@
 import React from 'react';
+import { useTranslations } from 'next-intl';
 import type { LucideIcon } from 'lucide-react';
 import { Card } from './card';
 import { EmptyState } from './empty-state';
@@ -25,6 +26,8 @@ export function WorkspaceEmptyDashboard({
   moduleTitle,
   title,
 }: WorkspaceEmptyDashboardProps) {
+  const t = useTranslations('workspace.emptyDashboard');
+
   return (
     <div className="workspace-page">
       <PageHeader title={title} description={description} />
@@ -39,7 +42,7 @@ export function WorkspaceEmptyDashboard({
         <EmptyState
           icon={icon}
           title={moduleTitle}
-          description="Bu panelin gerçek modülleri hazır olduğunda aynı workspace kabuğu, animasyon ve rol bazlı data sistemiyle açılacak."
+          description={t('description')}
           className="min-h-[22rem] border-0 rounded-none shadow-none"
         />
       </Card>

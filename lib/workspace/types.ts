@@ -6,7 +6,7 @@ export type WorkspaceDesktopNav = 'wide' | 'rail';
 
 export type WorkspaceNavItem = {
   icon: LucideIcon;
-  label: string;
+  labelKey: string;
   path: string;
   mobile?: 'tab' | 'more' | 'hidden';
 };
@@ -15,18 +15,18 @@ export type WorkspaceUserBadge = {
   handle: string;
   initials: string;
   name: string;
-  roleLabel: string;
+  roleLabelKey: string;
 };
 
 export type WorkspaceConfig = {
   accountItems: WorkspaceNavItem[];
   desktopNav: WorkspaceDesktopNav;
-  headerTitleFallback: string;
+  headerTitleKey: string;
   maxWidthClass: string;
   navItems: WorkspaceNavItem[];
   role: UserRole;
   rootPath: string;
   scope: WorkspaceScope;
-  searchPlaceholder?: string;
+  searchPlaceholderKey?: string;
   user: WorkspaceUserBadge;
 };

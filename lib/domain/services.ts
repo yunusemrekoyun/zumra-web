@@ -3,7 +3,11 @@ import {
   workspaceLessons,
   workspaceMeetings,
   workspaceOffers,
+  workspacePayments,
+  workspaceReportLanguageStats,
   workspaceReminders,
+  workspaceStudentProgressSummaries,
+  workspaceStudentTimelineEvents,
   workspaceStudents,
   workspaceUsers,
 } from './mock-data';
@@ -14,8 +18,12 @@ import type {
   Meeting,
   MeetingChannel,
   Offer,
+  PaymentTransaction,
   Reminder,
+  ReportLanguageStat,
   StudentProfile,
+  StudentProgressSummary,
+  StudentTimelineEvent,
   User,
 } from './types';
 
@@ -71,7 +79,11 @@ export interface WorkspaceDataService {
   getLessons(): Promise<Lesson[]>;
   getMeetings(): Promise<Meeting[]>;
   getOffers(): Promise<Offer[]>;
+  getPayments(): Promise<PaymentTransaction[]>;
+  getReportLanguageStats(): Promise<ReportLanguageStat[]>;
   getReminders(): Promise<Reminder[]>;
+  getStudentProgressSummaries(): Promise<StudentProgressSummary[]>;
+  getStudentTimelineEvents(): Promise<StudentTimelineEvent[]>;
 }
 
 export interface MeetingService {
@@ -107,8 +119,20 @@ export const mockWorkspaceDataService: WorkspaceDataService = {
   async getOffers() {
     return workspaceOffers;
   },
+  async getPayments() {
+    return workspacePayments;
+  },
+  async getReportLanguageStats() {
+    return workspaceReportLanguageStats;
+  },
   async getReminders() {
     return workspaceReminders;
+  },
+  async getStudentProgressSummaries() {
+    return workspaceStudentProgressSummaries;
+  },
+  async getStudentTimelineEvents() {
+    return workspaceStudentTimelineEvents;
   },
 };
 

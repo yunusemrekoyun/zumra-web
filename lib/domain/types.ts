@@ -12,6 +12,7 @@ export type User = {
 };
 
 export type StudentStatus = 'active' | 'paused' | 'graduated' | 'candidate';
+export type StudentProgramType = 'generalEducation';
 
 export type StudentProfile = {
   id: string;
@@ -21,6 +22,7 @@ export type StudentProfile = {
   phone: string;
   language: string;
   level: string;
+  programType: StudentProgramType;
   status: StudentStatus;
   progress: number;
   advisorId: string;
@@ -93,6 +95,59 @@ export type Offer = {
   status: OfferStatus;
   channels: CommunicationChannel[];
   sentAt?: string;
+};
+
+export type PaymentStatus = 'paid' | 'pending' | 'failed';
+
+export type PaymentTransaction = {
+  id: string;
+  studentId?: string;
+  leadId?: string;
+  payerName: string;
+  planKey: string;
+  amount: number;
+  currency: 'TRY';
+  paidAt: string;
+  status: PaymentStatus;
+};
+
+export type ReportLanguageStat = {
+  language: string;
+  percentage: number;
+  count: number;
+  colorClass: string;
+};
+
+export type StudentProgressSkill = {
+  key: 'speaking' | 'listening' | 'reading' | 'writing';
+  icon: 'speaking' | 'listening' | 'reading' | 'writing';
+  value: number;
+  tone: 'brand' | 'blue' | 'emerald' | 'amber';
+};
+
+export type StudentProgressBadge = {
+  earned: boolean;
+};
+
+export type StudentProgressSummary = {
+  studentId: string;
+  overall: number;
+  completedLessons: number;
+  totalLessons: number;
+  streak: number;
+  skills: StudentProgressSkill[];
+  badges: StudentProgressBadge[];
+};
+
+export type StudentTimelineHomeworkState = 'assigned' | 'completed';
+
+export type StudentTimelineEvent = {
+  id: string;
+  studentId: string;
+  lessonId: string;
+  noteKey: string;
+  homeworkState: StudentTimelineHomeworkState;
+  attachmentName?: string;
 };
 
 export type ReminderStatus = 'scheduled' | 'sent' | 'failed' | 'cancelled';

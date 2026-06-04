@@ -3,6 +3,7 @@
 import React from 'react';
 import { Flame } from 'lucide-react';
 import { motion, useReducedMotion } from 'motion/react';
+import { useTranslations } from 'next-intl';
 import { cn } from '@/lib/utils';
 
 /* ─── Types ───────────────────────────────────────────────────────── */
@@ -26,11 +27,12 @@ const sizes = {
 export function StreakBadge({ className, count, size = 'md' }: StreakBadgeProps) {
   const s = sizes[size];
   const shouldReduceMotion = useReducedMotion();
+  const t = useTranslations('common.streak');
 
   const content = (
     <>
       <Flame className={cn(s.icon, 'fill-white')} />
-      <span className={s.text}>{count} Gün</span>
+      <span className={s.text}>{t('days', { count })}</span>
     </>
   );
 

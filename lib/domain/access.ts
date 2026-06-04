@@ -1,4 +1,3 @@
-import { workspaceLeads, workspaceLessons, workspaceStudents } from './mock-data';
 import type { Lead, Lesson, StudentProfile, User } from './types';
 
 export function canAccessStudent(user: User, student: StudentProfile) {
@@ -29,7 +28,7 @@ export function canAccessLead(user: User, lead: Lead) {
   return false;
 }
 
-export function canAccessLesson(user: User, lesson: Lesson) {
+export function canAccessLesson(user: User, lesson: Lesson, students: StudentProfile[]) {
   if (user.role === 'admin') {
     return true;
   }
@@ -39,26 +38,26 @@ export function canAccessLesson(user: User, lesson: Lesson) {
   }
 
   if (user.role === 'student') {
-    const student = workspaceStudents.find((item) => item.id === lesson.studentId);
+    const student = students.find((item) => item.id === lesson.studentId);
     return student?.userId === user.id;
   }
 
   if (user.role === 'advisor') {
-    const student = workspaceStudents.find((item) => item.id === lesson.studentId);
+    const student = students.find((item) => item.id === lesson.studentId);
     return student?.advisorId === user.id;
   }
 
   return false;
 }
 
-export function getVisibleStudents(user: User, students = workspaceStudents) {
+export function getVisibleStudents(user: User, students: StudentProfile[]) {
   return students.filter((student) => canAccessStudent(user, student));
 }
 
-export function getVisibleLeads(user: User, leads = workspaceLeads) {
+export function getVisibleLeads(user: User, leads: Lead[]) {
   return leads.filter((lead) => canAccessLead(user, lead));
 }
 
-export function getVisibleLessons(user: User, lessons = workspaceLessons) {
-  return lessons.filter((lesson) => canAccessLesson(user, lesson));
+export function getVisibleLessons(user: User, lessons: Lesson[], students: StudentProfile[]) {
+  return lessons.filter((lesson) => canAccessLesson(user, lesson, students));
 }

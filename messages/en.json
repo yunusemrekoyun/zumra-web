@@ -1,0 +1,521 @@
+{
+  "metadata": {
+    "title": "Zümra Academy | Online Language Education for Women",
+    "description": "Zümra Academy offers a safe, high-quality and fully online language learning experience designed for women."
+  },
+  "common": {
+    "brand": {
+      "name": "Zümra",
+      "suffix": "Academy",
+      "full": "Zümra Academy"
+    },
+    "actions": {
+      "soon": "Coming Soon",
+      "viewAll": "View All",
+      "getInfo": "Get Info",
+      "joinLesson": "Join Lesson",
+      "filter": "Filter",
+      "moreOptions": "More options",
+      "openDetails": "Open details",
+      "call": "Call",
+      "add": "Add"
+    },
+    "languageSwitcher": {
+      "label": "Language switcher"
+    },
+    "emptyState": {
+      "title": "Coming Soon",
+      "description": "This module is currently being prepared."
+    },
+    "lessonStatus": {
+      "completed": "Completed",
+      "inProgress": "In Progress",
+      "upcoming": "Upcoming"
+    },
+    "status": {
+      "active": "Active",
+      "paused": "Paused",
+      "graduated": "Graduated",
+      "candidate": "Candidate",
+      "paid": "Paid",
+      "pending": "Pending",
+      "failed": "Failed",
+      "earned": "Earned"
+    },
+    "currency": {
+      "code": "TRY"
+    },
+    "dateFallback": {
+      "planned": "To be scheduled"
+    },
+    "streak": {
+      "days": "{count} Days"
+    }
+  },
+  "workspace": {
+    "mobileNav": "Main navigation",
+    "roles": {
+      "admin": "Admin",
+      "advisor": "Advisor",
+      "teacher": "Teacher",
+      "student": "Student"
+    },
+    "nav": {
+      "settings": "Settings"
+    },
+    "more": {
+      "title": "Account",
+      "modules": "Modules",
+      "account": "Account",
+      "support": "Support",
+      "logout": "Log Out",
+      "close": "Close menu"
+    },
+    "emptyDashboard": {
+      "description": "When the real modules are ready, they will open inside the same workspace shell, animation system and role-based data model."
+    },
+    "header": {
+      "messages": "Messages",
+      "notifications": "Notifications"
+    }
+  },
+  "public": {
+    "nav": {
+      "why": "Why Us?",
+      "process": "Process",
+      "programs": "Programs",
+      "login": "Log In",
+      "levelTest": "Level Assessment",
+      "openMenu": "Open menu"
+    },
+    "hero": {
+      "eyebrow": "Türkiye's First Women-Only Language Academy",
+      "titleBefore": "Feel like yourself,",
+      "titleEmphasis": "freely",
+      "titleAfter": "learn.",
+      "description": "Move at your own pace in our safe women-only online environment; focus on your goals and build your language skills with confidence. Flexible schedules and expert instructors create a fresh learning experience.",
+      "primaryCta": "Find Your Level",
+      "secondaryCta": "Explore Programs",
+      "stats": ["3500+ Students", "100% Online", "Women Only"],
+      "imageAlt": "Confident woman learning a language",
+      "quote": "Speak your mind.",
+      "quoteDescription": "A purely supportive, women-exclusive space designed to amplify your voice.",
+      "safeBadgeTitle": "Safe Space",
+      "safeBadgeText": "Learn Without Judgment"
+    },
+    "why": {
+      "title": "Forget traditional courses.",
+      "description": "At Zümra Academy, learning is not a technical obligation. It is a safe, joyful and personal growth journey.",
+      "cards": [
+        {
+          "title": "A Safe Space for Women",
+          "description": "A women-only online learning environment where you can feel comfortable, learn without judgment and build confidence without unnecessary stress."
+        },
+        {
+          "title": "Flexible Hours",
+          "description": "Join from home, at the time that fits your life. Camera-off participation keeps the experience fully compatible with your rhythm."
+        },
+        {
+          "title": "Active Speaking Practice",
+          "description": "Lessons focused on real communication, not endless grammar rules. With small groups and one-to-one support, you do not just learn the language, you use it."
+        }
+      ]
+    },
+    "how": {
+      "titleBefore": "A clear, planned and",
+      "titleEmphasis": "transparent",
+      "titleAfter": "process.",
+      "description": "From day one, you know exactly what to expect. No surprises, only focused steps toward your goal.",
+      "cta": "Start Your Journey",
+      "steps": [
+        { "num": "01", "title": "Pre-Registration & First Contact", "desc": "Fill out the form. We will contact you within 24 hours to plan the next step." },
+        { "num": "02", "title": "Free Level Assessment", "desc": "A short, relaxed 15-minute evaluation to understand your current level." },
+        { "num": "03", "title": "Your Personalized Program", "desc": "Together, we define the roadmap that fits your level and your goals." },
+        { "num": "04", "title": "Start Live Lessons", "desc": "Join live classes on safe platforms with flexible scheduling." },
+        { "num": "05", "title": "Progress Tracking", "desc": "Stay motivated with monthly progress reports and clear feedback." }
+      ]
+    },
+    "languages": {
+      "title": "Choose the language that fits you.",
+      "description": "One-to-one and group options across 8 languages.",
+      "viewAll": "View All Programs",
+      "items": [
+        { "name": "English", "subtitle": "General & Academic", "symbol": "A" },
+        { "name": "Arabic", "subtitle": "Modern & Practical", "symbol": "ع" },
+        { "name": "French", "subtitle": "European Languages", "symbol": "Fr" },
+        { "name": "German", "subtitle": "Career & Education", "symbol": "De" },
+        { "name": "Persian", "subtitle": "Cultural Depth", "symbol": "ف" },
+        { "name": "Japanese", "subtitle": "Far East", "symbol": "あ" },
+        { "name": "Korean", "subtitle": "New Trend", "symbol": "가" },
+        { "name": "Russian", "subtitle": "Strategic Communication", "symbol": "Ж" }
+      ]
+    },
+    "programs": {
+      "title": "Featured Learning Models",
+      "popular": "Popular",
+      "items": [
+        { "title": "General English", "level": "A1 - C1 Levels", "desc": "Designed for women who want to speak confidently in everyday life. Practice-first and goal-oriented.", "icon": "message", "popular": true },
+        { "title": "Academic English", "level": "IELTS / TOEFL Preparation", "desc": "Academic writing, presentation and exam skills for university and professional goals.", "icon": "book", "popular": false },
+        { "title": "English Speaking Club", "level": "Weekly Practice", "desc": "Keep your speaking skills active through a supportive and social practice environment.", "icon": "headset", "popular": false },
+        { "title": "Business English", "level": "Professional Communication", "desc": "Improve email writing, presentations and meeting communication for work life.", "icon": "briefcase", "popular": false }
+      ]
+    },
+    "cta": {
+      "title": "Not sure which program is right for you?",
+      "description": "After a short free consultation with our expert advisors, we will create a route designed around your goals.",
+      "primary": "Book a Free Consultation",
+      "secondary": "Message on WhatsApp"
+    },
+    "instructors": {
+      "title": "An inspiring team of strong women educators.",
+      "description": "Meet our elite instructors, each an expert in her field with strong academic experience. They teach language and also mentor your growth.",
+      "cta": "Meet the Team",
+      "imageAlt": "Instructor"
+    },
+    "testimonials": {
+      "title": "What Our Students Say",
+      "items": [
+        { "name": "Elif A.", "program": "Speaking Program", "image": 1, "text": "Being able to feel comfortable without turning on the camera mattered a lot to me. I genuinely found the courage to speak in class." },
+        { "name": "Selin K.", "program": "General English", "image": 2, "text": "Everything is planned and I get clear feedback every month. Knowing what I am doing keeps my motivation high." },
+        { "name": "Hande N.", "program": "Exam Preparation", "image": 3, "text": "My instructor noticed my gaps very quickly. The practice analysis system helped me feel stronger and closer to my goal." },
+        { "name": "Nil T.", "program": "Arabic Speaking", "image": 4, "text": "The lessons are very smooth. The content matched my goal, and I built a speaking habit in a short time. Zümra is the best." }
+      ]
+    },
+    "faq": {
+      "title": "Let's clarify what you are wondering.",
+      "description": "For more questions, feel free to reach us through our WhatsApp line.",
+      "items": [
+        { "q": "Do you offer free lessons?", "a": "Yes. Every month, we offer free demo lessons for those who want to try our group classes. We also organize seminars to support motivation." },
+        { "q": "How are lesson materials provided?", "a": "All materials are provided on our online platform. We support your learning with practical and interactive content for daily and professional life." },
+        { "q": "Which platform are lessons held on?", "a": "Lessons are held live and interactively on Zoom or Google Meet. A computer or tablet is enough." },
+        { "q": "Can I join without a camera?", "a": "Absolutely. To help women feel fully comfortable, students may join lessons with audio only if they prefer." }
+      ]
+    },
+    "footer": {
+      "description": "Türkiye's first women-only online language academy. Learn at your own pace, reach your goal and speak with the world.",
+      "programs": "Programs",
+      "corporate": "Company",
+      "support": "Support",
+      "copyright": "© {year} Zümra Academy. All rights reserved.",
+      "links": {
+        "generalEnglish": "General English",
+        "academicEnglish": "Academic English",
+        "speakingClubs": "Speaking Clubs",
+        "businessEnglish": "Business English",
+        "about": "About Us",
+        "why": "Why Us?",
+        "instructors": "Instructors",
+        "contact": "Contact",
+        "faq": "Frequently Asked Questions",
+        "privacy": "Privacy Policy",
+        "terms": "Terms of Use"
+      }
+    }
+  },
+  "domain": {
+    "languages": {
+      "english": "English",
+      "arabic": "Arabic",
+      "german": "German",
+      "french": "French"
+    },
+    "programTypes": {
+      "generalEducation": "General Education"
+    },
+    "relative": {
+      "tenMinutes": "10 min",
+      "twoHours": "2 hours",
+      "yesterday": "Yesterday"
+    },
+    "sources": {
+      "instagramForm": "Instagram Form",
+      "webForm": "Web Form",
+      "phone": "Phone",
+      "referral": "Referral"
+    },
+    "leadStatus": {
+      "contacted": "Contacted",
+      "converted": "Enrolled",
+      "lost": "Lost",
+      "meeting_scheduled": "Meeting Scheduled",
+      "new": "New Application",
+      "offer_pending": "Offer Pending"
+    }
+  },
+  "admin": {
+    "nav": {
+      "dashboard": "Dashboard",
+      "leads": "Leads",
+      "calendar": "Calendar",
+      "students": "Students",
+      "instructors": "Instructors",
+      "programs": "Programs",
+      "messages": "Messages",
+      "payments": "Payments",
+      "reports": "Reports"
+    },
+    "shell": {
+      "searchPlaceholder": "Search students, instructors or messages..."
+    },
+    "dashboard": {
+      "greeting": "Good morning, Yunus",
+      "totalStudents": "Total Students",
+      "activeStudents": "Active Students",
+      "newApplications": "New Applications (This Month)",
+      "conversionRate": "Conversion Rate",
+      "recentLeads": "Recent Leads",
+      "todaySchedule": "Today's Schedule",
+      "trendMonth": "12% vs last month",
+      "trendWeek": "4% vs last week",
+      "waiting": "12 pending",
+      "goodLevel": "Good level",
+      "meetingIntake": "Consultation - {name}",
+      "meetingLevel": "Level Assessment - {name}"
+    },
+    "students": {
+      "title": "Students",
+      "description": "{count} students are managed in the mock system.",
+      "add": "Add Student",
+      "all": "All",
+      "active": "Active",
+      "paused": "Paused",
+      "graduated": "Graduated",
+      "search": "Search by name...",
+      "education": "Education",
+      "nextLesson": "Next Lesson",
+      "teacher": "Teacher",
+      "progress": "Progress",
+      "toAssign": "To assign"
+    },
+    "studentDetail": {
+      "studentId": "Student ID",
+      "backToStudents": "Back to student list",
+      "email": "Email",
+      "sendMessage": "Send Message",
+      "activeStudent": "Active Student",
+      "registeredProgram": "Registered Program",
+      "currentLevel": "Current Level",
+      "programValue": "English • General Training",
+      "instructor": "Instructor",
+      "enrollmentDate": "Enrollment Date",
+      "enrollmentDateValue": "January 12, 2026",
+      "completedLessons": "Completed Lessons",
+      "attendance": "100% Attendance",
+      "developmentScore": "Development Score",
+      "scoreTrend": "↑ 12-point increase (last month)",
+      "homework": "Homework Submission",
+      "lateHomework": "1 Late Submission",
+      "courseHistory": "Lesson History & Notes",
+      "homeworkAssigned": "Homework Assigned",
+      "homeworkCompleted": "Homework Completed",
+      "timelineNotes": {
+        "speakingPractice": "The student was highly successful in everyday speaking practice. Vocabulary variety is improving noticeably. There are still small mistakes with past tense usage, which will be reinforced.",
+        "grammarFocus": "The student understood the grammar structure, but had some difficulty turning it into speech. An additional reading passage was sent."
+      },
+      "lesson12Title": "Lesson 12: Speaking Practice - Everyday Scenarios",
+      "lesson12Date": "March 17, 14:00",
+      "lesson12Note": "The student was highly successful in everyday speaking practice. Vocabulary variety is improving noticeably. There are still small mistakes with past tense usage, which will be reinforced.",
+      "lesson11Title": "Lesson 11: Grammar Focus - Perfect Tenses",
+      "lesson11Date": "March 15, 14:00",
+      "lesson11Note": "The student understood the grammar structure, but had some difficulty turning it into speech. An additional reading passage was sent."
+    },
+    "leads": {
+      "title": "Leads",
+      "search": "Name or phone...",
+      "addLead": "Add Lead",
+      "all": "All",
+      "new": "New",
+      "followUp": "Follow-up",
+      "online": "Online",
+      "today": "Today",
+      "applicationFilled": "Application Form Submitted • 10:45",
+      "applicationText": "The student submitted a form for the English A1 program through the website and is interested in the campaign.",
+      "advisorMessageMeta": "Advisor (You) • 11:00",
+      "advisorMessage": "Hello Ms. Ayşe, I am reaching out from Zümra Academy. We received your application. If you are available, may I call you at 14:00 to explain the process?",
+      "studentMessageMeta": "Ayşe Demir • 11:15",
+      "studentMessage": "Hello Mr. Yunus, yes 14:00 works. I am especially interested in speaking-focused training.",
+      "advisorNote": "Advisor Note • 11:20",
+      "advisorNoteText": "The student will be called at 14:00. She wants speaking-focused education; recommend the native instructor package.",
+      "messagePlaceholder": "Write a message or add a note...",
+      "addNote": "Add Note",
+      "info": "Lead Details",
+      "languageLevel": "Language & Level",
+      "phone": "Phone",
+      "email": "Email",
+      "source": "Source",
+      "actions": "Actions",
+      "createEnrollment": "Create Enrollment",
+      "scheduleMeeting": "Schedule Meeting",
+      "assignedAdvisor": "Assigned Advisor",
+      "salesSpecialist": "Sales Specialist"
+    },
+    "empty": {
+      "calendar": { "title": "Calendar", "description": "Track lesson schedules, consultation appointments and events from this calendar." },
+      "instructors": { "title": "Instructors", "description": "Manage your instructor team and assign lesson schedules from this module." },
+      "programs": { "title": "Programs", "description": "Create and manage your education programs from this module. It will be active soon." },
+      "messages": { "title": "Messages", "description": "Student and instructor communication will live here with notifications and messaging support." },
+      "settings": { "title": "Settings", "description": "General settings, notification preferences and account management will live here." }
+    },
+    "payments": {
+      "title": "Payments",
+      "manualAdd": "Add Manual Payment",
+      "monthlyCollection": "This Month's Collection",
+      "pendingPayments": "Pending Payments",
+      "billingPeriod": "Billing Period",
+      "billingDescription": "March 2026 invoices are ready to be issued.",
+      "bulkInvoice": "Issue Bulk Invoices",
+      "recentTransactions": "Recent Transactions",
+      "search": "Transaction number or name...",
+      "amount": "Amount",
+      "student": "Student",
+      "plan": "Plan",
+      "date": "Date",
+      "status": "Status",
+      "action": "Action",
+      "overdue": "7 overdue",
+      "trend": "8% vs last month",
+      "plans": {
+        "englishSixMonths": "English • 6-Month Package",
+        "arabicInstallment": "Arabic • Monthly Installment (2/4)",
+        "germanInstallment": "German • Monthly Installment (1/6)",
+        "englishPrivate": "English • Private Lesson Pack",
+        "frenchThreeMonths": "French • 3-Month Package"
+      },
+      "dates": {
+        "today1420": "Today, 14:20",
+        "today1015": "Today, 10:15",
+        "yesterday": "Yesterday",
+        "march15": "March 15",
+        "march14": "March 14"
+      }
+    },
+    "reports": {
+      "title": "Performance Reports",
+      "growth": "Growth",
+      "conversion": "Conversion",
+      "retention": "Retention",
+      "download": "Download Detailed Report",
+      "reportName": "March 2026 PDF Report",
+      "languagePopularity": "Language Popularity & Enrollments",
+      "languageDescription": "Which programs are gaining demand?",
+      "lastSixMonths": "Last 6 Months",
+      "thisYear": "This Year",
+      "growthTrend": "Student growth in the last quarter",
+      "conversionTrend": "Lead -> enrollment rate",
+      "retentionTrend": "Program completion",
+      "studentsCount": "{count} Students",
+      "languages": {
+        "english": "English",
+        "arabic": "Arabic",
+        "german": "German",
+        "french": "French"
+      }
+    }
+  },
+  "student": {
+    "nav": {
+      "lessons": "My Lessons",
+      "progress": "Progress",
+      "messages": "Messages",
+      "profile": "Profile"
+    },
+    "dashboard": {
+      "hello": "Hello, {name}!",
+      "encouragement": "You are doing great, keep going!",
+      "nextLesson": "Your Next Lesson",
+      "noUpcomingLesson": "No upcoming lesson yet",
+      "timeLeft": "in 2 hours",
+      "upcomingLessons": "Upcoming Lessons",
+      "completedLessons": "Completed Lessons"
+    },
+    "lessons": {
+      "title": "My Lessons",
+      "description": "Track your upcoming and completed lessons here.",
+      "summary": "{total} lessons total • {completed} completed",
+      "upcoming": "Upcoming Lessons",
+      "past": "Past Lessons"
+    },
+    "progressPage": {
+      "title": "Progress",
+      "description": "Your overall status and skill analysis",
+      "overall": "Overall Progress",
+      "completedCount": "{done} / {total} lessons completed",
+      "skillAnalysis": "Skill Analysis",
+      "badges": "Achievements & Badges",
+      "skills": {
+        "speaking": "Speaking",
+        "listening": "Listening",
+        "reading": "Reading",
+        "writing": "Writing"
+      },
+      "badgeLabels": ["12-Day Streak", "Complete 10 Lessons", "Learn 50 Words", "First Presentation", "B2 Level"]
+    },
+    "empty": {
+      "messages": { "title": "Messages", "description": "Advisor and instructor messages will appear here." }
+    },
+    "profilePage": {
+      "activeStudent": "Active Student",
+      "program": "Program",
+      "programValue": "English • General Training",
+      "level": "Level",
+      "enrollmentDate": "Enrollment Date",
+      "enrollmentDateValue": "January 12, 2026",
+      "account": "Account"
+    }
+  },
+  "advisor": {
+    "nav": {
+      "overview": "Overview",
+      "leads": "My Leads",
+      "students": "My Students",
+      "meetings": "Meetings",
+      "offers": "Offers",
+      "messages": "Messages"
+    },
+    "shell": {
+      "searchPlaceholder": "Search leads, students or meetings..."
+    },
+    "dashboard": {
+      "title": "Advisor Panel",
+      "description": "The base CRM shell is ready for assigned leads, students, meetings and offers.",
+      "moduleTitle": "Advisor Modules",
+      "leads": "My Leads",
+      "students": "My Students",
+      "meetings": "Meetings",
+      "offers": "Offers"
+    },
+    "empty": {
+      "leads": { "title": "My Leads", "description": "The lead pool assigned to this advisor will be managed here with the CRM flow." },
+      "students": { "title": "My Students", "description": "Student profiles, offers, meetings and follow-up flow for this advisor will live here." },
+      "meetings": { "title": "Meetings", "description": "Links, QR codes, reminders and meeting statuses will be managed in this module." },
+      "offers": { "title": "Offers", "description": "The offer flow sent to students through email and WhatsApp will be prepared here." },
+      "messages": { "title": "Messages", "description": "Student and lead communication history will be collected here in a single flow." },
+      "settings": { "title": "Advisor Settings", "description": "Notification preferences, working hours and profile settings will be managed here." }
+    }
+  },
+  "teacher": {
+    "nav": {
+      "lessons": "My Lessons",
+      "students": "Students",
+      "calendar": "Calendar",
+      "messages": "Messages",
+      "profile": "Profile"
+    },
+    "dashboard": {
+      "title": "Teacher Panel",
+      "description": "The teacher workspace shell is ready for lessons, students, calendar and messaging.",
+      "moduleTitle": "Teacher Modules",
+      "students": "Students",
+      "upcomingLessons": "Upcoming Lessons",
+      "completedLessons": "Completed Lessons",
+      "activeProgram": "Active Program"
+    },
+    "empty": {
+      "students": { "title": "Students", "description": "Students assigned to the teacher and lesson progress notes will appear here." },
+      "calendar": { "title": "Calendar", "description": "The teacher's lesson schedule, availability and meetings will be managed here." },
+      "messages": { "title": "Messages", "description": "Student messages, lesson notes and notification flows will live here." },
+      "profile": { "title": "Profile", "description": "Teacher specialties, lesson settings and profile details will be edited here." },
+      "settings": { "title": "Teacher Settings", "description": "Notification, calendar and account preferences will be managed here." }
+    }
+  }
+}

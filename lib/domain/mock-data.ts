@@ -1,4 +1,17 @@
-import type { Assignment, Lead, Lesson, Meeting, Offer, Reminder, StudentProfile, User } from './types';
+import type {
+  Assignment,
+  Lead,
+  Lesson,
+  Meeting,
+  Offer,
+  PaymentTransaction,
+  Reminder,
+  ReportLanguageStat,
+  StudentProfile,
+  StudentProgressSummary,
+  StudentTimelineEvent,
+  User,
+} from './types';
 
 export const workspaceUsers: User[] = [
   {
@@ -51,6 +64,7 @@ export const workspaceStudents: StudentProfile[] = [
     phone: '+90 555 300 30 30',
     language: 'İngilizce',
     level: 'B1 Intermediate',
+    programType: 'generalEducation',
     status: 'active',
     progress: 65,
     advisorId: 'user-advisor-aylin',
@@ -65,6 +79,7 @@ export const workspaceStudents: StudentProfile[] = [
     phone: '+90 555 123 45 67',
     language: 'Almanca',
     level: 'A1 Beginner',
+    programType: 'generalEducation',
     status: 'active',
     progress: 20,
     advisorId: 'user-advisor-aylin',
@@ -79,6 +94,7 @@ export const workspaceStudents: StudentProfile[] = [
     phone: '+90 555 444 12 11',
     language: 'Arapça',
     level: 'B2 Upper',
+    programType: 'generalEducation',
     status: 'active',
     progress: 85,
     advisorId: 'user-advisor-aylin',
@@ -93,6 +109,7 @@ export const workspaceStudents: StudentProfile[] = [
     phone: '+90 555 222 33 44',
     language: 'İngilizce',
     level: 'A2 Elementary',
+    programType: 'generalEducation',
     status: 'paused',
     progress: 40,
     advisorId: 'user-advisor-aylin',
@@ -233,6 +250,118 @@ export const workspaceOffers: Offer[] = [
     channels: ['email', 'whatsapp'],
     sentAt: '2026-06-02T18:00:00+03:00',
   },
+  {
+    id: 'offer-zeynep-english',
+    title: 'İngilizce B1 6 Aylık Paket',
+    studentId: 'student-zeynep',
+    advisorId: 'user-advisor-aylin',
+    amount: 24000,
+    currency: 'TRY',
+    status: 'accepted',
+    channels: ['email', 'whatsapp'],
+    sentAt: '2026-05-12T14:30:00+03:00',
+  },
+];
+
+export const workspacePayments: PaymentTransaction[] = [
+  {
+    id: 'payment-ayse-speaking',
+    leadId: 'lead-ayse',
+    payerName: 'Ayşe Demir',
+    planKey: 'englishSixMonths',
+    amount: 12000,
+    currency: 'TRY',
+    paidAt: '2026-06-03T14:20:00+03:00',
+    status: 'paid',
+  },
+  {
+    id: 'payment-fatma-arabic',
+    leadId: 'lead-fatma',
+    payerName: 'Fatma Kaya',
+    planKey: 'arabicInstallment',
+    amount: 2500,
+    currency: 'TRY',
+    paidAt: '2026-06-03T10:15:00+03:00',
+    status: 'paid',
+  },
+  {
+    id: 'payment-zeynep-german',
+    leadId: 'lead-zeynep',
+    payerName: 'Zeynep Yılmaz',
+    planKey: 'germanInstallment',
+    amount: 3000,
+    currency: 'TRY',
+    paidAt: '2026-06-02T16:45:00+03:00',
+    status: 'pending',
+  },
+  {
+    id: 'payment-elif-private',
+    studentId: 'student-elif',
+    payerName: 'Elif Türkmen',
+    planKey: 'englishPrivate',
+    amount: 8500,
+    currency: 'TRY',
+    paidAt: '2026-03-15T09:30:00+03:00',
+    status: 'failed',
+  },
+  {
+    id: 'payment-zeynep-english',
+    studentId: 'student-zeynep',
+    payerName: 'Zeynep Kaya',
+    planKey: 'englishSixMonths',
+    amount: 12000,
+    currency: 'TRY',
+    paidAt: '2026-05-12T15:00:00+03:00',
+    status: 'paid',
+  },
+];
+
+export const workspaceReportLanguageStats: ReportLanguageStat[] = [
+  { language: 'İngilizce', percentage: 75, count: 1110, colorClass: 'from-[#8C6CE6] to-[#533089]' },
+  { language: 'Arapça', percentage: 45, count: 320, colorClass: 'from-blue-400 to-blue-600' },
+  { language: 'Almanca', percentage: 30, count: 180, colorClass: 'from-emerald-400 to-emerald-600' },
+  { language: 'Fransızca', percentage: 15, count: 90, colorClass: 'from-amber-400 to-amber-600' },
+];
+
+export const workspaceStudentProgressSummaries: StudentProgressSummary[] = [
+  {
+    studentId: 'student-zeynep',
+    overall: 65,
+    completedLessons: 12,
+    totalLessons: 24,
+    streak: 12,
+    skills: [
+      { key: 'speaking', icon: 'speaking', value: 72, tone: 'brand' },
+      { key: 'listening', icon: 'listening', value: 65, tone: 'blue' },
+      { key: 'reading', icon: 'reading', value: 80, tone: 'emerald' },
+      { key: 'writing', icon: 'writing', value: 55, tone: 'amber' },
+    ],
+    badges: [
+      { earned: true },
+      { earned: true },
+      { earned: true },
+      { earned: false },
+      { earned: false },
+    ],
+  },
+];
+
+export const workspaceStudentTimelineEvents: StudentTimelineEvent[] = [
+  {
+    id: 'timeline-zeynep-speaking',
+    studentId: 'student-zeynep',
+    lessonId: 'lesson-speaking',
+    noteKey: 'speakingPractice',
+    homeworkState: 'assigned',
+    attachmentName: 'Unit_12_Notes.pdf',
+  },
+  {
+    id: 'timeline-zeynep-grammar',
+    studentId: 'student-zeynep',
+    lessonId: 'lesson-grammar',
+    noteKey: 'grammarFocus',
+    homeworkState: 'completed',
+  },
 ];
 
 export const workspaceReminders: Reminder[] = [
@@ -266,7 +395,11 @@ export const workspaceSeed = {
   lessons: workspaceLessons,
   meetings: workspaceMeetings,
   offers: workspaceOffers,
+  payments: workspacePayments,
+  reportLanguageStats: workspaceReportLanguageStats,
   reminders: workspaceReminders,
+  studentProgressSummaries: workspaceStudentProgressSummaries,
+  studentTimelineEvents: workspaceStudentTimelineEvents,
   students: workspaceStudents,
   users: workspaceUsers,
 };
