@@ -1,8 +1,7 @@
 'use client';
 
 import React, { useMemo, useState } from 'react';
-import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { useLocale, useTranslations } from 'next-intl';
 import {
   Bell,
   HelpCircle,
@@ -12,8 +11,10 @@ import {
   Settings,
   Zap,
 } from 'lucide-react';
+import { Link, usePathname } from '@/i18n/navigation';
 import { cn } from '@/lib/utils';
 import type { WorkspaceConfig, WorkspaceNavItem } from '@/lib/workspace';
+import { LanguageSwitcher } from './language-switcher';
 import { DashboardRouteTransition, useDashboardRouteNavigation } from './route-animation-engine';
 import { MobileMoreSheet } from './mobile-more-sheet';
 import { MobileTabBar } from './mobile-tab-bar';
@@ -24,7 +25,9 @@ type WorkspaceShellProps = {
 };
 
 export function WorkspaceShell({ children, config }: WorkspaceShellProps) {
+  const locale = useLocale();
   const pathname = usePathname();
+  const t = useTranslations();
   const [isMoreSheetOpen, setIsMoreSheetOpen] = useState(false);
   const rootSelector = `[data-dashboard-route-root="${config.scope}"]`;
   const { navigateWithTransition, warmRoute } = useDashboardRouteNavigation({
@@ -35,19 +38,42 @@ export function WorkspaceShell({ children, config }: WorkspaceShellProps) {
     },
   });
 
-  const mobileTabs = useMemo(
-    () => config.navItems.filter((item) => item.mobile === 'tab'),
-    [config.navItems],
-  );
-  const mobileMoreItems = useMemo(
-    () => config.navItems.filter((item) => item.mobile === 'more'),
-    [config.navItems],
-  );
-  const hasMobileMore = mobileMoreItems.length > 0 || config.accountItems.length > 0;
-  const activeTitle =
+  const mobileTabs = config.navItems
+    .filter((item) => item.mobile === 'tab')
+    .map((item) => ({
+      ...item,
+      label: t(item.labelKey),
+    }));
+  const mobileMoreItems = config.navItems
+    .filter((item) => item.mobile === 'more')
+    .map((item) => ({
+      ...item,
+      label: t(item.labelKey),
+    }));
+  const mobileAccountItems = config.accountItems.map((item) => ({
+    ...item,
+    label: t(item.labelKey),
+  }));
+  const hasMobileMore = mobileMoreItems.length > 0 || mobileAccountItems.length > 0;
+  const activeTitleKey =
     [...config.navItems, ...config.accountItems].find((item) =>
       isRouteActive(pathname, item.path, config.rootPath),
-    )?.label ?? config.headerTitleFallback;
+    )?.labelKey ?? config.headerTitleKey;
+  const activeTitle = t(activeTitleKey);
+  const searchPlaceholder = config.searchPlaceholderKey
+    ? t(config.searchPlaceholderKey)
+    : undefined;
+
+  const sheetLabels = useMemo(
+    () => ({
+      account: t('workspace.more.account'),
+      close: t('workspace.more.close'),
+      logout: t('workspace.more.logout'),
+      modules: t('workspace.more.modules'),
+      support: t('workspace.more.support'),
+    }),
+    [t],
+  );
 
   return (
     <div className="min-h-dvh lg:min-h-screen bg-[#EBE9F1] p-0 lg:p-4 flex items-stretch lg:items-center justify-center font-neubau text-[#2E286C]">
@@ -58,17 +84,20 @@ export function WorkspaceShell({ children, config }: WorkspaceShellProps) {
         navigateWithTransition={navigateWithTransition}
         warmRoute={warmRoute}
         onMorePress={hasMobileMore ? () => setIsMoreSheetOpen(true) : undefined}
+        moreLabel={t('workspace.more.title')}
+        navLabel={t('workspace.mobileNav')}
       />
 
       {hasMobileMore && (
         <MobileMoreSheet
           isOpen={isMoreSheetOpen}
           moduleItems={mobileMoreItems}
-          accountItems={config.accountItems}
+          accountItems={mobileAccountItems}
           onClose={() => setIsMoreSheetOpen(false)}
           pathname={pathname}
           rootPath={config.rootPath}
-          title="Hesabım"
+          title={t('workspace.more.title')}
+          labels={sheetLabels}
           navigateWithTransition={navigateWithTransition}
           warmRoute={warmRoute}
         />
@@ -87,9 +116,9 @@ export function WorkspaceShell({ children, config }: WorkspaceShellProps) {
           navItems={config.navItems}
           navigateWithTransition={navigateWithTransition}
           pathname={pathname}
-          rootPath={config.rootPath}
-          warmRoute={warmRoute}
-        />
+            rootPath={config.rootPath}
+            warmRoute={warmRoute}
+          />
 
         <div className="flex-1 flex flex-col min-w-0 bg-[#F4F5F8] relative">
           <header
@@ -105,12 +134,12 @@ export function WorkspaceShell({ children, config }: WorkspaceShellProps) {
               <span className="font-rosmatika font-bold text-lg text-[#2E286C] tracking-tight">Zümra</span>
             </div>
 
-            {config.searchPlaceholder ? (
+            {searchPlaceholder ? (
               <div className="relative group hidden md:block w-full max-w-sm lg:w-96">
                 <Search className="w-4 h-4 absolute left-4 top-1/2 -translate-y-1/2 text-[#2E286C]/40 group-focus-within:text-[#533089] transition-colors" />
                 <input
                   type="text"
-                  placeholder={config.searchPlaceholder}
+                  placeholder={searchPlaceholder}
                   className="w-full h-11 bg-white rounded-2xl pl-11 pr-4 outline-none text-sm placeholder:text-[#2E286C]/30 text-[#2E286C] shadow-sm border border-transparent focus:border-[#533089]/20 focus:shadow-md transition-all font-medium"
                 />
                 <div className="absolute right-3 top-1/2 -translate-y-1/2 flex gap-1">
@@ -131,12 +160,21 @@ export function WorkspaceShell({ children, config }: WorkspaceShellProps) {
             )}
 
             <div className="flex items-center gap-2 lg:gap-6 ml-auto">
+              <LanguageSwitcher variant="workspace" className="hidden sm:inline-flex" />
               {config.desktopNav === 'wide' && (
-                <button className="relative w-9 h-9 lg:w-10 lg:h-10 rounded-full bg-white flex items-center justify-center shadow-sm text-[#2E286C]/40 hover:text-[#533089] transition-colors">
+                <button
+                  type="button"
+                  aria-label={t('workspace.header.messages')}
+                  className="relative w-9 h-9 lg:w-10 lg:h-10 rounded-full bg-white flex items-center justify-center shadow-sm text-[#2E286C]/40 hover:text-[#533089] transition-colors"
+                >
                   <MessageSquare className="w-4 h-4" />
                 </button>
               )}
-              <button className="relative w-9 h-9 lg:w-10 lg:h-10 rounded-full bg-white flex items-center justify-center shadow-sm text-[#2E286C]/40 hover:text-[#533089] transition-colors">
+              <button
+                type="button"
+                aria-label={t('workspace.header.notifications')}
+                className="relative w-9 h-9 lg:w-10 lg:h-10 rounded-full bg-white flex items-center justify-center shadow-sm text-[#2E286C]/40 hover:text-[#533089] transition-colors"
+              >
                 <Bell className="w-4 h-4" />
                 <span className="absolute top-0 right-0 w-2.5 h-2.5 lg:w-3 lg:h-3 bg-red-400 rounded-full border-2 border-white" />
               </button>
@@ -156,7 +194,7 @@ export function WorkspaceShell({ children, config }: WorkspaceShellProps) {
           </header>
 
           <main className="flex-1 overflow-x-hidden overflow-y-auto px-4 sm:px-6 lg:px-10 pb-6 lg:pb-10 custom-scrollbar">
-            <DashboardRouteTransition routeKey={pathname} scope={config.scope}>
+            <DashboardRouteTransition routeKey={`${locale}:${pathname}`} scope={config.scope}>
               {children}
             </DashboardRouteTransition>
           </main>
@@ -188,6 +226,8 @@ function WorkspaceSidebar({
   rootPath,
   warmRoute,
 }: WorkspaceSidebarProps) {
+  const t = useTranslations();
+
   if (desktopNav === 'rail') {
     return (
       <aside className="w-20 bg-[#F8F9FC] hidden lg:flex flex-col items-center justify-between py-8 border-r border-black/[0.03] z-10 shrink-0">
@@ -241,10 +281,10 @@ function WorkspaceSidebar({
           />
         ))}
         <button className="flex items-center gap-3 w-full px-4 py-3 rounded-2xl transition-all font-medium text-[14px] text-[#2E286C]/60 hover:bg-black/[0.02]">
-          <HelpCircle className="w-5 h-5 text-[#2E286C]/40" /> Destek
+          <HelpCircle className="w-5 h-5 text-[#2E286C]/40" /> {t('workspace.more.support')}
         </button>
         <button className="flex items-center gap-3 w-full px-4 py-3 rounded-2xl transition-all font-medium text-[14px] text-red-500/70 hover:bg-red-50 hover:text-red-600">
-          <LogOut className="w-5 h-5 text-red-400" /> Çıkış Yap
+          <LogOut className="w-5 h-5 text-red-400" /> {t('workspace.more.logout')}
         </button>
       </div>
     </aside>
@@ -290,12 +330,13 @@ function WideNavLink({
   rootPath,
   warmRoute,
 }: NavLinkProps) {
+  const t = useTranslations();
   const Icon = item.icon ?? fallbackIcon ?? Settings;
   const isActive = isRouteActive(pathname, item.path, rootPath);
 
   return (
     <Link
-      href={item.path}
+      href={item.path as never}
       onClick={(event) => navigateWithTransition(event, item.path)}
       onFocus={() => warmRoute(item.path)}
       onMouseEnter={() => warmRoute(item.path)}
@@ -307,7 +348,7 @@ function WideNavLink({
       )}
     >
       <Icon className={cn('w-5 h-5', isActive ? 'text-[#533089]' : 'text-[#2E286C]/40')} />
-      {item.label}
+      {t(item.labelKey)}
     </Link>
   );
 }
@@ -319,11 +360,13 @@ function RailNavLink({
   rootPath,
   warmRoute,
 }: NavLinkProps) {
+  const t = useTranslations();
   const isActive = isRouteActive(pathname, item.path, rootPath);
+  const label = t(item.labelKey);
 
   return (
     <Link
-      href={item.path}
+      href={item.path as never}
       onClick={(event) => navigateWithTransition(event, item.path)}
       onFocus={() => warmRoute(item.path)}
       onMouseEnter={() => warmRoute(item.path)}
@@ -333,11 +376,11 @@ function RailNavLink({
           ? 'bg-white shadow-sm text-[#533089]'
           : 'text-[#2E286C]/40 hover:text-[#2E286C]/70 hover:bg-black/[0.02]',
       )}
-      title={item.label}
+      title={label}
     >
       <item.icon className="w-5 h-5" strokeWidth={isActive ? 2.4 : 1.8} />
       <span className={cn('text-[9px] leading-none tracking-wide', isActive ? 'font-bold' : 'font-medium')}>
-        {item.label}
+        {label}
       </span>
     </Link>
   );

@@ -1,6 +1,7 @@
 'use client';
 
 import React from 'react';
+import { useTranslations } from 'next-intl';
 import { cn } from '@/lib/utils';
 import { CheckCircle2, Clock, PlayCircle } from 'lucide-react';
 import { motion, useReducedMotion } from 'motion/react';
@@ -20,23 +21,23 @@ type LessonCardProps = {
 
 /* ─── Status config ───────────────────────────────────────────────── */
 
-const statusConfig: Record<LessonStatus, { bg: string; icon: React.ReactNode; label: string; text: string }> = {
+const statusConfig: Record<LessonStatus, { bg: string; icon: React.ReactNode; labelKey: string; text: string }> = {
   completed: {
     bg: 'bg-emerald-50 border-emerald-100',
     icon: <CheckCircle2 className="w-4 h-4 text-emerald-500" />,
-    label: 'Tamamlandı',
+    labelKey: 'completed',
     text: 'text-emerald-700',
   },
   'in-progress': {
     bg: 'bg-[#533089]/5 border-[#533089]/10',
     icon: <PlayCircle className="w-4 h-4 text-[#533089]" />,
-    label: 'Devam Ediyor',
+    labelKey: 'inProgress',
     text: 'text-[#533089]',
   },
   upcoming: {
     bg: 'bg-blue-50 border-blue-100',
     icon: <Clock className="w-4 h-4 text-blue-500" />,
-    label: 'Yaklaşan',
+    labelKey: 'upcoming',
     text: 'text-blue-700',
   },
 };
@@ -44,6 +45,7 @@ const statusConfig: Record<LessonStatus, { bg: string; icon: React.ReactNode; la
 /* ─── Component ───────────────────────────────────────────────────── */
 
 export function LessonCard({ className, dateTime, instructor, status, title, topic }: LessonCardProps) {
+  const t = useTranslations('common.lessonStatus');
   const config = statusConfig[status];
   const shouldReduceMotion = useReducedMotion();
 
@@ -59,7 +61,7 @@ export function LessonCard({ className, dateTime, instructor, status, title, top
       <div className="flex items-center justify-between gap-3 mt-3">
         <div className="text-xs font-medium text-[#2E286C]/50">{instructor} • {dateTime}</div>
         <span className={cn('text-[10px] font-bold uppercase tracking-wider', config.text)}>
-          {config.label}
+          {t(config.labelKey)}
         </span>
       </div>
     </>

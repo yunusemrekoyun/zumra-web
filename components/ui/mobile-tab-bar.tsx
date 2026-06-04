@@ -1,9 +1,9 @@
 'use client';
 
 import React from 'react';
-import Link from 'next/link';
 import type { LucideIcon } from 'lucide-react';
 import { CircleUserRound } from 'lucide-react';
+import { Link } from '@/i18n/navigation';
 import { cn } from '@/lib/utils';
 
 export type MobileTabItem = {
@@ -16,6 +16,7 @@ type MobileTabBarProps = {
   items: MobileTabItem[];
   moreIcon?: LucideIcon;
   moreLabel?: string;
+  navLabel?: string;
   navigateWithTransition: (
     event: React.MouseEvent<HTMLAnchorElement>,
     targetPath: string,
@@ -29,7 +30,8 @@ type MobileTabBarProps = {
 export function MobileTabBar({
   items,
   moreIcon: MoreIcon = CircleUserRound,
-  moreLabel = 'Hesabım',
+  moreLabel = 'Account',
+  navLabel = 'Main navigation',
   navigateWithTransition,
   onMorePress,
   pathname,
@@ -49,7 +51,7 @@ export function MobileTabBar({
         'shadow-[0_-4px_24px_-4px_rgba(46,40,108,0.08)]',
       )}
       style={{ paddingBottom: 'var(--mobile-sab)' }}
-      aria-label="Ana navigasyon"
+      aria-label={navLabel}
     >
       <div className="flex items-stretch h-[var(--mobile-tab-bar-h)]">
         {items.map((tab) => {
@@ -58,7 +60,7 @@ export function MobileTabBar({
           return (
             <Link
               key={tab.path}
-              href={tab.path}
+              href={tab.path as never}
               onClick={(e) => navigateWithTransition(e, tab.path)}
               onMouseEnter={() => warmRoute(tab.path)}
               onFocus={() => warmRoute(tab.path)}
@@ -103,7 +105,7 @@ export function MobileTabBar({
                 ? 'text-[#533089]'
                 : 'text-[#2E286C]/40 active:text-[#2E286C]/70',
             )}
-            aria-label={`${moreLabel} menüsü`}
+            aria-label={moreLabel}
           >
             {isMoreActive && (
               <span className="absolute top-1.5 w-1 h-1 rounded-full bg-[#533089]" />

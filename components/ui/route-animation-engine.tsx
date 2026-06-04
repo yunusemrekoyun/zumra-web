@@ -1,7 +1,8 @@
 'use client';
 
 import React, { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useLocale } from 'next-intl';
+import { useRouter } from '@/i18n/navigation';
 
 type AnimationRun = {
   animations: Animation[];
@@ -34,6 +35,7 @@ export function useDashboardRouteNavigation({
   warmupHeaders,
 }: UseDashboardRouteNavigationOptions) {
   const router = useRouter();
+  const locale = useLocale();
   const shouldReduceMotion = usePrefersReducedMotion();
   const isNavigatingRef = useRef(false);
   const activeAnimationsRef = useRef<Animation[]>([]);
@@ -56,7 +58,7 @@ export function useDashboardRouteNavigation({
 
     warmedRoutesRef.current.add(targetPath);
 
-    return fetch(targetPath, {
+    return fetch(getLocalizedWarmupPath(targetPath, locale), {
       credentials: 'same-origin',
       headers: warmupHeaders,
     })
@@ -64,7 +66,7 @@ export function useDashboardRouteNavigation({
       .catch(() => {
         warmedRoutesRef.current.delete(targetPath);
       });
-  }, [currentPath, warmupHeaders]);
+  }, [currentPath, locale, warmupHeaders]);
 
   const navigateWithTransition = useCallback(
     async (event: RouteTransitionClick, targetPath: string) => {
@@ -89,7 +91,7 @@ export function useDashboardRouteNavigation({
       await pauseEmptyState();
       await warmup;
 
-      router.push(targetPath);
+      router.push(targetPath as never);
     },
     [currentPath, rootSelector, router, shouldReduceMotion, warmRoute],
   );
@@ -255,6 +257,14 @@ function shouldUseNativeNavigation(
     target === '_blank' ||
     targetPath === currentPath
   );
+}
+
+function getLocalizedWarmupPath(targetPath: string, locale: string) {
+  if (/^https?:\/\//.test(targetPath) || targetPath.startsWith(`/${locale}/`) || targetPath === `/${locale}`) {
+    return targetPath;
+  }
+
+  return `/${locale}${targetPath.startsWith('/') ? targetPath : `/${targetPath}`}`;
 }
 
 function playAnimations(animations: Animation[]): AnimationRun {
