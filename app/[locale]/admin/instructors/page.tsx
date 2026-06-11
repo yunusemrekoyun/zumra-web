@@ -1,8 +1,9 @@
 import { Presentation } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { EmptyState, Button } from '@/components/ui';
+import { withWorkspacePage } from '@/lib/server/workspace-page';
 
-export default function InstructorsPage() {
+function InstructorsPage() {
   const t = useTranslations('admin.empty.instructors');
   const common = useTranslations('common.actions');
 
@@ -17,3 +18,5 @@ export default function InstructorsPage() {
     </div>
   );
 }
+
+export default withWorkspacePage('admin', InstructorsPage);

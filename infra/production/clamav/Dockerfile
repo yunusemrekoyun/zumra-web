@@ -1,0 +1,5 @@
+FROM clamav/clamav-debian:1.4.3
+
+RUN apt-get update \
+  && apt-get upgrade -y \
+  && rm -rf /var/lib/apt/lists/*

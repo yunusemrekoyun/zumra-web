@@ -61,6 +61,7 @@ export function MobileTabBar({
             <Link
               key={tab.path}
               href={tab.path as never}
+              prefetch={false}
               onClick={(e) => navigateWithTransition(e, tab.path)}
               onMouseEnter={() => warmRoute(tab.path)}
               onFocus={() => warmRoute(tab.path)}

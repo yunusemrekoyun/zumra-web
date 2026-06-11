@@ -27,3 +27,4 @@ export { StreakBadge } from './streak-badge';
 export { TimelineItem } from './timeline-item';
 export { WorkspaceEmptyDashboard } from './workspace-empty-dashboard';
 export { WorkspaceShell } from './workspace-shell';
+export { WorkspaceScopeShell } from './workspace-scope-shell';

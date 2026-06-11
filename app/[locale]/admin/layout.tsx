@@ -1,9 +1,17 @@
-'use client';
-
 import React from 'react';
-import { WorkspaceShell } from '@/components/ui';
-import { workspaceConfigs } from '@/lib/workspace';
+import { WorkspaceScopeShell } from '@/components/ui';
+import { requireWorkspaceRole } from '@/lib/server/authorization';
 
-export default function AdminLayout({ children }: { children: React.ReactNode }) {
-  return <WorkspaceShell config={workspaceConfigs.admin}>{children}</WorkspaceShell>;
+export const dynamic = 'force-dynamic';
+
+export default async function AdminLayout({
+  children,
+  params,
+}: {
+  children: React.ReactNode;
+  params: Promise<{ locale: string }>;
+}) {
+  const { locale } = await params;
+  await requireWorkspaceRole('admin', locale);
+  return <WorkspaceScopeShell scope="admin">{children}</WorkspaceScopeShell>;
 }

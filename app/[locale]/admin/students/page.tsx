@@ -4,8 +4,9 @@ import { useLocale, useTranslations } from 'next-intl';
 import { Link } from '@/i18n/navigation';
 import { Avatar, Button, FilterTabs, IconButton, InfoField, ModulePanel, PageHeader, SearchInput } from '@/components/ui';
 import { getDashboardData, getDomainLanguageKey } from '@/lib/domain';
+import { withWorkspacePage } from '@/lib/server/workspace-page';
 
-export default function StudentsPage() {
+function StudentsPage() {
   const locale = useLocale();
   const t = useTranslations('admin.students');
   const actions = useTranslations('common.actions');
@@ -129,6 +130,8 @@ export default function StudentsPage() {
     </div>
   );
 }
+
+export default withWorkspacePage('admin', StudentsPage);
 
 function getStudentStatusDotClass(status: string) {
   if (status === 'active') {

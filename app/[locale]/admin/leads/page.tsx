@@ -1,6 +1,9 @@
 import { getDashboardData } from '@/lib/domain';
+import { withWorkspacePage } from '@/lib/server/workspace-page';
 import { LeadsClient } from './_components/leads-client';
 
-export default function LeadsPage() {
+function LeadsPage() {
   return <LeadsClient dashboard={getDashboardData('admin')} />;
 }
+
+export default withWorkspacePage('admin', LeadsPage);

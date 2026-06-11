@@ -2,33 +2,75 @@
   "name": "zumra-web",
   "version": "0.1.0",
   "private": true,
+  "engines": {
+    "node": "24.16.0"
+  },
+  "overrides": {
+    "kysely": "$kysely"
+  },
   "scripts": {
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
     "lint": "eslint .",
-    "clean": "next clean"
+    "clean": "rm -rf .next",
+    "test": "vitest run",
+    "test:integration": "RUN_INTEGRATION_TESTS=true vitest run tests/integration",
+    "test:watch": "vitest",
+    "infra:up": "docker compose up -d postgres redis mailpit clamav",
+    "infra:down": "docker compose down",
+    "infra:logs": "docker compose logs -f --tail=100",
+    "db:generate": "drizzle-kit generate",
+    "db:migrate": "tsx scripts/db/migrate.ts",
+    "db:check": "tsx scripts/db/check.ts",
+    "auth:bootstrap-admin": "tsx scripts/auth/bootstrap-admin.ts",
+    "worker": "node --conditions=react-server --import tsx workers/index.ts",
+    "worker:dev": "node --conditions=react-server --import tsx --watch workers/index.ts",
+    "security:audit": "npm audit --omit=dev --audit-level=high && npm run security:secrets",
+    "security:secrets": "tsx scripts/security/scan-secrets.ts",
+    "ops:preflight": "bash infra/production/scripts/preflight.sh"
   },
   "dependencies": {
+    "@swc/helpers": "0.5.23",
     "autoprefixer": "^10.4.21",
+    "better-auth": "1.6.14",
+    "bullmq": "5.78.0",
     "clsx": "^2.1.1",
+    "dotenv": "17.2.3",
+    "drizzle-orm": "0.45.2",
+    "file-type": "21.3.4",
+    "ioredis": "5.11.1",
+    "kysely": "0.28.17",
     "lucide-react": "^0.553.0",
     "motion": "^12.23.24",
-    "next": "^15.4.9",
+    "next": "15.5.19",
     "next-intl": "^4.13.0",
+    "nodemailer": "8.0.10",
+    "pg": "8.21.0",
     "postcss": "^8.5.6",
+    "qrcode": "1.5.4",
     "react": "^19.2.1",
     "react-dom": "^19.2.1",
-    "tailwind-merge": "^3.3.1"
+    "server-only": "0.0.1",
+    "tailwind-merge": "^3.3.1",
+    "zod": "4.4.3"
   },
   "devDependencies": {
+    "@eslint/eslintrc": "3.3.1",
     "@tailwindcss/postcss": "4.1.11",
-    "@types/node": "^20",
+    "@types/node": "^24.13.2",
+    "@types/nodemailer": "7.0.11",
+    "@types/pg": "8.16.0",
+    "@types/qrcode": "1.5.6",
     "@types/react": "^19",
     "@types/react-dom": "^19",
-    "eslint": "9.39.1",
-    "eslint-config-next": "16.0.8",
+    "drizzle-kit": "0.31.10",
+    "esbuild": "^0.28.0",
+    "eslint": "9.29.0",
+    "eslint-config-next": "15.5.19",
     "tailwindcss": "4.1.11",
-    "typescript": "5.9.3"
+    "tsx": "4.21.0",
+    "typescript": "5.9.3",
+    "vitest": "4.1.8"
   }
 }

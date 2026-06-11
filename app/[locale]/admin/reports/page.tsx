@@ -3,8 +3,9 @@ import { BarChart3, TrendingUp, Users, Target, ArrowUpRight } from 'lucide-react
 import { useLocale, useTranslations } from 'next-intl';
 import { KpiCard, SectionHeader, Card } from '@/components/ui';
 import { getDomainLanguageKey, getReportsData } from '@/lib/domain';
+import { withWorkspacePage } from '@/lib/server/workspace-page';
 
-export default function ReportsPage() {
+function ReportsPage() {
   const locale = useLocale();
   const t = useTranslations('admin.reports');
   const domain = useTranslations('domain');
@@ -79,3 +80,5 @@ export default function ReportsPage() {
     </div>
   );
 }
+
+export default withWorkspacePage('admin', ReportsPage);

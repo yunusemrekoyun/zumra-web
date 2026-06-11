@@ -1,0 +1,8 @@
+[Unit]
+Description=Check Zümra Restic repository integrity
+After=docker.service
+Requires=docker.service
+
+[Service]
+Type=oneshot
+ExecStart=/srv/zumra/current/infra/production/scripts/compose.sh exec -T backup /opt/zumra/scripts/restic-check.sh

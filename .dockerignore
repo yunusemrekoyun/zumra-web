@@ -1,0 +1,13 @@
+.git
+.next
+.data
+.env
+.env.*
+backups
+coverage
+docs
+node_modules
+npm-debug.log
+releases
+runtime
+tmp

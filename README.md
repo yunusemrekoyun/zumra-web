@@ -5,11 +5,17 @@ Zümra Web, Zümra Akademi public sitesi ve CRM/SaaS workspace panelleri için N
 ## Çalıştırma
 
 ```bash
-npm install
+nvm use
+npm ci
+npm run infra:up
+npm run db:migrate
+npm run db:check
 npm run dev
+npm run worker:dev
 ```
 
 Yerel geliştirme varsayılan olarak `http://localhost:3000` üzerinde çalışır.
+Hedef runtime Node.js `24.16.0` sürümüdür.
 
 ## Route ve Dil Yapısı
 
@@ -79,3 +85,4 @@ Ek kontroller:
 - TR/EN message key eşitliği korunur.
 - Rol bazlı visibility doğru çalışır.
 - Tutar alanlarında currency `TRY` kalır.
+- `.env`, `.data`, backup ve runtime dosyaları Git'e girmez.

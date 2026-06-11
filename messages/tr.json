@@ -3,6 +3,11 @@
     "title": "Zümra Akademi | Kadınlara Özel Online Dil Eğitimi",
     "description": "Zümra Akademi, kadınlara özel online dil eğitimiyle güvenli, nitelikli ve tamamen online bir öğrenme deneyimi sunar."
   },
+  "notFound": {
+    "title": "Sayfa bulunamadı",
+    "description": "Aradığınız sayfa mevcut değil.",
+    "help": "Adresi kontrol edin veya ana sayfaya dönün."
+  },
   "common": {
     "brand": {
       "name": "Zümra",
@@ -461,6 +466,19 @@
       "enrollmentDate": "Kayıt Tarihi",
       "enrollmentDateValue": "12 Ocak 2026",
       "account": "Hesap"
+    },
+    "googleAccount": {
+      "title": "Bağlı Hesaplar",
+      "description": "Google hesabınızı yalnız daha hızlı ve güvenli giriş için kullanın.",
+      "connected": "Bağlı",
+      "disconnected": "Bağlı değil",
+      "verifiedEmail": "Doğrulanmış e-posta",
+      "password": "Mevcut parolanız",
+      "link": "Google hesabını bağla",
+      "unlink": "Bağlantıyı kaldır",
+      "linkedSuccess": "Google hesabınız güvenle bağlandı.",
+      "unlinkedSuccess": "Google hesabı bağlantısı kaldırıldı.",
+      "actionError": "İşlem tamamlanamadı. Parolanızı ve Google hesabınızın e-posta adresini kontrol edip yeniden deneyin."
     }
   },
   "advisor": {
@@ -516,6 +534,85 @@
       "messages": { "title": "Mesajlar", "description": "Öğrenci mesajları, ders notları ve bildirim akışları burada olacak." },
       "profile": { "title": "Profil", "description": "Öğretmen uzmanlıkları, ders ayarları ve profil bilgileri burada düzenlenecek." },
       "settings": { "title": "Öğretmen Ayarları", "description": "Bildirim, takvim ve hesap tercihleri burada yönetilecek." }
+    }
+  },
+  "auth": {
+    "login": {
+      "title": "Workspace'e giriş",
+      "description": "Zümra hesabınızla güvenli oturum açın.",
+      "username": "Kullanıcı adı",
+      "password": "Parola",
+      "forgotPassword": "Parolamı unuttum",
+      "submit": "Giriş yap",
+      "or": "veya",
+      "google": "Google ile devam et",
+      "googleError": "Bu Google hesabıyla giriş yapılamadı. Zümra hesabınız varsa kullanıcı adı ve parolanızla giriş yapıp Google hesabınızı profilinizden bağlayabilirsiniz.",
+      "rateLimited": "Çok fazla doğrulama isteği gönderildi. Lütfen birkaç dakika sonra tekrar deneyin.",
+      "error": "Giriş bilgileri doğrulanamadı."
+    },
+    "googleCompletion": {
+      "title": "Google hesabı doğrulanıyor",
+      "description": "Güvenli bağlantı tamamlanırken lütfen bu pencereyi açık tutun.",
+      "pending": "Google hesabınız ve Zümra üyeliğiniz doğrulanıyor...",
+      "error": "Google ile işlem tamamlanamadı. Giriş sayfasına yönlendiriliyorsunuz."
+    },
+    "forgotPassword": {
+      "title": "Parolanızı sıfırlayın",
+      "description": "Hesabınıza bağlı e-posta adresini girin. Hesap mevcutsa güvenli sıfırlama bağlantısı gönderilir.",
+      "email": "E-posta adresi",
+      "submit": "Sıfırlama bağlantısı gönder",
+      "success": "Bu e-posta sistemde kayıtlıysa sıfırlama bağlantısı gönderildi.",
+      "error": "İstek şu anda tamamlanamadı. Lütfen daha sonra tekrar deneyin."
+    },
+    "resetPassword": {
+      "title": "Yeni parola belirleyin",
+      "description": "En az 12 karakterli yeni parolanızı oluşturun.",
+      "password": "Yeni parola",
+      "confirmPassword": "Parolayı doğrula",
+      "submit": "Parolayı güncelle",
+      "mismatch": "Parolalar eşleşmiyor.",
+      "sameAsCurrent": "Yeni parola mevcut parolanızdan farklı olmalıdır.",
+      "success": "Parolanız güncellendi. Girişe yönlendiriliyorsunuz.",
+      "error": "Bağlantı geçersiz, kullanılmış veya süresi dolmuş."
+    },
+    "activation": {
+      "title": "Hesabınızı etkinleştirin",
+      "description": "Davetinizi tamamlamak için en az 12 karakterli parolanızı belirleyin.",
+      "password": "Yeni parola",
+      "confirmPassword": "Parolayı doğrula",
+      "submit": "Hesabı etkinleştir",
+      "mismatch": "Parolalar eşleşmiyor.",
+      "error": "Davet bağlantısı geçersiz veya süresi dolmuş.",
+      "success": "Hesabınız etkinleştirildi. Girişe yönlendiriliyorsunuz."
+    },
+    "device": {
+      "title": "Yeni cihaz doğrulaması",
+      "description": "E-posta adresinize gönderilen altı haneli kodu girin. Bu cihaz 30 gün güvenilir kalır.",
+      "code": "Doğrulama kodu",
+      "submit": "Cihazı doğrula",
+      "error": "Kod geçersiz veya süresi dolmuş."
+    },
+    "mfa": {
+      "title": "İki adımlı doğrulama",
+      "description": "Authenticator uygulamanızdaki güncel kodu girin.",
+      "code": "Authenticator kodu",
+      "submit": "Doğrula",
+      "error": "Kod doğrulanamadı."
+    },
+    "mfaSetup": {
+      "title": "Admin MFA kurulumu",
+      "description": "Admin panelini açmadan önce authenticator doğrulamasını kurun. Recovery kodlarını yalnızca bir kez göreceksiniz.",
+      "password": "Mevcut parola",
+      "setup": "Kurulumu başlat",
+      "backupCodes": "Tek kullanımlık recovery kodları",
+      "code": "Authenticator kodu",
+      "submit": "Kurulumu tamamla",
+      "error": "MFA kurulumu tamamlanamadı."
+    },
+    "unauthorized": {
+      "title": "Erişim doğrulanamadı",
+      "description": "Bu panel için gerekli rol veya güvenlik doğrulaması bulunmuyor.",
+      "help": "Oturumunuzu yenileyin veya sistem yöneticinizle iletişime geçin."
     }
   }
 }

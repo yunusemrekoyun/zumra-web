@@ -2,8 +2,9 @@ import { Calendar } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { WorkspaceEmptyDashboard } from '@/components/ui';
 import { getDashboardData } from '@/lib/domain';
+import { withWorkspacePage } from '@/lib/server/workspace-page';
 
-export default function AdvisorDashboardPage() {
+function AdvisorDashboardPage() {
   const t = useTranslations('advisor.dashboard');
   const dashboard = getDashboardData('advisor');
 
@@ -22,3 +23,5 @@ export default function AdvisorDashboardPage() {
     />
   );
 }
+
+export default withWorkspacePage('advisor', AdvisorDashboardPage);

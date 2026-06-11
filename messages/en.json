@@ -3,6 +3,11 @@
     "title": "Zümra Academy | Online Language Education for Women",
     "description": "Zümra Academy offers a safe, high-quality and fully online language learning experience designed for women."
   },
+  "notFound": {
+    "title": "Page not found",
+    "description": "The page you requested does not exist.",
+    "help": "Check the address or return to the home page."
+  },
   "common": {
     "brand": {
       "name": "Zümra",
@@ -461,6 +466,19 @@
       "enrollmentDate": "Enrollment Date",
       "enrollmentDateValue": "January 12, 2026",
       "account": "Account"
+    },
+    "googleAccount": {
+      "title": "Connected Accounts",
+      "description": "Use your Google account only for faster, secure sign-in.",
+      "connected": "Connected",
+      "disconnected": "Not connected",
+      "verifiedEmail": "Verified email",
+      "password": "Current password",
+      "link": "Connect Google account",
+      "unlink": "Remove connection",
+      "linkedSuccess": "Your Google account was connected securely.",
+      "unlinkedSuccess": "The Google account connection was removed.",
+      "actionError": "The action could not be completed. Check your password and the email address on your Google account, then try again."
     }
   },
   "advisor": {
@@ -516,6 +534,85 @@
       "messages": { "title": "Messages", "description": "Student messages, lesson notes and notification flows will live here." },
       "profile": { "title": "Profile", "description": "Teacher specialties, lesson settings and profile details will be edited here." },
       "settings": { "title": "Teacher Settings", "description": "Notification, calendar and account preferences will be managed here." }
+    }
+  },
+  "auth": {
+    "login": {
+      "title": "Sign in to the workspace",
+      "description": "Start a secure session with your Zümra account.",
+      "username": "Username",
+      "password": "Password",
+      "forgotPassword": "Forgot password",
+      "submit": "Sign in",
+      "or": "or",
+      "google": "Continue with Google",
+      "googleError": "This Google account could not be used to sign in. If you have a Zümra account, sign in with your username and password, then connect Google from your profile.",
+      "rateLimited": "Too many verification requests were sent. Please try again in a few minutes.",
+      "error": "Your sign-in details could not be verified."
+    },
+    "googleCompletion": {
+      "title": "Verifying your Google account",
+      "description": "Keep this window open while the secure connection is completed.",
+      "pending": "Your Google account and Zümra membership are being verified...",
+      "error": "The Google action could not be completed. Redirecting you to sign in."
+    },
+    "forgotPassword": {
+      "title": "Reset your password",
+      "description": "Enter the email address associated with your account. If it exists, a secure reset link will be sent.",
+      "email": "Email address",
+      "submit": "Send reset link",
+      "success": "If this email is registered, a reset link has been sent.",
+      "error": "The request could not be completed right now. Please try again later."
+    },
+    "resetPassword": {
+      "title": "Choose a new password",
+      "description": "Create a new password with at least 12 characters.",
+      "password": "New password",
+      "confirmPassword": "Confirm password",
+      "submit": "Update password",
+      "mismatch": "Passwords do not match.",
+      "sameAsCurrent": "Your new password must be different from your current password.",
+      "success": "Your password has been updated. Redirecting to sign in.",
+      "error": "The link is invalid, already used, or expired."
+    },
+    "activation": {
+      "title": "Activate your account",
+      "description": "Set a password of at least 12 characters to complete your invitation.",
+      "password": "New password",
+      "confirmPassword": "Confirm password",
+      "submit": "Activate account",
+      "mismatch": "Passwords do not match.",
+      "error": "The invitation link is invalid or has expired.",
+      "success": "Your account is active. Redirecting to sign in."
+    },
+    "device": {
+      "title": "Verify this device",
+      "description": "Enter the six-digit code sent to your email. This device will remain trusted for 30 days.",
+      "code": "Verification code",
+      "submit": "Verify device",
+      "error": "The code is invalid or has expired."
+    },
+    "mfa": {
+      "title": "Two-step verification",
+      "description": "Enter the current code from your authenticator app.",
+      "code": "Authenticator code",
+      "submit": "Verify",
+      "error": "The code could not be verified."
+    },
+    "mfaSetup": {
+      "title": "Set up admin MFA",
+      "description": "Configure authenticator verification before opening the admin workspace. Recovery codes are shown only once.",
+      "password": "Current password",
+      "setup": "Start setup",
+      "backupCodes": "Single-use recovery codes",
+      "code": "Authenticator code",
+      "submit": "Complete setup",
+      "error": "MFA setup could not be completed."
+    },
+    "unauthorized": {
+      "title": "Access could not be verified",
+      "description": "The required role or security verification is missing for this workspace.",
+      "help": "Refresh your session or contact your system administrator."
     }
   }
 }

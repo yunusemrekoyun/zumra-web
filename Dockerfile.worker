@@ -1,0 +1,35 @@
+FROM node:24.16.0-trixie-slim AS builder
+WORKDIR /app
+COPY package.json package-lock.json ./
+RUN --mount=type=cache,target=/root/.npm \
+  npm ci --fetch-retries=5 --fetch-retry-mintimeout=2000 --fetch-retry-maxtimeout=120000
+COPY lib ./lib
+COPY workers ./workers
+COPY scripts ./scripts
+COPY tsconfig.json ./
+RUN ./node_modules/.bin/esbuild workers/index.ts \
+      --bundle \
+      --platform=node \
+      --format=cjs \
+      --target=node24 \
+      --conditions=react-server \
+      --external:pg-native \
+      --outfile=dist/worker.cjs \
+  && ./node_modules/.bin/esbuild scripts/db/migrate.ts \
+      --bundle \
+      --platform=node \
+      --format=cjs \
+      --target=node24 \
+      --external:pg-native \
+      --outfile=dist/migrate.cjs
+
+FROM node:24.16.0-alpine
+WORKDIR /app
+ENV NODE_ENV=production
+RUN apk upgrade --no-cache \
+  && addgroup --system --gid 1001 nodejs \
+  && adduser --system --uid 1001 --ingroup nodejs worker
+COPY --from=builder --chown=worker:nodejs /app/dist ./dist
+COPY --chown=worker:nodejs drizzle ./drizzle
+USER worker
+CMD ["node", "--conditions=react-server", "dist/worker.cjs"]

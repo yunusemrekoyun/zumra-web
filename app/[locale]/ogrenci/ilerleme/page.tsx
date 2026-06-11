@@ -3,10 +3,11 @@ import { notFound } from 'next/navigation';
 import { Card, SectionHeader, ProgressRing, StreakBadge, StatusChip, CountUp, StaggerContainer, StaggerItem } from '@/components/ui';
 import { Award, BookOpen, Headphones, Mic, PenLine } from 'lucide-react';
 import { getStudentProgressData } from '@/lib/domain';
+import { withWorkspacePage } from '@/lib/server/workspace-page';
 
 /* ─── Component ───────────────────────────────────────────────────── */
 
-export default function IlerlemePage() {
+function IlerlemePage() {
   const t = useTranslations('student.progressPage');
   const status = useTranslations('common.status');
   const progress = getStudentProgressData('student');
@@ -102,6 +103,8 @@ export default function IlerlemePage() {
     </StaggerContainer>
   );
 }
+
+export default withWorkspacePage('student', IlerlemePage);
 
 function SkillIcon({ name }: { name: string }) {
   const className = 'w-4 h-4 text-[#533089]';

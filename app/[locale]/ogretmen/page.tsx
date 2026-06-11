@@ -2,8 +2,9 @@ import { BookOpen } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { WorkspaceEmptyDashboard } from '@/components/ui';
 import { getDashboardData } from '@/lib/domain';
+import { withWorkspacePage } from '@/lib/server/workspace-page';
 
-export default function TeacherDashboardPage() {
+function TeacherDashboardPage() {
   const t = useTranslations('teacher.dashboard');
   const dashboard = getDashboardData('teacher');
   const lessonRecords = dashboard.lessons;
@@ -26,3 +27,5 @@ export default function TeacherDashboardPage() {
     />
   );
 }
+
+export default withWorkspacePage('teacher', TeacherDashboardPage);

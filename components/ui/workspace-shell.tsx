@@ -12,6 +12,7 @@ import {
   Zap,
 } from 'lucide-react';
 import { Link, usePathname } from '@/i18n/navigation';
+import { LogoutButton } from '@/components/auth/logout-button';
 import { cn } from '@/lib/utils';
 import type { WorkspaceConfig, WorkspaceNavItem } from '@/lib/workspace';
 import { LanguageSwitcher } from './language-switcher';
@@ -33,9 +34,6 @@ export function WorkspaceShell({ children, config }: WorkspaceShellProps) {
   const { navigateWithTransition, warmRoute } = useDashboardRouteNavigation({
     currentPath: pathname,
     rootSelector,
-    warmupHeaders: {
-      [`x-${config.scope}-route-warmup`]: '1',
-    },
   });
 
   const mobileTabs = config.navItems
@@ -283,9 +281,9 @@ function WorkspaceSidebar({
         <button className="flex items-center gap-3 w-full px-4 py-3 rounded-2xl transition-all font-medium text-[14px] text-[#2E286C]/60 hover:bg-black/[0.02]">
           <HelpCircle className="w-5 h-5 text-[#2E286C]/40" /> {t('workspace.more.support')}
         </button>
-        <button className="flex items-center gap-3 w-full px-4 py-3 rounded-2xl transition-all font-medium text-[14px] text-red-500/70 hover:bg-red-50 hover:text-red-600">
+        <LogoutButton className="flex items-center gap-3 w-full px-4 py-3 rounded-2xl transition-all font-medium text-[14px] text-red-500/70 hover:bg-red-50 hover:text-red-600">
           <LogOut className="w-5 h-5 text-red-400" /> {t('workspace.more.logout')}
-        </button>
+        </LogoutButton>
       </div>
     </aside>
   );
@@ -337,6 +335,7 @@ function WideNavLink({
   return (
     <Link
       href={item.path as never}
+      prefetch={false}
       onClick={(event) => navigateWithTransition(event, item.path)}
       onFocus={() => warmRoute(item.path)}
       onMouseEnter={() => warmRoute(item.path)}
@@ -367,6 +366,7 @@ function RailNavLink({
   return (
     <Link
       href={item.path as never}
+      prefetch={false}
       onClick={(event) => navigateWithTransition(event, item.path)}
       onFocus={() => warmRoute(item.path)}
       onMouseEnter={() => warmRoute(item.path)}

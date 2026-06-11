@@ -118,7 +118,7 @@ export function LeadsClient({ dashboard }: LeadsClientProps) {
       </div>
 
       <div className="flex-1 overflow-y-auto custom-scrollbar p-3 space-y-2 max-h-[64dvh] lg:max-h-none">
-        {leads.map((lead, i) => (
+        {leads.map((lead) => (
           <ListItemCard
             key={lead.id}
             active={lead.active}

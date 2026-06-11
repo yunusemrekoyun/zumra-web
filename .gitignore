@@ -23,6 +23,10 @@ coverage/
 *.lcov
 .nyc_output/
 
+# Local documentation and manual acceptance notes
+/docs/
+/scripts/load/staging.js
+
 # ===========================
 # TypeScript
 # ===========================
@@ -34,7 +38,6 @@ next-env.d.ts
 # ===========================
 .env
 .env.*
-!.env.example
 
 # ===========================
 # OS Generated Files
@@ -57,30 +60,6 @@ Desktop.ini
 *.swo
 *.sublime-project
 *.sublime-workspace
-
-# ===========================
-# AI Tools & Assistants
-# ===========================
-.aistudio/
-.gemini/
-.cursor/
-.copilot/
-.codeium/
-.windsurf/
-.tabnine/
-.continue/
-.bolt/
-.replit/
-.idx/
-.codex/
-.claude/
-.openai/
-.mcp/
-.mcp.json
-assets/.aistudio/
-
-# Google AI Studio specific
-metadata.json
 
 # ===========================
 # Debug & Logs
@@ -111,4 +90,47 @@ database-debug.log
 .cache/
 tmp/
 temp/
-/.agent
+
+# ===========================
+# Runtime Data & Operations
+# ===========================
+.data/
+/runtime/
+/backups/
+/releases/
+/shared/
+*.pid
+*.sock
+/pgbackrest/
+/restic-cache/
+*.sqlite
+*.sqlite3
+*.db
+*.dump
+*.bak
+*.backup
+
+# ===========================
+# Credentials & Certificates
+# ===========================
+/secrets/
+/.secrets/
+*.pem
+*.key
+*.p12
+*.pfx
+*.jks
+*.keystore
+credentials*.json
+service-account*.json
+client_secret*.json
+*rclone.conf
+
+# ===========================
+# Tool Caches & Reports
+# ===========================
+.eslintcache
+.turbo/
+.swc/
+playwright-report/
+test-results/

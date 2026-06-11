@@ -1,0 +1,26 @@
+FROM node:24.16.0-trixie-slim AS builder
+WORKDIR /app
+COPY package.json package-lock.json ./
+RUN --mount=type=cache,target=/root/.npm \
+  npm ci --fetch-retries=5 --fetch-retry-mintimeout=2000 --fetch-retry-maxtimeout=120000
+COPY media-processor ./media-processor
+COPY lib/media-sandbox-contract.ts ./lib/media-sandbox-contract.ts
+COPY tsconfig.json ./
+RUN ./node_modules/.bin/esbuild media-processor/index.ts \
+      --bundle \
+      --platform=node \
+      --format=cjs \
+      --target=node24 \
+      --outfile=dist/media-processor.cjs
+
+FROM node:24.16.0-trixie-slim
+WORKDIR /app
+RUN apt-get -o Acquire::Retries=5 update \
+  && apt-get upgrade -y \
+  && apt-get install -y --no-install-recommends ffmpeg \
+  && rm -rf /var/lib/apt/lists/* \
+  && groupadd --system --gid 1002 media \
+  && useradd --system --uid 1002 --gid media --create-home processor
+COPY --from=builder --chown=processor:media /app/dist ./dist
+USER processor
+CMD ["node", "dist/media-processor.cjs"]

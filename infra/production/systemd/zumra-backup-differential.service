@@ -1,0 +1,8 @@
+[Unit]
+Description=Zümra pgBackRest differential backup
+After=docker.service
+Requires=docker.service
+
+[Service]
+Type=oneshot
+ExecStart=/srv/zumra/current/infra/production/scripts/physical-backup.sh diff

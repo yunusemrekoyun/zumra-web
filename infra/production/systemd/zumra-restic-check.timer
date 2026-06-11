@@ -1,0 +1,9 @@
+[Unit]
+Description=Check Zümra Restic repository weekly
+
+[Timer]
+OnCalendar=Sun *-*-* 04:00:00 UTC
+Persistent=true
+
+[Install]
+WantedBy=timers.target

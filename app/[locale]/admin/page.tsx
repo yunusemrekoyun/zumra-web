@@ -6,6 +6,7 @@ import {
   getDomainLanguageKey,
   getDomainRelativeKey,
 } from '@/lib/domain';
+import { requireWorkspaceRole } from '@/lib/server/authorization';
 
 /* ─── Data ────────────────────────────────────────────────────────── */
 
@@ -20,7 +21,18 @@ const leadStatusMeta = {
 
 /* ─── Component ───────────────────────────────────────────────────── */
 
-export default function AdminPage() {
+type AdminPageProps = {
+  params: Promise<{ locale: string }>;
+};
+
+export default async function AdminPage({ params }: AdminPageProps) {
+  const { locale } = await params;
+  await requireWorkspaceRole('admin', locale);
+
+  return <AdminPageContent />;
+}
+
+function AdminPageContent() {
   const locale = useLocale();
   const t = useTranslations('admin.dashboard');
   const status = useTranslations('domain.leadStatus');

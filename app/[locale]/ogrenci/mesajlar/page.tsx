@@ -1,8 +1,9 @@
 import { MessageSquare } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { EmptyState, Button } from '@/components/ui';
+import { withWorkspacePage } from '@/lib/server/workspace-page';
 
-export default function StudentMessagesPage() {
+function StudentMessagesPage() {
   const t = useTranslations('student.empty.messages');
   const common = useTranslations('common.actions');
 
@@ -17,3 +18,5 @@ export default function StudentMessagesPage() {
     </div>
   );
 }
+
+export default withWorkspacePage('student', StudentMessagesPage);
