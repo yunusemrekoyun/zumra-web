@@ -3,6 +3,7 @@ import { Filter, ArrowUpRight, CheckCircle2 } from 'lucide-react';
 import { useLocale, useTranslations } from 'next-intl';
 import { KpiCard, SectionHeader, Avatar, StatusChip, SearchInput, Card, Button, IconButton, ModulePanel, PageHeader } from '@/components/ui';
 import { getDashboardData } from '@/lib/domain';
+import { withWorkspacePage } from '@/lib/server/workspace-page';
 
 const paymentTone = {
   failed: 'red',
@@ -10,7 +11,7 @@ const paymentTone = {
   pending: 'amber',
 } as const;
 
-export default function PaymentsPage() {
+function PaymentsPage() {
   const locale = useLocale();
   const t = useTranslations('admin.payments');
   const actions = useTranslations('common.actions');
@@ -146,6 +147,8 @@ export default function PaymentsPage() {
     </div>
   );
 }
+
+export default withWorkspacePage('admin', PaymentsPage);
 
 function formatTry(amount: number, locale: string) {
   return new Intl.NumberFormat(locale === 'en' ? 'en-US' : 'tr-TR', {

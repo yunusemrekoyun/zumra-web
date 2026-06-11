@@ -1,0 +1,10 @@
+[Unit]
+Description=Run Zümra logical backup daily
+
+[Timer]
+OnCalendar=*-*-* 01:15:00 UTC
+Persistent=true
+RandomizedDelaySec=120
+
+[Install]
+WantedBy=timers.target

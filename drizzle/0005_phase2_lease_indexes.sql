@@ -1,0 +1,2 @@
+CREATE INDEX "media_assets_status_lease_idx" ON "media_assets" USING btree ("status","lease_expires_at");--> statement-breakpoint
+CREATE INDEX "notification_outbox_status_lease_idx" ON "notification_outbox" USING btree ("status","lease_expires_at");

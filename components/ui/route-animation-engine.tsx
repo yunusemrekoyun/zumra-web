@@ -1,7 +1,6 @@
 'use client';
 
 import React, { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
-import { useLocale } from 'next-intl';
 import { useRouter } from '@/i18n/navigation';
 
 type AnimationRun = {
@@ -14,7 +13,6 @@ type RouteTransitionClick = React.MouseEvent<HTMLAnchorElement>;
 type UseDashboardRouteNavigationOptions = {
   currentPath: string;
   rootSelector: string;
-  warmupHeaders?: HeadersInit;
 };
 
 type DashboardRouteTransitionProps = {
@@ -28,45 +26,55 @@ const MAX_AUTO_BUBBLES = 18;
 const EXIT_EMPTY_PAUSE_MS = 90;
 const ENTER_STAGGER_MS = 35;
 const EXIT_STAGGER_MS = 22;
+const ROUTE_PREFETCH_DELAY_MS = 120;
+const NAVIGATION_RECOVERY_MS = 12_000;
 
 export function useDashboardRouteNavigation({
   currentPath,
   rootSelector,
-  warmupHeaders,
 }: UseDashboardRouteNavigationOptions) {
   const router = useRouter();
-  const locale = useLocale();
   const shouldReduceMotion = usePrefersReducedMotion();
   const isNavigatingRef = useRef(false);
   const activeAnimationsRef = useRef<Animation[]>([]);
   const warmedRoutesRef = useRef(new Set<string>());
+  const prefetchTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const recoveryTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     isNavigatingRef.current = false;
+    clearTimer(recoveryTimerRef);
   }, [currentPath]);
 
   useEffect(() => {
     return () => {
       cancelAnimations(activeAnimationsRef.current);
+      clearTimer(prefetchTimerRef);
+      clearTimer(recoveryTimerRef);
     };
   }, []);
 
-  const warmRoute = useCallback((targetPath: string) => {
+  const prefetchRoute = useCallback((targetPath: string) => {
     if (targetPath === currentPath || warmedRoutesRef.current.has(targetPath)) {
-      return Promise.resolve();
+      return;
     }
 
     warmedRoutesRef.current.add(targetPath);
 
-    return fetch(getLocalizedWarmupPath(targetPath, locale), {
-      credentials: 'same-origin',
-      headers: warmupHeaders,
-    })
-      .then(() => undefined)
-      .catch(() => {
-        warmedRoutesRef.current.delete(targetPath);
-      });
-  }, [currentPath, locale, warmupHeaders]);
+    try {
+      router.prefetch(targetPath as never);
+    } catch {
+      warmedRoutesRef.current.delete(targetPath);
+    }
+  }, [currentPath, router]);
+
+  const warmRoute = useCallback((targetPath: string) => {
+    clearTimer(prefetchTimerRef);
+    prefetchTimerRef.current = setTimeout(() => {
+      prefetchTimerRef.current = null;
+      prefetchRoute(targetPath);
+    }, ROUTE_PREFETCH_DELAY_MS);
+  }, [prefetchRoute]);
 
   const navigateWithTransition = useCallback(
     async (event: RouteTransitionClick, targetPath: string) => {
@@ -82,18 +90,25 @@ export function useDashboardRouteNavigation({
 
       isNavigatingRef.current = true;
       cancelAnimations(activeAnimationsRef.current);
+      clearTimer(prefetchTimerRef);
+      prefetchRoute(targetPath);
 
-      const warmup = warmRoute(targetPath);
       const exitRun = animateOut(document.querySelector<HTMLElement>(rootSelector), shouldReduceMotion);
       activeAnimationsRef.current = exitRun.animations;
 
       await exitRun.finished;
       await pauseEmptyState();
-      await warmup;
 
       router.push(targetPath as never);
+
+      clearTimer(recoveryTimerRef);
+      recoveryTimerRef.current = setTimeout(() => {
+        isNavigatingRef.current = false;
+        cancelAnimations(activeAnimationsRef.current);
+        clearBubbleStyles(document.querySelector<HTMLElement>(rootSelector));
+      }, NAVIGATION_RECOVERY_MS);
     },
-    [currentPath, rootSelector, router, shouldReduceMotion, warmRoute],
+    [currentPath, prefetchRoute, rootSelector, router, shouldReduceMotion],
   );
 
   return {
@@ -259,14 +274,6 @@ function shouldUseNativeNavigation(
   );
 }
 
-function getLocalizedWarmupPath(targetPath: string, locale: string) {
-  if (/^https?:\/\//.test(targetPath) || targetPath.startsWith(`/${locale}/`) || targetPath === `/${locale}`) {
-    return targetPath;
-  }
-
-  return `/${locale}${targetPath.startsWith('/') ? targetPath : `/${targetPath}`}`;
-}
-
 function playAnimations(animations: Animation[]): AnimationRun {
   return {
     animations,
@@ -274,6 +281,15 @@ function playAnimations(animations: Animation[]): AnimationRun {
       () => undefined,
     ),
   };
+}
+
+function clearTimer(
+  timerRef: React.MutableRefObject<ReturnType<typeof setTimeout> | null>,
+) {
+  if (timerRef.current) {
+    clearTimeout(timerRef.current);
+    timerRef.current = null;
+  }
 }
 
 function emptyAnimationRun(): AnimationRun {

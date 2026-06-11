@@ -1,8 +1,9 @@
 import { Calendar } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { Button, EmptyState } from '@/components/ui';
+import { withWorkspacePage } from '@/lib/server/workspace-page';
 
-export default function TeacherCalendarPage() {
+function TeacherCalendarPage() {
   const t = useTranslations('teacher.empty.calendar');
   const common = useTranslations('common.actions');
 
@@ -17,3 +18,5 @@ export default function TeacherCalendarPage() {
     </div>
   );
 }
+
+export default withWorkspacePage('teacher', TeacherCalendarPage);

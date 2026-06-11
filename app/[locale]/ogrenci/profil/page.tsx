@@ -1,15 +1,22 @@
-import { useTranslations } from 'next-intl';
+import { useLocale, useTranslations } from 'next-intl';
+import { getTranslations } from 'next-intl/server';
 import { Avatar, Card, InfoField, SectionHeader, StatusChip, StreakBadge, StaggerContainer, StaggerItem } from '@/components/ui';
 import { BookOpen, Calendar, GraduationCap, Settings, HelpCircle, LogOut } from 'lucide-react';
 import { Link } from '@/i18n/navigation';
 import { getDashboardData, getDomainLanguageKey, getStudentProgressData } from '@/lib/domain';
+import { LogoutButton } from '@/components/auth/logout-button';
+import { GoogleAccountCard } from '@/components/auth/google-account-card';
+import { getSessionPrincipal } from '@/lib/server/authorization';
+import { googleIdentityService } from '@/lib/server/services/google-identities';
+import { withWorkspacePage } from '@/lib/server/workspace-page';
 
-export default function StudentProfilePage() {
+function StudentProfilePage() {
   const t = useTranslations('student.profilePage');
   const workspace = useTranslations('workspace.more');
   const nav = useTranslations('workspace.nav');
   const domain = useTranslations('domain');
   const commonStatus = useTranslations('common.status');
+  const locale = useLocale() as 'tr' | 'en';
   const dashboard = getDashboardData('student');
   const progress = getStudentProgressData('student');
   const currentStudent = dashboard.students[0];
@@ -56,6 +63,10 @@ export default function StudentProfilePage() {
         </Card>
       </StaggerItem>
 
+      <StaggerItem>
+        <GoogleIdentitySection locale={locale} />
+      </StaggerItem>
+
       {/* Account menu */}
       <StaggerItem>
         <Card padded={false}>
@@ -72,13 +83,52 @@ export default function StudentProfilePage() {
               <HelpCircle className="w-5 h-5 text-[#2E286C]/40" />
               <span className="text-[15px] font-medium flex-1 text-left">{workspace('support')}</span>
             </button>
-            <button className="flex w-full items-center gap-4 px-4 py-3.5 rounded-2xl text-red-500/80 hover:bg-red-50/50 transition-colors">
+            <LogoutButton className="flex w-full items-center gap-4 px-4 py-3.5 rounded-2xl text-red-500/80 hover:bg-red-50/50 transition-colors">
               <LogOut className="w-5 h-5 text-red-400" />
               <span className="text-[15px] font-medium flex-1 text-left">{workspace('logout')}</span>
-            </button>
+            </LogoutButton>
           </div>
         </Card>
       </StaggerItem>
     </StaggerContainer>
   );
 }
+
+async function GoogleIdentitySection({ locale }: { locale: 'tr' | 'en' }) {
+  const principal = await getSessionPrincipal();
+
+  if (!principal || principal.role !== 'student') {
+    return null;
+  }
+
+  const [status, t] = await Promise.all([
+    googleIdentityService.getStatus(principal.id),
+    getTranslations('student.googleAccount'),
+  ]);
+
+  if (!status.configured) {
+    return null;
+  }
+
+  return (
+    <GoogleAccountCard
+      initialStatus={status}
+      labels={{
+        actionError: t('actionError'),
+        connected: t('connected'),
+        description: t('description'),
+        disconnected: t('disconnected'),
+        link: t('link'),
+        linkedSuccess: t('linkedSuccess'),
+        password: t('password'),
+        title: t('title'),
+        unlink: t('unlink'),
+        unlinkedSuccess: t('unlinkedSuccess'),
+        verifiedEmail: t('verifiedEmail'),
+      }}
+      locale={locale}
+    />
+  );
+}
+
+export default withWorkspacePage('student', StudentProfilePage);

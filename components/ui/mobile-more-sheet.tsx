@@ -10,6 +10,7 @@ import {
 } from 'lucide-react';
 import { Link } from '@/i18n/navigation';
 import { cn } from '@/lib/utils';
+import { LogoutButton } from '@/components/auth/logout-button';
 
 export type SheetMenuItem = {
   icon: LucideIcon;
@@ -96,6 +97,7 @@ export function MobileMoreSheet({
       <Link
         key={item.path}
         href={item.path as never}
+        prefetch={false}
         onClick={(e) => handleNavigate(e, item.path)}
         onMouseEnter={() => warmRoute(item.path)}
         onFocus={() => warmRoute(item.path)}
@@ -205,13 +207,13 @@ export function MobileMoreSheet({
               </button>
 
               {/* Logout */}
-              <button
-                type="button"
+              <LogoutButton
+                onLogout={onClose}
                 className="flex w-full items-center gap-4 px-5 py-3.5 rounded-2xl text-red-500/80 transition-colors duration-200 active:bg-red-50 hover:bg-red-50/50"
               >
                 <LogOut className="w-5 h-5 text-red-400 shrink-0" />
                 <span className="flex-1 text-left text-[15px] font-medium">{labels.logout}</span>
-              </button>
+              </LogoutButton>
             </div>
           </div>
         </div>

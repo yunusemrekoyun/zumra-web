@@ -1,0 +1,8 @@
+[Unit]
+Description=Zümra logical PostgreSQL backup
+After=docker.service
+Requires=docker.service
+
+[Service]
+Type=oneshot
+ExecStart=/srv/zumra/current/infra/production/scripts/compose.sh exec -T backup /opt/zumra/scripts/logical-backup.sh

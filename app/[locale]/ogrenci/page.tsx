@@ -2,8 +2,9 @@ import { useLocale, useTranslations } from 'next-intl';
 import { BookOpen, ArrowRight } from 'lucide-react';
 import { Avatar, Button, Card, SectionHeader, StreakBadge, LessonCard, StaggerContainer, StaggerItem } from '@/components/ui';
 import { getDashboardData, getDomainLanguageKey, getStudentProgressData } from '@/lib/domain';
+import { withWorkspacePage } from '@/lib/server/workspace-page';
 
-export default function StudentDashboard() {
+function StudentDashboard() {
   const locale = useLocale();
   const t = useTranslations('student.dashboard');
   const domain = useTranslations('domain');
@@ -122,6 +123,8 @@ export default function StudentDashboard() {
     </StaggerContainer>
   );
 }
+
+export default withWorkspacePage('student', StudentDashboard);
 
 function formatLessonDate(value: string, locale: string) {
   return new Intl.DateTimeFormat(locale === 'en' ? 'en-US' : 'tr-TR', {

@@ -1,9 +1,17 @@
-'use client';
-
 import React from 'react';
-import { WorkspaceShell } from '@/components/ui';
-import { workspaceConfigs } from '@/lib/workspace';
+import { WorkspaceScopeShell } from '@/components/ui';
+import { requireWorkspaceRole } from '@/lib/server/authorization';
 
-export default function StudentLayout({ children }: { children: React.ReactNode }) {
-  return <WorkspaceShell config={workspaceConfigs.student}>{children}</WorkspaceShell>;
+export const dynamic = 'force-dynamic';
+
+export default async function StudentLayout({
+  children,
+  params,
+}: {
+  children: React.ReactNode;
+  params: Promise<{ locale: string }>;
+}) {
+  const { locale } = await params;
+  await requireWorkspaceRole('student', locale);
+  return <WorkspaceScopeShell scope="student">{children}</WorkspaceScopeShell>;
 }

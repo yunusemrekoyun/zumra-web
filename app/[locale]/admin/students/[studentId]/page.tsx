@@ -5,13 +5,15 @@ import { notFound } from 'next/navigation';
 import { Link } from '@/i18n/navigation';
 import { ActionBar, Button, Card, InfoField, ModulePanel, StatusChip } from '@/components/ui';
 import { getCurrentWorkspaceUser, getDomainLanguageKey, getStudentDetailData } from '@/lib/domain';
+import { requireWorkspaceRole } from '@/lib/server/authorization';
 
 type StudentDetailPageProps = {
-  params: Promise<{ studentId: string }>;
+  params: Promise<{ locale: string; studentId: string }>;
 };
 
 export default async function StudentDetailPage({ params }: StudentDetailPageProps) {
-  const { studentId } = await params;
+  const { locale, studentId } = await params;
+  await requireWorkspaceRole('admin', locale);
   const detail = getStudentDetailData('admin', getCurrentWorkspaceUser('admin'), studentId);
 
   if (!detail) {

@@ -1,8 +1,9 @@
 import { useLocale, useTranslations } from 'next-intl';
 import { LessonCard, SectionHeader, StaggerContainer, StaggerItem } from '@/components/ui';
 import { getDashboardData } from '@/lib/domain';
+import { withWorkspacePage } from '@/lib/server/workspace-page';
 
-export default function DerslerPage() {
+function DerslerPage() {
   const locale = useLocale();
   const t = useTranslations('student.lessons');
   const dashboard = getDashboardData('student');
@@ -47,6 +48,8 @@ export default function DerslerPage() {
     </StaggerContainer>
   );
 }
+
+export default withWorkspacePage('student', DerslerPage);
 
 function formatLessonDateTime(value: string, locale: string) {
   return new Intl.DateTimeFormat(locale === 'en' ? 'en-US' : 'tr-TR', {

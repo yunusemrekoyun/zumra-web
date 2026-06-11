@@ -1,0 +1,8 @@
+[Unit]
+Description=Zümra encrypted WAL repository sync
+After=docker.service
+Requires=docker.service
+
+[Service]
+Type=oneshot
+ExecStart=/srv/zumra/current/infra/production/scripts/compose.sh exec -T backup /opt/zumra/scripts/restic-wal-sync.sh

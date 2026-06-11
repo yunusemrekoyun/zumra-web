@@ -1,8 +1,9 @@
 import { Target } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { Button, EmptyState } from '@/components/ui';
+import { withWorkspacePage } from '@/lib/server/workspace-page';
 
-export default function AdvisorOffersPage() {
+function AdvisorOffersPage() {
   const t = useTranslations('advisor.empty.offers');
   const common = useTranslations('common.actions');
 
@@ -17,3 +18,5 @@ export default function AdvisorOffersPage() {
     </div>
   );
 }
+
+export default withWorkspacePage('advisor', AdvisorOffersPage);

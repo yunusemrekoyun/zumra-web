@@ -129,6 +129,14 @@ export const workspaceModules = [
 ] satisfies WorkspaceModuleDefinition[];
 
 export const workspaceExtraRoutes = [
+  '/aktivasyon',
+  '/cihaz-dogrulama',
+  '/giris',
+  '/mfa',
+  '/mfa-kurulum',
+  '/sifremi-unuttum',
+  '/sifre-sifirla',
+  '/yetkisiz',
   '/admin/students/[studentId]',
   '/admin/students/1',
   '/ogrenci/dersler',

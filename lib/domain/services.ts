@@ -90,7 +90,7 @@ export interface MeetingService {
   createMeetingLink(input: MeetingLinkInput): Promise<MeetingLinkResult>;
 }
 
-export interface NotificationService {
+export interface WorkspaceMessagingService {
   sendOffer(input: OfferNotificationInput): Promise<NotificationResult>;
   sendMeetingReminder(input: ReminderNotificationInput): Promise<NotificationResult>;
 }
@@ -151,7 +151,7 @@ export const mockMeetingService: MeetingService = {
   },
 };
 
-export const mockNotificationService: NotificationService = {
+export const mockNotificationService: WorkspaceMessagingService = {
   async sendOffer(input) {
     return {
       externalId: `mock-offer-${input.offerId}-${input.channels.join('-')}`,

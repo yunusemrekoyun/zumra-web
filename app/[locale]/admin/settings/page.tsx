@@ -1,8 +1,9 @@
 import { Settings } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { EmptyState, Button } from '@/components/ui';
+import { withWorkspacePage } from '@/lib/server/workspace-page';
 
-export default function SettingsPage() {
+function SettingsPage() {
   const t = useTranslations('admin.empty.settings');
   const common = useTranslations('common.actions');
 
@@ -17,3 +18,5 @@ export default function SettingsPage() {
     </div>
   );
 }
+
+export default withWorkspacePage('admin', SettingsPage);

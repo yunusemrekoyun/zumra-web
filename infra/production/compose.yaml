@@ -1,0 +1,301 @@
+name: zumra-production
+
+x-app-environment: &app-environment
+  NODE_ENV: production
+  AUTH_ENFORCEMENT_ENABLED: "true"
+  CLAMAV_HOST: clamav
+  DATABASE_POOL_MAX: 15
+  MEDIA_ROOT: /data/media
+
+x-app-common: &app-common
+  restart: unless-stopped
+  env_file:
+    - /srv/zumra/shared/app.env
+  depends_on:
+    postgres:
+      condition: service_healthy
+    redis:
+      condition: service_healthy
+  networks:
+    - edge
+    - backend
+  group_add:
+    - "2000"
+  read_only: true
+  tmpfs:
+    - /tmp:size=128m,noexec,nosuid,nodev
+  volumes:
+    - /srv/zumra/data/media:/data/media
+  security_opt:
+    - no-new-privileges:true
+  cap_drop:
+    - ALL
+
+x-worker-environment: &worker-environment
+  NODE_ENV: production
+  DATABASE_POOL_MAX: 5
+  MEDIA_ROOT: /data/media
+  MEDIA_JOB_ROOT: /data/media-jobs
+  FFMPEG_SANDBOX_MODE: filesystem
+
+x-worker-common: &worker-common
+  restart: unless-stopped
+  stop_grace_period: 20m
+  env_file:
+    - /srv/zumra/shared/worker.env
+  depends_on:
+    postgres:
+      condition: service_healthy
+    redis:
+      condition: service_healthy
+  networks:
+    - edge
+    - backend
+  group_add:
+    - "2000"
+  read_only: true
+  tmpfs:
+    - /tmp:size=128m,noexec,nosuid,nodev
+  volumes:
+    - /srv/zumra/data/media:/data/media
+    - /srv/zumra/runtime/media-jobs:/data/media-jobs
+  security_opt:
+    - no-new-privileges:true
+  cap_drop:
+    - ALL
+
+x-media-environment: &media-environment
+  FFMPEG_JOB_TIMEOUT_MS: 900000
+  MEDIA_JOB_ROOT: /data/media-jobs
+  MEDIA_ROOT: /data/media
+
+x-media-common: &media-common
+  restart: unless-stopped
+  stop_grace_period: 20m
+  network_mode: none
+  group_add:
+    - "2000"
+  read_only: true
+  tmpfs:
+    - /tmp:size=256m,nosuid,nodev
+  volumes:
+    - /srv/zumra/data/media:/data/media
+    - /srv/zumra/runtime/media-jobs:/data/media-jobs
+  deploy:
+    resources:
+      limits:
+        cpus: "2.0"
+        memory: 2G
+  security_opt:
+    - no-new-privileges:true
+  cap_drop:
+    - ALL
+  healthcheck:
+    test: ["CMD-SHELL", "grep -aq 'dist/media-processor.cjs' /proc/1/cmdline"]
+    interval: 10s
+    timeout: 3s
+    retries: 3
+    start_period: 10s
+
+services:
+  app_blue:
+    <<: *app-common
+    image: ${APP_BLUE_IMAGE}
+    environment:
+      <<: *app-environment
+      RELEASE_ID: ${BLUE_RELEASE_ID}
+
+  app_green:
+    <<: *app-common
+    image: ${APP_GREEN_IMAGE}
+    environment:
+      <<: *app-environment
+      RELEASE_ID: ${GREEN_RELEASE_ID}
+
+  worker_blue:
+    <<: *worker-common
+    image: ${WORKER_BLUE_IMAGE}
+    environment:
+      <<: *worker-environment
+      RELEASE_ID: ${BLUE_RELEASE_ID}
+
+  worker_green:
+    <<: *worker-common
+    image: ${WORKER_GREEN_IMAGE}
+    environment:
+      <<: *worker-environment
+      RELEASE_ID: ${GREEN_RELEASE_ID}
+
+  media_processor_blue:
+    <<: *media-common
+    image: ${MEDIA_PROCESSOR_BLUE_IMAGE}
+    environment:
+      <<: *media-environment
+      RELEASE_ID: ${BLUE_RELEASE_ID}
+
+  media_processor_green:
+    <<: *media-common
+    image: ${MEDIA_PROCESSOR_GREEN_IMAGE}
+    environment:
+      <<: *media-environment
+      RELEASE_ID: ${GREEN_RELEASE_ID}
+
+  nginx:
+    image: zumra-nginx:1.28.3
+    build:
+      context: ../..
+      dockerfile: infra/production/nginx/Dockerfile
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    networks:
+      - edge
+    group_add:
+      - "2000"
+    read_only: true
+    tmpfs:
+      - /var/cache/nginx:size=128m
+      - /var/run:size=16m
+    volumes:
+      - ./nginx/zumra.conf:/etc/nginx/conf.d/default.conf:ro
+      - ./nginx/proxy.conf:/etc/nginx/zumra/proxy.conf:ro
+      - /srv/zumra/shared/nginx/upstream.conf:/etc/nginx/zumra/upstream.conf:ro
+      - /srv/zumra/shared/nginx/cloudflare-real-ip.conf:/etc/nginx/zumra/cloudflare-real-ip.conf:ro
+      - /srv/zumra/shared/tls:/etc/nginx/tls:ro
+      - /srv/zumra/data/media:/srv/zumra/data/media:ro
+    security_opt:
+      - no-new-privileges:true
+
+  postgres:
+    build:
+      context: ../..
+      dockerfile: infra/production/postgres/Dockerfile
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      APP_DB_USER: ${APP_DB_USER}
+      APP_DB_PASSWORD: ${APP_DB_PASSWORD}
+      BACKUP_DB_USER: ${BACKUP_DB_USER}
+      BACKUP_DB_PASSWORD: ${BACKUP_DB_PASSWORD}
+      TZ: UTC
+      PGTZ: UTC
+    command:
+      - postgres
+      - -c
+      - wal_level=replica
+      - -c
+      - archive_mode=on
+      - -c
+      - archive_command=pgbackrest --stanza=zumra archive-push %p
+      - -c
+      - max_wal_senders=3
+    networks:
+      - backend
+    volumes:
+      - /srv/zumra/data/postgres:/var/lib/postgresql/data
+      - /srv/zumra/data/pgbackrest:/var/lib/pgbackrest
+      - /srv/zumra/runtime/pgbackrest-spool:/var/spool/pgbackrest
+      - ./pgbackrest/pgbackrest.conf:/etc/pgbackrest/pgbackrest.conf:ro
+      - ../docker/postgres/init-roles.sh:/docker-entrypoint-initdb.d/10-init-roles.sh:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+    security_opt:
+      - no-new-privileges:true
+
+  redis:
+    image: zumra-redis:8.8.0
+    build:
+      context: ../..
+      dockerfile: infra/production/redis/Dockerfile
+    restart: unless-stopped
+    environment:
+      REDIS_ADMIN_PASSWORD: ${REDIS_ADMIN_PASSWORD}
+      REDIS_PASSWORD: ${REDIS_PASSWORD}
+    command:
+      - /bin/sh
+      - -ec
+      - |
+        printf 'user default on >%s ~* +@all\nuser zumra on >%s ~zumra:* +@all -@dangerous +info\n' "$$REDIS_ADMIN_PASSWORD" "$$REDIS_PASSWORD" > /data/users.acl
+        exec redis-server /usr/local/etc/redis/redis.conf --aclfile /data/users.acl
+    networks:
+      - backend
+    volumes:
+      - /srv/zumra/data/redis:/data
+      - ./redis/redis.conf:/usr/local/etc/redis/redis.conf:ro
+    healthcheck:
+      test: ["CMD-SHELL", "redis-cli --user zumra --pass \"$${REDIS_PASSWORD}\" ping | grep PONG"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+    security_opt:
+      - no-new-privileges:true
+
+  clamav:
+    image: zumra-clamav:1.4.3
+    build:
+      context: ../..
+      dockerfile: infra/production/clamav/Dockerfile
+    restart: unless-stopped
+    environment:
+      CLAMD_CONF_AlertExceedsMax: "yes"
+      CLAMD_CONF_ConcurrentDatabaseReload: "no"
+      CLAMD_CONF_MaxFileSize: 110M
+      CLAMD_CONF_MaxScanSize: 200M
+      CLAMD_CONF_StreamMaxLength: 110M
+    networks:
+      - backend
+    volumes:
+      - /srv/zumra/data/clamav:/var/lib/clamav
+    security_opt:
+      - no-new-privileges:true
+
+  uptime_kuma:
+    image: zumra-uptime-kuma:2.4.0
+    build:
+      context: ../..
+      dockerfile: infra/production/uptime-kuma/Dockerfile
+    restart: unless-stopped
+    networks:
+      - edge
+    ports:
+      - "127.0.0.1:3001:3001"
+    volumes:
+      - /srv/zumra/data/uptime-kuma:/app/data
+    read_only: true
+    tmpfs:
+      - /tmp:size=64m,noexec,nosuid,nodev
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+
+  backup:
+    build:
+      context: ../..
+      dockerfile: infra/production/backup/Dockerfile
+    restart: unless-stopped
+    env_file:
+      - /srv/zumra/shared/backup.env
+    networks:
+      - edge
+      - backend
+    volumes:
+      - /srv/zumra/data/media:/data/media:ro
+      - /srv/zumra/data/pgbackrest:/data/pgbackrest:ro
+      - /srv/zumra/runtime/pgbackrest-spool:/data/pgbackrest-spool:ro
+      - /srv/zumra/backups:/backups
+      - /srv/zumra/data/restic-cache:/root/.cache/restic
+      - /srv/zumra/data/rclone:/root/.config/rclone:ro
+    security_opt:
+      - no-new-privileges:true
+
+networks:
+  edge:
+  backend:
+    internal: true
