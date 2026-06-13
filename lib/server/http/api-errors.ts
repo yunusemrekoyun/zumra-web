@@ -7,6 +7,7 @@ import {
   AuthorizationDeniedError,
   ExternalIdentityError,
   PayloadTooLargeError,
+  PublicFlowError,
   UnsafeMediaError,
   UnsupportedMediaTypeError,
 } from '@/lib/server/http/errors';
@@ -29,6 +30,10 @@ export function apiErrorResponse(error: unknown, id: string) {
 
   if (error instanceof ExternalIdentityError) {
     return response('identity_operation_failed', 409, id);
+  }
+
+  if (error instanceof PublicFlowError) {
+    return response(error.code, error.status, id);
   }
 
   if (error instanceof PayloadTooLargeError) {

@@ -20,6 +20,7 @@ import {
 } from 'lucide-react';
 import Image from 'next/image';
 import { LanguageSwitcher } from '@/components/ui';
+import { Link } from '@/i18n/navigation';
 
 type PublicStep = { desc: string; num: string; title: string };
 type PublicLanguage = { name: string; subtitle: string; symbol: string };
@@ -119,12 +120,12 @@ function Navbar() {
         </nav>
         <div className="flex justify-end gap-3 sm:gap-4 items-center">
           <LanguageSwitcher className="hidden sm:inline-flex" />
-          <button className="hidden sm:block text-sm font-semibold text-brand-dark/80 hover:text-brand-primary transition-colors">
+          <Link href="/giris" className="hidden sm:block text-sm font-semibold text-brand-dark/80 hover:text-brand-primary transition-colors">
             {t('login')}
-          </button>
-          <button className="hidden sm:block px-6 py-2.5 bg-brand-primary text-white text-[11px] font-bold uppercase tracking-widest rounded-full shadow-lg shadow-brand-primary/20 hover:scale-105 transition-transform shrink-0 glow-effect">
+          </Link>
+          <Link href="/level-test" className="hidden sm:block px-6 py-2.5 bg-brand-primary text-white text-[11px] font-bold uppercase tracking-widest rounded-full shadow-lg shadow-brand-primary/20 hover:scale-105 transition-transform shrink-0 glow-effect">
             {t('levelTest')}
-          </button>
+          </Link>
           <button
             type="button"
             aria-label={t('openMenu')}
@@ -141,7 +142,7 @@ function Navbar() {
           <a href="#neden-biz" onClick={() => setIsOpen(false)} className="rounded-2xl px-4 py-3 hover:bg-brand-primary/5 hover:text-brand-primary transition-colors">{t('why')}</a>
           <a href="#nasil-calisiyoruz" onClick={() => setIsOpen(false)} className="rounded-2xl px-4 py-3 hover:bg-brand-primary/5 hover:text-brand-primary transition-colors">{t('process')}</a>
           <a href="#programlar" onClick={() => setIsOpen(false)} className="rounded-2xl px-4 py-3 hover:bg-brand-primary/5 hover:text-brand-primary transition-colors">{t('programs')}</a>
-          <button className="mt-2 rounded-2xl bg-brand-primary px-4 py-3 text-left text-white shadow-lg shadow-brand-primary/20">{t('levelTest')}</button>
+          <Link href="/level-test" onClick={() => setIsOpen(false)} className="mt-2 rounded-2xl bg-brand-primary px-4 py-3 text-left text-white shadow-lg shadow-brand-primary/20">{t('levelTest')}</Link>
         </nav>
       </div>
     </motion.header>
@@ -202,20 +203,22 @@ function Hero() {
             transition={{ duration: 1, delay: 0.5, ease: [0.16, 1, 0.3, 1] }}
             className="flex flex-col sm:flex-row gap-5 pt-4"
           >
-            <motion.button 
+            <motion.div
               whileHover={{ scale: 1.03 }}
               whileTap={{ scale: 0.97 }}
-              className="px-8 py-4 bg-brand-primary text-white rounded-[1rem] font-bold uppercase tracking-wider text-xs shadow-2xl shadow-brand-primary/30 flex items-center justify-center gap-3 hover:shadow-brand-primary/40 transition-shadow glow-effect"
             >
-              {t('primaryCta')} <ArrowRight className="w-4 h-4" />
-            </motion.button>
-            <motion.button 
+              <Link href="/level-test" className="px-8 py-4 bg-brand-primary text-white rounded-[1rem] font-bold uppercase tracking-wider text-xs shadow-2xl shadow-brand-primary/30 flex items-center justify-center gap-3 hover:shadow-brand-primary/40 transition-shadow glow-effect">
+                {t('primaryCta')} <ArrowRight className="w-4 h-4" />
+              </Link>
+            </motion.div>
+            <motion.a
+              href="#programlar"
               whileHover={{ scale: 1.03, backgroundColor: 'rgba(83,48,137,0.05)' }}
               whileTap={{ scale: 0.97 }}
               className="px-8 py-4 border border-brand-dark/10 text-brand-dark rounded-[1rem] font-bold uppercase tracking-wider text-xs hover:border-brand-primary/30 transition-colors flex items-center justify-center gap-2"
             >
               {t('secondaryCta')}
-            </motion.button>
+            </motion.a>
           </motion.div>
 
           <motion.div 
@@ -418,9 +421,9 @@ function HowItWorks() {
           <p className="text-lg text-brand-dark/70 mb-10 max-w-md font-neubau">
             {t('description')}
           </p>
-          <button className="px-8 py-4 rounded-full bg-brand-dark text-white text-xs font-bold uppercase tracking-wider hover:bg-brand-primary transition-colors premium-shadow">
+          <Link href="/level-test" className="inline-flex px-8 py-4 rounded-full bg-brand-dark text-white text-xs font-bold uppercase tracking-wider hover:bg-brand-primary transition-colors premium-shadow">
             {t('cta')}
-          </button>
+          </Link>
         </motion.div>
 
         <div ref={ref} className="relative pl-2 sm:pl-4 lg:pl-12 py-4 lg:py-8">
