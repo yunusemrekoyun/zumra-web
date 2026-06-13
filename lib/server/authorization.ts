@@ -143,6 +143,20 @@ export async function requireCriticalAdmin(password: string) {
   return principal;
 }
 
+export async function requireAdminSession() {
+  const principal = await requireSession();
+
+  if (
+    principal.role !== 'admin' ||
+    principal.sessionSecurityLevel !== 'mfa' ||
+    !principal.twoFactorEnabled
+  ) {
+    throw new AuthorizationDeniedError('Admin MFA is required.');
+  }
+
+  return principal;
+}
+
 export async function requireFreshStudentPassword(
   password: string,
   action: string,

@@ -82,11 +82,18 @@ const outboxEnvSchema = z.object({
   OUTBOX_ENCRYPTION_SECRET: z.string().min(48).optional(),
 });
 
+const identityEnvSchema = z.object({
+  IDENTITY_ENCRYPTION_SECRET: z.string().min(48).optional(),
+});
+
 export type RuntimeEnv = z.infer<typeof runtimeEnvSchema>;
 export type AuthEnv = z.infer<typeof authEnvSchema>;
 export type MailEnv = z.infer<typeof mailEnvSchema>;
 export type OutboxEnv = {
   OUTBOX_ENCRYPTION_SECRET: string;
+};
+export type IdentityEnv = {
+  IDENTITY_ENCRYPTION_SECRET: string;
 };
 export type ServerEnv = RuntimeEnv & AuthEnv & OutboxEnv;
 
@@ -94,6 +101,7 @@ let cachedRuntimeEnv: RuntimeEnv | undefined;
 let cachedAuthEnv: AuthEnv | undefined;
 let cachedMailEnv: MailEnv | undefined;
 let cachedOutboxEnv: OutboxEnv | undefined;
+let cachedIdentityEnv: IdentityEnv | undefined;
 
 export function getRuntimeEnv(): RuntimeEnv {
   cachedRuntimeEnv ??= parseEnv(
@@ -164,6 +172,32 @@ export function getOutboxEnv(): OutboxEnv {
   return cachedOutboxEnv;
 }
 
+export function getIdentityEnv(): IdentityEnv {
+  if (cachedIdentityEnv) {
+    return cachedIdentityEnv;
+  }
+
+  const parsed = parseEnv(
+    identityEnvSchema,
+    'identity',
+    productionBuildDefaults,
+  );
+  const fallback =
+    process.env.NODE_ENV === 'production'
+      ? undefined
+      : process.env.BETTER_AUTH_SECRET;
+  const secret = parsed.IDENTITY_ENCRYPTION_SECRET ?? fallback;
+
+  if (!secret || secret.length < 48) {
+    throw new Error(
+      'IDENTITY_ENCRYPTION_SECRET must be at least 48 characters.',
+    );
+  }
+
+  cachedIdentityEnv = { IDENTITY_ENCRYPTION_SECRET: secret };
+  return cachedIdentityEnv;
+}
+
 export function getServerEnv(): ServerEnv {
   return {
     ...getRuntimeEnv(),
@@ -177,6 +211,7 @@ export function resetServerEnvForTests() {
   cachedAuthEnv = undefined;
   cachedMailEnv = undefined;
   cachedOutboxEnv = undefined;
+  cachedIdentityEnv = undefined;
 }
 
 function parseEnv<T extends z.ZodType>(
@@ -211,6 +246,8 @@ const productionBuildDefaults =
         DATABASE_URL: 'postgresql://build:build@127.0.0.1:5432/build',
         DEVICE_COOKIE_SECRET:
           'build-device-placeholder-build-device-placeholder',
+        IDENTITY_ENCRYPTION_SECRET:
+          'build-identity-placeholder-build-identity-placeholder',
         OUTBOX_ENCRYPTION_SECRET:
           'build-outbox-placeholder-build-outbox-placeholder',
         READINESS_TOKEN: 'build-readiness-placeholder-token',

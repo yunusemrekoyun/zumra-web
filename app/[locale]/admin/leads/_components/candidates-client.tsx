@@ -5,6 +5,7 @@ import { useLocale, useTranslations } from 'next-intl';
 import {
   CalendarClock,
   CheckCircle2,
+  ClipboardPenLine,
   Clock3,
   Mail,
   Phone,
@@ -13,6 +14,7 @@ import {
 } from 'lucide-react';
 import {
   EmptyState,
+  Button,
   FilterTabs,
   InfoField,
   ListItemCard,
@@ -21,7 +23,9 @@ import {
   ResponsiveTabs,
   SearchInput,
   StatusChip,
+  TimelineItem,
 } from '@/components/ui';
+import { useRouter } from '@/i18n/navigation';
 import type { CandidateDirectoryRecord } from '@/lib/server/services/candidate-directory';
 
 type CandidateFilter =
@@ -174,6 +178,29 @@ function CandidateProfile({
   locale: string;
   t: ReturnType<typeof useTranslations>;
 }) {
+  const router = useRouter();
+  const [startingEnrollment, setStartingEnrollment] = useState(false);
+  const [enrollmentError, setEnrollmentError] = useState(false);
+
+  async function startEnrollment() {
+    setStartingEnrollment(true);
+    setEnrollmentError(false);
+
+    try {
+      const response = await fetch(
+        `/api/admin/candidates/${candidate.id}/enrollment-draft`,
+        { credentials: 'same-origin', method: 'POST' },
+      );
+      if (!response.ok) {
+        throw new Error('enrollment_start_failed');
+      }
+      router.push(`/admin/leads/${candidate.id}/enrollment`);
+    } catch {
+      setEnrollmentError(true);
+      setStartingEnrollment(false);
+    }
+  }
+
   return (
     <div className="grid min-w-0 flex-1 gap-5 xl:grid-cols-[1fr_19rem]">
       <ModulePanel className="rounded-3xl">
@@ -193,6 +220,42 @@ function CandidateProfile({
           </div>
           <StatusChip tone="purple">{stageLabel(candidate.stage, t)}</StatusChip>
         </div>
+
+        <div className="flex flex-col gap-3 border-b border-black/[0.04] py-5 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <div className="text-sm font-bold text-[#2E286C]">
+              {candidate.stage === 'enrolled'
+                ? t('enrollmentCompleted')
+                : candidate.activeEnrollmentDraft
+                  ? t('enrollmentInProgress')
+                  : t('enrollmentReady')}
+            </div>
+            <div className="mt-1 text-xs font-medium text-[#2E286C]/45">
+              {candidate.stage === 'enrolled'
+                ? t('enrollmentCompletedDescription')
+                : t('enrollmentActionDescription')}
+            </div>
+          </div>
+          {candidate.stage !== 'enrolled' && (
+            <Button
+              size="sm"
+              disabled={startingEnrollment}
+              onClick={startEnrollment}
+            >
+              <ClipboardPenLine className="h-4 w-4" />
+              {startingEnrollment
+                ? t('enrollmentOpening')
+                : candidate.activeEnrollmentDraft
+                  ? t('continueEnrollment')
+                  : t('startEnrollment')}
+            </Button>
+          )}
+        </div>
+        {enrollmentError && (
+          <p className="mt-3 text-xs font-semibold text-red-600">
+            {t('enrollmentStartError')}
+          </p>
+        )}
 
         <div className="grid gap-4 py-6 sm:grid-cols-2">
           <ContactRow icon={Mail} label={t('email')} value={candidate.email} />
@@ -242,6 +305,14 @@ function CandidateProfile({
             <InfoField label={t('source')} value={sourceLabel(candidate.source, t)} />
             <InfoField label={t('locale')} value={(candidate.locale ?? '-').toUpperCase()} />
             <InfoField
+              label={t('learningGoal')}
+              value={candidate.learningGoal ?? '-'}
+            />
+            <InfoField
+              label={t('preferredContact')}
+              value={candidate.preferredContactChannel ?? '-'}
+            />
+            <InfoField
               label={t('lastActivity')}
               value={new Intl.DateTimeFormat(locale, {
                 dateStyle: 'medium',
@@ -249,6 +320,56 @@ function CandidateProfile({
                 timeZone: 'Europe/Istanbul',
               }).format(new Date(candidate.lastActivityAt))}
             />
+          </div>
+        </div>
+
+        {candidate.appointmentPreferences.length > 0 && (
+          <div className="mt-6 rounded-3xl bg-[#F8F7FB] p-5">
+            <h3 className="text-xs font-bold uppercase tracking-[0.16em] text-[#2E286C]/40">
+              {t('appointmentPreferences')}
+            </h3>
+            <div className="mt-4 grid gap-3 sm:grid-cols-3">
+              {candidate.appointmentPreferences.map((preference) => (
+                <div
+                  key={`${preference.rank}-${preference.startsAt}`}
+                  className="rounded-2xl bg-white p-4"
+                >
+                  <div className="text-[10px] font-bold uppercase tracking-wider text-[#533089]">
+                    {t('preferenceRank', { rank: preference.rank })}
+                  </div>
+                  <div className="mt-2 text-sm font-bold text-[#2E286C]">
+                    {new Intl.DateTimeFormat(locale, {
+                      dateStyle: 'medium',
+                      timeStyle: 'short',
+                    }).format(new Date(preference.startsAt))}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        <div className="mt-6 border-t border-black/[0.04] pt-6">
+          <h3 className="text-xs font-bold uppercase tracking-[0.16em] text-[#2E286C]/40">
+            {t('timeline')}
+          </h3>
+          <div className="mt-5 space-y-3">
+            {candidate.activities.map((activity) => (
+              <TimelineItem
+                key={`${activity.type}-${activity.occurredAt}`}
+                title={activityLabel(activity.type, t)}
+                time={new Intl.DateTimeFormat(locale, {
+                  dateStyle: 'medium',
+                  timeStyle: 'short',
+                }).format(new Date(activity.occurredAt))}
+                tone={activityTone(activity.type)}
+              />
+            ))}
+            {!candidate.activities.length && (
+              <p className="text-sm font-medium text-[#2E286C]/40">
+                {t('noTimeline')}
+              </p>
+            )}
           </div>
         </div>
       </ModulePanel>
@@ -373,6 +494,32 @@ function stageLabel(stage: string, t: ReturnType<typeof useTranslations>) {
 
 function sourceLabel(source: string | undefined, t: ReturnType<typeof useTranslations>) {
   return source === 'public_level_test' ? t('publicLevelTest') : source ?? '-';
+}
+
+function activityLabel(
+  type: string,
+  t: ReturnType<typeof useTranslations>,
+) {
+  const supported = [
+    'candidate.created_from_public_assessment',
+    'candidate.inquiry_received',
+    'candidate.assessment_completed',
+    'candidate.profile_completed',
+    'candidate.appointment_requested',
+    'candidate.advisor_assigned',
+    'candidate.enrollment_started',
+    'candidate.enrollment_completed',
+  ];
+  return supported.includes(type)
+    ? t(`activities.${type.replace('candidate.', '')}`)
+    : type;
+}
+
+function activityTone(type: string) {
+  if (type.includes('completed')) return 'emerald' as const;
+  if (type.includes('appointment')) return 'blue' as const;
+  if (type.includes('enrollment_started')) return 'amber' as const;
+  return 'brand' as const;
 }
 
 function languageLabel(language: string | undefined, locale: string) {

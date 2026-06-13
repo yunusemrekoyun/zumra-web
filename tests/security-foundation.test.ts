@@ -1,3 +1,5 @@
+import 'dotenv/config';
+
 import { readdir, readFile } from 'node:fs/promises';
 import path from 'node:path';
 import { describe, expect, it } from 'vitest';
@@ -36,6 +38,12 @@ import {
   googleProviderSecurityPolicy,
 } from '@/lib/server/security/google-identity-policy';
 import { validateGoogleProfileForStudent } from '@/lib/server/security/google-profile';
+import {
+  isValidIdentityDocument,
+  maskIdentityDocument,
+  normalizeIdentityDocument,
+  protectIdentityDocument,
+} from '@/lib/server/security/identity';
 
 function principal(
   overrides: Partial<WorkspacePrincipal> = {},
@@ -148,6 +156,26 @@ describe('security foundation', () => {
     expect(isValidUsername('yunus_emre')).toBe(true);
     expect(isValidUsername('x')).toBe(false);
     expect(isValidUsername('../admin')).toBe(false);
+  });
+
+  it('validates, encrypts and masks identity documents without plaintext storage', () => {
+    expect(
+      isValidIdentityDocument('national_id', '10000000146'),
+    ).toBe(true);
+    expect(isValidIdentityDocument('national_id', '10000000147')).toBe(false);
+    expect(normalizeIdentityDocument('passport', ' tr-123 456 ')).toBe(
+      'TR123456',
+    );
+
+    const protectedPassport = protectIdentityDocument(
+      'passport',
+      'TR123456',
+    );
+    expect(protectedPassport.encrypted).not.toContain('TR123456');
+    expect(protectedPassport.blindIndex).toHaveLength(64);
+    expect(maskIdentityDocument('passport', protectedPassport.lastFour)).toBe(
+      '****3456',
+    );
   });
 
   it('masks valid IPv4 and compressed IPv6 addresses as network prefixes', () => {
