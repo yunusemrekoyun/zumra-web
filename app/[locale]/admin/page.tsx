@@ -108,7 +108,7 @@ function AdminPageContent() {
       </div>
 
       <div className="grid grid-cols-1 xl:grid-cols-3 gap-4 lg:gap-6">
-        {/* Recent Leads */}
+        {/* Recent candidates */}
         <Card className="xl:col-span-2" padded>
           <SectionHeader
             title={t('recentLeads')}

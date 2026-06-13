@@ -146,4 +146,9 @@ export const workspacePathnames = Object.fromEntries(
   ['/', ...workspaceModules.map((item) => item.path), ...workspaceExtraRoutes]
     .filter((path, index, paths) => paths.indexOf(path) === index)
     .map((path) => [path, path]),
-) as Record<string, string>;
+) as Record<string, string | Record<'en' | 'tr', string>>;
+
+workspacePathnames['/level-test'] = {
+  en: '/level-test',
+  tr: '/seviye-testi',
+};

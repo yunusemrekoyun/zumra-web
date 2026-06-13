@@ -57,6 +57,103 @@
       "days": "{count} Gün"
     }
   },
+  "publicAssessment": {
+    "eyebrow": "Ücretsiz seviye tespiti",
+    "title": "Nerede olduğunu gör, sonraki adımını netleştir.",
+    "description": "Kısa değerlendirmeyi tamamla; seviyeni öğren ve istersen uzman danışmanlarımızla görüşme talebi oluştur.",
+    "backHome": "Ana sayfaya dön",
+    "loading": "Akışın hazırlanıyor...",
+    "genericError": "İşlem şu anda tamamlanamadı. Bilgilerini kontrol edip yeniden deneyebilirsin.",
+    "expired": "Yedi günlük devam süren dolmuş. Yeni bir değerlendirme başlatabilirsin.",
+    "progress": "{current} / {total}",
+    "steps": {
+      "start": "Başlangıç",
+      "assessment": "Değerlendirme",
+      "profile": "Sonucu aç",
+      "result": "Sonuç"
+    },
+    "start": {
+      "title": "Önce seni biraz tanıyalım.",
+      "description": "Bu bilgilerle aday kaydın açılır ve değerlendirmeye hemen başlarsın.",
+      "firstName": "Ad",
+      "lastName": "Soyad",
+      "email": "E-posta",
+      "language": "Öğrenmek istediğin dil",
+      "languagePlaceholder": "Bir dil seç",
+      "consent": "Bilgilerimin adaylık, seviye tespiti ve iletişim sürecinin yürütülmesi için işlenmesini kabul ediyorum. 18 yaşın altındaysam bu bilgileri velimin bilgisi ve onayıyla verdiğimi beyan ederim.",
+      "marketing": "Haber ve duyuruları e-posta yoluyla almak istiyorum.",
+      "submit": "Değerlendirmeyi başlat",
+      "privacyNote": "E-posta adresin hesap oluşturmak için kullanılmaz. İletişim ve başvurunun takibi için aday profiline eklenir."
+    },
+    "languages": {
+      "english": "İngilizce",
+      "german": "Almanca",
+      "french": "Fransızca",
+      "arabic": "Arapça"
+    },
+    "assessment": {
+      "title": "{language} değerlendirmesi",
+      "levelLabel": "{level} seviyesi",
+      "topicLabel": "Konu: {topic}",
+      "submit": "Cevabı onayla",
+      "topics": {
+        "grammar": "Dil bilgisi",
+        "vocabulary": "Kelime bilgisi",
+        "reading": "Okuduğunu anlama"
+      }
+    },
+    "profile": {
+      "title": "Sonucun hazır.",
+      "description": "Sonucunu açmak ve sana uygun sonraki adımı göstermek için iletişim bilgilerini tamamla.",
+      "locked": "Seviye sonucu",
+      "phone": "Cep telefonu",
+      "guardianPhone": "Veli telefonu",
+      "minor": "18 yaşından küçüğüm",
+      "goal": "Öğrenme amacın",
+      "contactChannel": "Nasıl iletişim kuralım?",
+      "city": "Şehir (opsiyonel)",
+      "lessonModel": "Tercih ettiğin ders modeli",
+      "contactWindow": "Uygun iletişim zamanı (opsiyonel)",
+      "timezone": "Saat dilimi",
+      "submit": "Sonucumu göster",
+      "goals": {
+        "daily_life": "Günlük yaşam",
+        "career": "Kariyer",
+        "academic": "Akademik",
+        "exam": "Sınav hazırlığı",
+        "travel": "Seyahat",
+        "other": "Diğer"
+      },
+      "channels": {
+        "phone": "Telefon",
+        "whatsapp": "WhatsApp",
+        "email": "E-posta"
+      },
+      "models": {
+        "one_to_one": "Birebir",
+        "group": "Grup",
+        "undecided": "Henüz karar vermedim"
+      }
+    },
+    "result": {
+      "eyebrow": "Seviyen belirlendi",
+      "title": "Mevcut seviyen {level}",
+      "score": "%{score} başarı",
+      "summary": "{correct} doğru / {total} soru",
+      "description": "Bu demo değerlendirme başlangıç seviyeni anlamak için bir ön sonuç üretir. Danışman görüşmesiyle hedeflerine uygun program netleştirilir.",
+      "appointmentCta": "Görüşme talebi oluştur",
+      "restart": "Yeni değerlendirme başlat"
+    },
+    "appointment": {
+      "title": "Sana uyan üç zamanı seç.",
+      "description": "Bunlar kesin randevu değil, danışmanımızın seninle planlama yapabilmesi için uygunluk tercihlerindir.",
+      "preference": "{rank}. tercih",
+      "submit": "Görüşme talebini gönder",
+      "successTitle": "Talebini aldık.",
+      "successDescription": "Danışman ekibimiz uygunluklarını değerlendirip seninle iletişime geçecek.",
+      "status": "Talep edildi"
+    }
+  },
   "workspace": {
     "mobileNav": "Ana navigasyon",
     "roles": {
@@ -250,7 +347,7 @@
   "admin": {
     "nav": {
       "dashboard": "Dashboard",
-      "leads": "Leadler",
+      "leads": "Adaylar",
       "calendar": "Takvim",
       "students": "Öğrenciler",
       "instructors": "Eğitmenler",
@@ -268,7 +365,7 @@
       "activeStudents": "Aktif Öğrenci",
       "newApplications": "Yeni Başvuru (Bu Ay)",
       "conversionRate": "Dönüşüm Oranı",
-      "recentLeads": "Son Leadler",
+      "recentLeads": "Son Adaylar",
       "todaySchedule": "Bugünkü Program",
       "trendMonth": "12% geçen aya göre",
       "trendWeek": "4% geçen haftaya göre",
@@ -325,34 +422,46 @@
       "lesson11Note": "Gramer yapısını anladı ancak konuşmaya dökmekte biraz zorlandı. Ekstra okuma parçası gönderildi."
     },
     "leads": {
-      "title": "Leadler",
-      "search": "İsim veya tel no...",
-      "addLead": "Lead Ekle",
+      "title": "Adaylar",
+      "description": "Kayıtlı veya kayıtsız tüm potansiyel öğrencileri, başvurularını ve seviye tespit süreçlerini tek havuzda yönetin.",
+      "profile": "Aday profili",
+      "search": "İsim, e-posta veya telefon...",
       "all": "Tümü",
-      "new": "Yeni",
-      "followUp": "Takip",
-      "online": "Çevrimiçi",
-      "today": "Bugün",
-      "applicationFilled": "Başvuru Formu Dolduruldu • 10:45",
-      "applicationText": "Öğrenci web sitesi üzerinden İngilizce A1 programı için form doldurdu. Kampanya ile ilgileniyor.",
-      "advisorMessageMeta": "Danışman (Siz) • 11:00",
-      "advisorMessage": "Merhaba Ayşe Hanım, Zümra Akademi'den ulaşıyorum. Başvurunuzu aldık, müsaitseniz süreç hakkında bilgi vermek için 14:00'da arayabilir miyim?",
-      "studentMessageMeta": "Ayşe Demir • 11:15",
-      "studentMessage": "Merhaba Yunus Bey, tabii 14:00 uygundur. Özellikle speaking ağırlıklı bir eğitim almak istiyorum.",
-      "advisorNote": "Danışman Notu • 11:20",
-      "advisorNoteText": "Öğrenci 14:00'da aranacak. Konuşma ağırlıklı eğitim istiyor, Native eğitmen paketi önerilecek.",
-      "messagePlaceholder": "Mesaj yaz veya not ekle...",
-      "addNote": "Not Ekle",
-      "info": "Lead Bilgileri",
-      "languageLevel": "Dil & Seviye",
+      "missingContact": "Eksik iletişim",
+      "notStarted": "Sınava girmedi",
+      "assessmentInProgress": "Sınav devam ediyor",
+      "levelDetermined": "Seviyesi belirlendi",
+      "appointmentRequested": "Randevu talep etti",
+      "noCandidates": "Bu filtrede aday bulunmuyor.",
+      "noCandidatesDescription": "Public formlar veya personel girişleriyle oluşan adaylar burada görünecek.",
+      "applicationCount": "{count} başvuru",
       "phone": "Telefon",
       "email": "E-posta",
+      "assessment": "Seviye tespiti",
+      "appointment": "Randevu",
+      "noAppointment": "Henüz talep yok",
       "source": "Kaynak",
-      "actions": "Aksiyonlar",
-      "createEnrollment": "Kayıt Oluştur",
-      "scheduleMeeting": "Görüşme Planla",
+      "language": "İlgilendiği dil",
+      "locale": "Form dili",
+      "lastActivity": "Son aktivite",
+      "latestApplication": "Son başvuru",
       "assignedAdvisor": "Atanan Danışman",
-      "salesSpecialist": "Satış Uzmanı"
+      "noAdvisor": "Henüz atanmadı",
+      "dataQuality": "Veri tamamlama",
+      "emailCaptured": "E-posta alındı",
+      "phoneCaptured": "Telefon alındı",
+      "assessmentCompleted": "Seviye tespiti tamamlandı",
+      "statusSummary": "Durum özeti",
+      "contactCaptured": "İletişim tamam",
+      "publicLevelTest": "Public seviye tespiti",
+      "stages": {
+        "new": "Yeni aday",
+        "contacted": "İletişime geçildi",
+        "qualified": "Nitelikli aday",
+        "offer_pending": "Teklif bekliyor",
+        "enrolled": "Kayıt oldu",
+        "lost": "Kaybedildi"
+      }
     },
     "empty": {
       "calendar": { "title": "Takvim", "description": "Ders programları, görüşme randevuları ve etkinlikleri bu takvimden takip edebilirsiniz." },
@@ -484,30 +593,30 @@
   "advisor": {
     "nav": {
       "overview": "Özet",
-      "leads": "Leadlerim",
+      "leads": "Adaylarım",
       "students": "Öğrencilerim",
       "meetings": "Görüşmeler",
       "offers": "Teklifler",
       "messages": "Mesajlar"
     },
     "shell": {
-      "searchPlaceholder": "Lead, öğrenci veya görüşme ara..."
+      "searchPlaceholder": "Aday, öğrenci veya görüşme ara..."
     },
     "dashboard": {
       "title": "Danışman Paneli",
-      "description": "Atanan leadler, öğrenciler, görüşmeler ve teklifler için CRM akışının temel kabuğu hazır.",
+      "description": "Atanan adaylar, öğrenciler, görüşmeler ve teklifler için CRM akışının temel kabuğu hazır.",
       "moduleTitle": "Danışman Modülleri",
-      "leads": "Leadlerim",
+      "leads": "Adaylarım",
       "students": "Öğrencilerim",
       "meetings": "Görüşmeler",
       "offers": "Teklifler"
     },
     "empty": {
-      "leads": { "title": "Leadlerim", "description": "Danışmana atanmış lead havuzu burada CRM akışıyla yönetilecek." },
+      "leads": { "title": "Adaylarım", "description": "Danışmana atanmış aday havuzu burada CRM akışıyla yönetilecek." },
       "students": { "title": "Öğrencilerim", "description": "Danışmana bağlı öğrencilerin profil, teklif, görüşme ve takip akışı burada olacak." },
       "meetings": { "title": "Görüşmeler", "description": "Link, QR, hatırlatma ve görüşme durumları bu modülde yönetilecek." },
       "offers": { "title": "Teklifler", "description": "Öğrenciye mail ve WhatsApp üzerinden gönderilecek teklif akışı burada hazırlanacak." },
-      "messages": { "title": "Mesajlar", "description": "Öğrenci ve lead iletişim geçmişi burada tek akışta toplanacak." },
+      "messages": { "title": "Mesajlar", "description": "Öğrenci ve aday iletişim geçmişi burada tek akışta toplanacak." },
       "settings": { "title": "Danışman Ayarları", "description": "Bildirim tercihleri, çalışma saatleri ve profil ayarları burada yönetilecek." }
     }
   },

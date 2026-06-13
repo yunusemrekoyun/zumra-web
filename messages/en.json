@@ -57,6 +57,103 @@
       "days": "{count} Days"
     }
   },
+  "publicAssessment": {
+    "eyebrow": "Free level assessment",
+    "title": "See where you are and make your next step clear.",
+    "description": "Complete a short assessment, discover your level and request a consultation with our expert advisors if you wish.",
+    "backHome": "Back to home",
+    "loading": "Preparing your assessment...",
+    "genericError": "The action could not be completed right now. Check your information and try again.",
+    "expired": "Your seven-day continuation period has expired. You can start a new assessment.",
+    "progress": "{current} / {total}",
+    "steps": {
+      "start": "Start",
+      "assessment": "Assessment",
+      "profile": "Unlock result",
+      "result": "Result"
+    },
+    "start": {
+      "title": "First, let us get to know you.",
+      "description": "These details create your candidate record and let you begin immediately.",
+      "firstName": "First name",
+      "lastName": "Last name",
+      "email": "Email",
+      "language": "Language you want to learn",
+      "languagePlaceholder": "Choose a language",
+      "consent": "I consent to the processing of my information for candidacy, level assessment and communication. If I am under 18, I confirm that I provide this information with my guardian's knowledge and approval.",
+      "marketing": "I would like to receive news and announcements by email.",
+      "submit": "Start assessment",
+      "privacyNote": "Your email is not used to create an account. It is added to your candidate profile for communication and application tracking."
+    },
+    "languages": {
+      "english": "English",
+      "german": "German",
+      "french": "French",
+      "arabic": "Arabic"
+    },
+    "assessment": {
+      "title": "{language} assessment",
+      "levelLabel": "{level} level",
+      "topicLabel": "Topic: {topic}",
+      "submit": "Confirm answer",
+      "topics": {
+        "grammar": "Grammar",
+        "vocabulary": "Vocabulary",
+        "reading": "Reading"
+      }
+    },
+    "profile": {
+      "title": "Your result is ready.",
+      "description": "Complete your contact information to unlock your result and see the most useful next step.",
+      "locked": "Level result",
+      "phone": "Mobile phone",
+      "guardianPhone": "Guardian phone",
+      "minor": "I am under 18",
+      "goal": "Your learning goal",
+      "contactChannel": "How should we contact you?",
+      "city": "City (optional)",
+      "lessonModel": "Preferred lesson model",
+      "contactWindow": "Preferred contact time (optional)",
+      "timezone": "Time zone",
+      "submit": "Show my result",
+      "goals": {
+        "daily_life": "Daily life",
+        "career": "Career",
+        "academic": "Academic",
+        "exam": "Exam preparation",
+        "travel": "Travel",
+        "other": "Other"
+      },
+      "channels": {
+        "phone": "Phone",
+        "whatsapp": "WhatsApp",
+        "email": "Email"
+      },
+      "models": {
+        "one_to_one": "One-to-one",
+        "group": "Group",
+        "undecided": "Not decided yet"
+      }
+    },
+    "result": {
+      "eyebrow": "Your level is ready",
+      "title": "Your current level is {level}",
+      "score": "{score}% success",
+      "summary": "{correct} correct / {total} questions",
+      "description": "This demo assessment provides an initial indication of your level. A consultation helps define the right program for your goals.",
+      "appointmentCta": "Request a consultation",
+      "restart": "Start a new assessment"
+    },
+    "appointment": {
+      "title": "Choose three times that suit you.",
+      "description": "These are availability preferences, not confirmed appointments. Our advisor will use them to plan with you.",
+      "preference": "Preference {rank}",
+      "submit": "Send consultation request",
+      "successTitle": "We received your request.",
+      "successDescription": "Our advisor team will review your availability and contact you.",
+      "status": "Requested"
+    }
+  },
   "workspace": {
     "mobileNav": "Main navigation",
     "roles": {
@@ -250,7 +347,7 @@
   "admin": {
     "nav": {
       "dashboard": "Dashboard",
-      "leads": "Leads",
+      "leads": "Candidates",
       "calendar": "Calendar",
       "students": "Students",
       "instructors": "Instructors",
@@ -268,7 +365,7 @@
       "activeStudents": "Active Students",
       "newApplications": "New Applications (This Month)",
       "conversionRate": "Conversion Rate",
-      "recentLeads": "Recent Leads",
+      "recentLeads": "Recent Candidates",
       "todaySchedule": "Today's Schedule",
       "trendMonth": "12% vs last month",
       "trendWeek": "4% vs last week",
@@ -325,34 +422,46 @@
       "lesson11Note": "The student understood the grammar structure, but had some difficulty turning it into speech. An additional reading passage was sent."
     },
     "leads": {
-      "title": "Leads",
-      "search": "Name or phone...",
-      "addLead": "Add Lead",
+      "title": "Candidates",
+      "description": "Manage every potential student, application and level assessment in one pool, whether enrolled or not.",
+      "profile": "Candidate profile",
+      "search": "Name, email or phone...",
       "all": "All",
-      "new": "New",
-      "followUp": "Follow-up",
-      "online": "Online",
-      "today": "Today",
-      "applicationFilled": "Application Form Submitted • 10:45",
-      "applicationText": "The student submitted a form for the English A1 program through the website and is interested in the campaign.",
-      "advisorMessageMeta": "Advisor (You) • 11:00",
-      "advisorMessage": "Hello Ms. Ayşe, I am reaching out from Zümra Academy. We received your application. If you are available, may I call you at 14:00 to explain the process?",
-      "studentMessageMeta": "Ayşe Demir • 11:15",
-      "studentMessage": "Hello Mr. Yunus, yes 14:00 works. I am especially interested in speaking-focused training.",
-      "advisorNote": "Advisor Note • 11:20",
-      "advisorNoteText": "The student will be called at 14:00. She wants speaking-focused education; recommend the native instructor package.",
-      "messagePlaceholder": "Write a message or add a note...",
-      "addNote": "Add Note",
-      "info": "Lead Details",
-      "languageLevel": "Language & Level",
+      "missingContact": "Missing contact",
+      "notStarted": "Assessment not started",
+      "assessmentInProgress": "Assessment in progress",
+      "levelDetermined": "Level determined",
+      "appointmentRequested": "Consultation requested",
+      "noCandidates": "No candidates match this filter.",
+      "noCandidatesDescription": "Candidates created by public forms or staff entry will appear here.",
+      "applicationCount": "{count} applications",
       "phone": "Phone",
       "email": "Email",
+      "assessment": "Level assessment",
+      "appointment": "Consultation",
+      "noAppointment": "No request yet",
       "source": "Source",
-      "actions": "Actions",
-      "createEnrollment": "Create Enrollment",
-      "scheduleMeeting": "Schedule Meeting",
+      "language": "Interested language",
+      "locale": "Form language",
+      "lastActivity": "Last activity",
+      "latestApplication": "Latest application",
       "assignedAdvisor": "Assigned Advisor",
-      "salesSpecialist": "Sales Specialist"
+      "noAdvisor": "Not assigned yet",
+      "dataQuality": "Data completion",
+      "emailCaptured": "Email captured",
+      "phoneCaptured": "Phone captured",
+      "assessmentCompleted": "Level assessment completed",
+      "statusSummary": "Status summary",
+      "contactCaptured": "Contact complete",
+      "publicLevelTest": "Public level assessment",
+      "stages": {
+        "new": "New candidate",
+        "contacted": "Contacted",
+        "qualified": "Qualified candidate",
+        "offer_pending": "Offer pending",
+        "enrolled": "Enrolled",
+        "lost": "Lost"
+      }
     },
     "empty": {
       "calendar": { "title": "Calendar", "description": "Track lesson schedules, consultation appointments and events from this calendar." },
@@ -484,30 +593,30 @@
   "advisor": {
     "nav": {
       "overview": "Overview",
-      "leads": "My Leads",
+      "leads": "My Candidates",
       "students": "My Students",
       "meetings": "Meetings",
       "offers": "Offers",
       "messages": "Messages"
     },
     "shell": {
-      "searchPlaceholder": "Search leads, students or meetings..."
+      "searchPlaceholder": "Search candidates, students or meetings..."
     },
     "dashboard": {
       "title": "Advisor Panel",
-      "description": "The base CRM shell is ready for assigned leads, students, meetings and offers.",
+      "description": "The base CRM shell is ready for assigned candidates, students, meetings and offers.",
       "moduleTitle": "Advisor Modules",
-      "leads": "My Leads",
+      "leads": "My Candidates",
       "students": "My Students",
       "meetings": "Meetings",
       "offers": "Offers"
     },
     "empty": {
-      "leads": { "title": "My Leads", "description": "The lead pool assigned to this advisor will be managed here with the CRM flow." },
+      "leads": { "title": "My Candidates", "description": "The candidate pool assigned to this advisor will be managed here with the CRM flow." },
       "students": { "title": "My Students", "description": "Student profiles, offers, meetings and follow-up flow for this advisor will live here." },
       "meetings": { "title": "Meetings", "description": "Links, QR codes, reminders and meeting statuses will be managed in this module." },
       "offers": { "title": "Offers", "description": "The offer flow sent to students through email and WhatsApp will be prepared here." },
-      "messages": { "title": "Messages", "description": "Student and lead communication history will be collected here in a single flow." },
+      "messages": { "title": "Messages", "description": "Student and candidate communication history will be collected here in a single flow." },
       "settings": { "title": "Advisor Settings", "description": "Notification preferences, working hours and profile settings will be managed here." }
     }
   },
