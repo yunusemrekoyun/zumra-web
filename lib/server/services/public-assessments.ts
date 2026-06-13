@@ -378,6 +378,12 @@ export async function startPublicAssessment(
       throw new PublicFlowError('candidate_could_not_be_created', 409);
     }
 
+    const [existingCandidate] = await transaction
+      .select({ id: candidateProfiles.id })
+      .from(candidateProfiles)
+      .where(eq(candidateProfiles.contactId, contact.id))
+      .limit(1);
+
     const [candidate] = await transaction
       .insert(candidateProfiles)
       .values({
@@ -478,15 +484,30 @@ export async function startPublicAssessment(
       },
     ]);
 
-    await transaction.insert(candidateActivities).values({
-      candidateId: candidate.id,
-      inquiryId: inquiry.id,
-      metadata: {
-        language: input.language,
-        source: 'public_level_test',
+    await transaction.insert(candidateActivities).values([
+      ...(!existingCandidate
+        ? [
+            {
+              candidateId: candidate.id,
+              inquiryId: inquiry.id,
+              metadata: {
+                language: input.language,
+                source: 'public_level_test',
+              },
+              type: 'candidate.created_from_public_assessment',
+            },
+          ]
+        : []),
+      {
+        candidateId: candidate.id,
+        inquiryId: inquiry.id,
+        metadata: {
+          language: input.language,
+          source: 'public_level_test',
+        },
+        type: 'candidate.inquiry_received',
       },
-      type: 'candidate.created_from_public_assessment',
-    });
+    ]);
 
     return attempt.id;
   });
@@ -655,12 +676,19 @@ export async function answerPublicAssessment(
       })
       .where(eq(assessmentAttempts.id, context.attemptId));
 
-    await transaction.insert(candidateActivities).values({
-      candidateId: context.candidateId,
-      inquiryId: context.inquiryId,
-      metadata: { level, score },
-      type: 'assessment.completed',
-    });
+    const now = new Date();
+    await Promise.all([
+      transaction.insert(candidateActivities).values({
+        candidateId: context.candidateId,
+        inquiryId: context.inquiryId,
+        metadata: { level, score },
+        type: 'candidate.assessment_completed',
+      }),
+      transaction
+        .update(candidateProfiles)
+        .set({ lastActivityAt: now, updatedAt: now })
+        .where(eq(candidateProfiles.id, context.candidateId)),
+    ]);
   });
 
   return buildState(await requireAttemptContext(token), locale);
@@ -808,12 +836,19 @@ export async function requestPublicAppointment(
         })),
       );
 
-      await transaction.insert(candidateActivities).values({
-        candidateId: context.candidateId,
-        inquiryId: context.inquiryId,
-        metadata: { preferenceCount: 3, timezone },
-        type: 'appointment.requested',
-      });
+      const activityAt = new Date();
+      await Promise.all([
+        transaction.insert(candidateActivities).values({
+          candidateId: context.candidateId,
+          inquiryId: context.inquiryId,
+          metadata: { preferenceCount: 3, timezone },
+          type: 'candidate.appointment_requested',
+        }),
+        transaction
+          .update(candidateProfiles)
+          .set({ lastActivityAt: activityAt, updatedAt: activityAt })
+          .where(eq(candidateProfiles.id, context.candidateId)),
+      ]);
     });
   }
 
