@@ -22,6 +22,10 @@ import {
   maskIdentityDocument,
   protectIdentityDocument,
 } from '@/lib/server/security/identity';
+import {
+  type ProgramLanguage,
+  resolveProgramPricing,
+} from '@/lib/server/services/programs';
 
 type IdentityDocumentType = 'national_id' | 'passport';
 type GenderIdentity =
@@ -73,11 +77,11 @@ export type EnrollmentDraftPatch =
   | {
       step: 3;
       data: {
-        courseMode: 'group' | 'private';
         instagramHandle?: string;
-        programLabel?: string;
-        programReferenceId?: string;
-        sectionId?: string;
+        privateLessonHours?: number;
+        privateLessonLanguage?: ProgramLanguage;
+        programId: string;
+        teacherUserId?: string;
       };
     }
   | {
@@ -99,12 +103,12 @@ export type EnrollmentDraftPatch =
   | {
       step: 7;
       data: {
-        discountCents: number;
-        finalPriceCents: number;
+        discountNote?: string;
+        discountType: 'none' | 'percentage' | 'fixed';
+        discountValue: number;
         financialNotes?: string;
         initialPaymentCents: number;
         installmentCount: number;
-        listPriceCents: number;
         paymentMethod?: string;
       };
     }
@@ -148,6 +152,9 @@ export type EnrollmentDraftView = {
     currency: 'TRY';
     currentStep: number;
     discountCents: number;
+    discountNote?: string;
+    discountType: 'none' | 'percentage' | 'fixed';
+    discountValue: number;
     email: string;
     finalPriceCents?: number;
     financialNotes?: string;
@@ -165,6 +172,9 @@ export type EnrollmentDraftView = {
     listPriceCents?: number;
     paymentMethod?: string;
     primaryPhone: string;
+    privateLessonHours?: number;
+    privateLessonLanguage?: ProgramLanguage;
+    privateLessonRateId?: string;
     programLabel?: string;
     programReferenceId?: string;
     registrationChannel?: string;
@@ -179,6 +189,7 @@ export type EnrollmentDraftView = {
     school?: string;
     secondaryPhone?: string;
     sectionId?: string;
+    selectedTeacherUserId?: string;
     status: string;
     studentIsContractParty: boolean;
   };
@@ -291,6 +302,9 @@ export async function getEnrollmentDraftForAdmin(
       currency: enrollmentDrafts.currency,
       currentStep: enrollmentDrafts.currentStep,
       discountCents: enrollmentDrafts.discountCents,
+      discountNote: enrollmentDrafts.discountNote,
+      discountType: enrollmentDrafts.discountType,
+      discountValue: enrollmentDrafts.discountValue,
       draftBirthDate: enrollmentDrafts.birthDate,
       draftBirthPlace: enrollmentDrafts.birthPlace,
       draftEmail: enrollmentDrafts.email,
@@ -316,6 +330,9 @@ export async function getEnrollmentDraftForAdmin(
       listPriceCents: enrollmentDrafts.listPriceCents,
       paymentMethod: enrollmentDrafts.paymentMethod,
       phone: contacts.phone,
+      privateLessonHours: enrollmentDrafts.privateLessonHours,
+      privateLessonLanguage: enrollmentDrafts.privateLessonLanguage,
+      privateLessonRateId: enrollmentDrafts.privateLessonRateId,
       programReferenceId: enrollmentDrafts.programReferenceId,
       programSelection: enrollmentDrafts.programSelection,
       registrationChannel: enrollmentDrafts.registrationChannel,
@@ -324,6 +341,7 @@ export async function getEnrollmentDraftForAdmin(
       scheduleNotes: enrollmentDrafts.scheduleNotes,
       schedulePreferences: enrollmentDrafts.schedulePreferences,
       secondaryPhone: enrollmentDrafts.secondaryPhone,
+      selectedTeacherUserId: enrollmentDrafts.selectedTeacherUserId,
       status: enrollmentDrafts.status,
       studentIsContractParty: enrollmentDrafts.studentIsContractParty,
     })
@@ -394,6 +412,9 @@ export async function getEnrollmentDraftForAdmin(
       currency: 'TRY',
       currentStep: row.currentStep,
       discountCents: row.discountCents,
+      discountNote: row.discountNote ?? undefined,
+      discountType: row.discountType,
+      discountValue: row.discountValue,
       email: row.draftEmail ?? row.email,
       finalPriceCents: row.finalPriceCents ?? undefined,
       financialNotes: row.financialNotes ?? undefined,
@@ -415,6 +436,10 @@ export async function getEnrollmentDraftForAdmin(
       listPriceCents: row.listPriceCents ?? undefined,
       paymentMethod: row.paymentMethod ?? undefined,
       primaryPhone: row.draftPrimaryPhone ?? row.phone ?? '',
+      privateLessonHours: row.privateLessonHours ?? undefined,
+      privateLessonLanguage:
+        (row.privateLessonLanguage as ProgramLanguage | null) ?? undefined,
+      privateLessonRateId: row.privateLessonRateId ?? undefined,
       programLabel: row.programSelection.label,
       programReferenceId:
         row.programSelection.programId ??
@@ -431,6 +456,7 @@ export async function getEnrollmentDraftForAdmin(
       school: row.draftSchool ?? undefined,
       secondaryPhone: row.secondaryPhone ?? undefined,
       sectionId: row.programSelection.sectionId,
+      selectedTeacherUserId: row.selectedTeacherUserId ?? undefined,
       status: row.status,
       studentIsContractParty: row.studentIsContractParty,
     },
@@ -460,7 +486,7 @@ export async function updateEnrollmentDraft(
   assertAdmin(principal);
   const now = new Date();
 
-  await database.transaction(async (transaction) => {
+  const result = await database.transaction(async (transaction) => {
     const [draft] = await transaction
       .select({
         candidateId: enrollmentDrafts.candidateId,
@@ -468,6 +494,7 @@ export async function updateEnrollmentDraft(
         identityDocumentEncrypted:
           enrollmentDrafts.identityDocumentEncrypted,
         identityDocumentType: enrollmentDrafts.identityDocumentType,
+        listPriceCents: enrollmentDrafts.listPriceCents,
         status: enrollmentDrafts.status,
       })
       .from(enrollmentDrafts)
@@ -618,22 +645,58 @@ export async function updateEnrollmentDraft(
     }
 
     if (patch.step === 3) {
+      const pricing = await resolveProgramPricing(transaction, {
+        privateLessonHours: patch.data.privateLessonHours,
+        privateLessonLanguage: patch.data.privateLessonLanguage,
+        programId: patch.data.programId,
+        teacherUserId: patch.data.teacherUserId,
+      });
+
       await transaction
         .update(enrollmentDrafts)
         .set({
           ...common,
-          courseMode: patch.data.courseMode,
+          courseMode: pricing.courseMode,
+          discountAppliedByUserId: null,
+          discountCents: 0,
+          discountNote: null,
+          discountType: 'none',
+          discountValue: 0,
+          finalPriceCents: pricing.basePriceCents,
           instagramHandle: cleanOptional(patch.data.instagramHandle),
-          programReferenceId: cleanOptional(patch.data.programReferenceId),
-          programSelection: {
-            label: cleanOptional(patch.data.programLabel) ?? undefined,
-            programId:
-              cleanOptional(patch.data.programReferenceId) ?? undefined,
-            sectionId: cleanOptional(patch.data.sectionId) ?? undefined,
-          },
+          listPriceCents: pricing.basePriceCents,
+          privateLessonHours:
+            pricing.courseMode === 'private'
+              ? patch.data.privateLessonHours
+              : null,
+          privateLessonLanguage:
+            pricing.courseMode === 'private'
+              ? patch.data.privateLessonLanguage
+              : null,
+          privateLessonRateId:
+            pricing.courseMode === 'private' ? pricing.rate.id : null,
+          programId: pricing.program.id,
+          programReferenceId: pricing.program.id,
+          programSelection: pricing.snapshot,
+          selectedTeacherUserId:
+            pricing.courseMode === 'private'
+              ? patch.data.teacherUserId
+              : null,
         })
         .where(eq(enrollmentDrafts.id, draftId));
-      return;
+      return {
+        draft: {
+          courseMode: pricing.courseMode,
+          discountCents: 0,
+          discountType: 'none' as const,
+          discountValue: 0,
+          finalPriceCents: pricing.basePriceCents,
+          listPriceCents: pricing.basePriceCents,
+          privateLessonRateId:
+            pricing.courseMode === 'private' ? pricing.rate.id : undefined,
+          programLabel: pricing.snapshot.label,
+        },
+      };
     }
 
     if (patch.step === 4) {
@@ -667,21 +730,49 @@ export async function updateEnrollmentDraft(
     }
 
     if (patch.step === 7) {
+      if (draft.listPriceCents === null) {
+        throw new PublicFlowError('program_price_missing', 409);
+      }
+      const discount = calculateDiscount(
+        draft.listPriceCents,
+        patch.data.discountType,
+        patch.data.discountValue,
+      );
+      const finalPriceCents = draft.listPriceCents - discount.discountCents;
+
+      if (patch.data.initialPaymentCents > finalPriceCents) {
+        throw new PublicFlowError('initial_payment_exceeds_price', 400);
+      }
+
       await transaction
         .update(enrollmentDrafts)
         .set({
           ...common,
           currency: 'TRY',
-          discountCents: patch.data.discountCents,
-          finalPriceCents: patch.data.finalPriceCents,
+          discountAppliedByUserId:
+            discount.discountCents > 0 ? principal.id : null,
+          discountCents: discount.discountCents,
+          discountNote:
+            discount.discountCents > 0
+              ? cleanOptional(patch.data.discountNote)
+              : null,
+          discountType: patch.data.discountType,
+          discountValue: discount.discountValue,
+          finalPriceCents,
           financialNotes: cleanOptional(patch.data.financialNotes),
           initialPaymentCents: patch.data.initialPaymentCents,
           installmentCount: patch.data.installmentCount,
-          listPriceCents: patch.data.listPriceCents,
           paymentMethod: cleanOptional(patch.data.paymentMethod),
         })
         .where(eq(enrollmentDrafts.id, draftId));
-      return;
+      return {
+        draft: {
+          discountCents: discount.discountCents,
+          discountType: patch.data.discountType,
+          discountValue: discount.discountValue,
+          finalPriceCents,
+        },
+      };
     }
 
     if (patch.step === 8) {
@@ -706,7 +797,7 @@ export async function updateEnrollmentDraft(
       .where(eq(enrollmentDrafts.id, draftId));
   });
 
-  return { savedAt: now.toISOString() };
+  return { ...result, savedAt: now.toISOString() };
 }
 
 export async function attachEnrollmentDocument(
@@ -857,12 +948,18 @@ export async function completeEnrollment(
         finalPriceCents: draft.finalPriceCents!,
         financialSnapshot: {
           discountCents: draft.discountCents,
+          discountAppliedByUserId: draft.discountAppliedByUserId,
+          discountNote: draft.discountNote,
+          discountType: draft.discountType,
+          discountValue: draft.discountValue,
           financialNotes: draft.financialNotes,
           initialPaymentCents: draft.initialPaymentCents,
           installmentCount: draft.installmentCount,
           listPriceCents: draft.listPriceCents,
           paymentMethod: draft.paymentMethod,
         },
+        privateLessonRateId: draft.privateLessonRateId,
+        programId: draft.programId,
         programReferenceId: draft.programReferenceId,
         programSelection: draft.programSelection,
         registeredByUserId: principal.id,
@@ -871,6 +968,7 @@ export async function completeEnrollment(
           notes: draft.scheduleNotes,
           preferences: draft.schedulePreferences,
         },
+        selectedTeacherUserId: draft.selectedTeacherUserId,
         studentId: student.id,
       })
       .returning({ id: enrollments.id });
@@ -933,6 +1031,7 @@ function validateEnrollmentDraft(
     ['email', draft.email],
     ['address', draft.residenceAddress],
     ['course_mode', draft.courseMode],
+    ['program_id', draft.programId],
     ['program', draft.programSelection.label],
     ['registration_channel', draft.registrationChannel],
   ] as const;
@@ -949,6 +1048,16 @@ function validateEnrollmentDraft(
     draft.finalPriceCents !== draft.listPriceCents - draft.discountCents
   ) {
     errors.push('financial_totals');
+  }
+
+  if (
+    draft.courseMode === 'private' &&
+    (!draft.selectedTeacherUserId ||
+      !draft.privateLessonLanguage ||
+      !draft.privateLessonHours ||
+      !draft.privateLessonRateId)
+  ) {
+    errors.push('private_lesson_selection');
   }
 
   if (!draft.studentIsContractParty) {
@@ -1008,4 +1117,32 @@ function cleanOptional(value?: string) {
 
 function normalizePhone(value: string) {
   return value.replace(/\D/g, '');
+}
+
+function calculateDiscount(
+  listPriceCents: number,
+  type: 'none' | 'percentage' | 'fixed',
+  rawValue: number,
+) {
+  const value = Math.max(0, Math.trunc(rawValue));
+
+  if (type === 'none') {
+    return { discountCents: 0, discountValue: 0 };
+  }
+
+  if (type === 'percentage') {
+    if (value > 10_000) {
+      throw new PublicFlowError('discount_percentage_invalid', 400);
+    }
+    return {
+      discountCents: Math.round((listPriceCents * value) / 10_000),
+      discountValue: value,
+    };
+  }
+
+  if (value > listPriceCents) {
+    throw new PublicFlowError('discount_exceeds_price', 400);
+  }
+
+  return { discountCents: value, discountValue: value };
 }

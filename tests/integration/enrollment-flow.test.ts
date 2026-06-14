@@ -12,6 +12,7 @@ import {
   enrollmentDrafts,
   enrollmentParties,
   enrollments,
+  programs,
   studentProfiles,
   users,
 } from '@/lib/server/db/schema';
@@ -39,6 +40,7 @@ integration('candidate enrollment flow', () => {
     let draftId: string | undefined;
     let studentId: string | undefined;
     let enrollmentId: string | undefined;
+    let programId: string | undefined;
 
     const principal: WorkspacePrincipal = {
       accountStatus: 'active',
@@ -81,6 +83,19 @@ integration('candidate enrollment flow', () => {
         .returning({ id: candidateProfiles.id });
       candidateId = candidate!.id;
 
+      const [program] = await database
+        .insert(programs)
+        .values({
+          createdByUserId: adminId,
+          kind: 'group',
+          language: 'english',
+          levels: ['A1', 'A2'],
+          listPriceCents: 100_000,
+          name: 'Integration English Program',
+        })
+        .returning({ id: programs.id });
+      programId = program!.id;
+
       const started = await beginEnrollmentDraft(principal, candidateId);
       draftId = started.id;
       expect(started.created).toBe(true);
@@ -113,8 +128,7 @@ integration('candidate enrollment flow', () => {
       });
       await updateEnrollmentDraft(principal, draftId, {
         data: {
-          courseMode: 'private',
-          programLabel: 'Integration English Program',
+          programId,
         },
         step: 3,
       });
@@ -128,11 +142,10 @@ integration('candidate enrollment flow', () => {
       });
       await updateEnrollmentDraft(principal, draftId, {
         data: {
-          discountCents: 10_000,
-          finalPriceCents: 90_000,
+          discountType: 'fixed',
+          discountValue: 10_000,
           initialPaymentCents: 20_000,
           installmentCount: 4,
-          listPriceCents: 100_000,
           paymentMethod: 'bank_transfer',
         },
         step: 7,
@@ -206,6 +219,9 @@ integration('candidate enrollment flow', () => {
       }
       if (contactId) {
         await database.delete(contacts).where(eq(contacts.id, contactId));
+      }
+      if (programId) {
+        await database.delete(programs).where(eq(programs.id, programId));
       }
       await database.delete(users).where(eq(users.id, adminId));
     }

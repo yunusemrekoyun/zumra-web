@@ -32,6 +32,10 @@ import type {
   EnrollmentDraftView,
   EnrollmentPartyInput,
 } from '@/lib/server/services/enrollments';
+import type {
+  ProgramLanguage,
+  ProgramManagementData,
+} from '@/lib/server/services/programs';
 
 type DraftState = EnrollmentDraftView['draft'] & {
   identityDocument: string;
@@ -40,8 +44,10 @@ type DraftState = EnrollmentDraftView['draft'] & {
 const stepNumbers = [1, 2, 3, 4, 5, 6, 7, 8, 9] as const;
 
 export function EnrollmentWizard({
+  catalog,
   initial,
 }: {
+  catalog: ProgramManagementData;
   initial: EnrollmentDraftView;
 }) {
   const t = useTranslations('admin.enrollment');
@@ -107,6 +113,9 @@ export function EnrollmentWizard({
         const body = await response.json().catch(() => ({}));
         if (response.ok && body.savedAt) {
           setLastSavedAt(body.savedAt);
+          if (body.draft) {
+            setDraft((current) => ({ ...current, ...body.draft }));
+          }
         }
       } catch {
         // Explicit step save surfaces errors; background autosave stays quiet.
@@ -148,6 +157,9 @@ export function EnrollmentWizard({
         throw new Error(body.error ?? 'save_failed');
       }
       setLastSavedAt(body.savedAt);
+      if (body.draft) {
+        setDraft((current) => ({ ...current, ...body.draft }));
+      }
       setMessage(t('saved'));
       if (step < 9) {
         setStep((current) => current + 1);
@@ -378,7 +390,12 @@ export function EnrollmentWizard({
               />
             )}
             {step === 3 && (
-              <ProgramStep draft={draft} setDraft={setDraft} t={t} />
+              <ProgramStep
+                catalog={catalog}
+                draft={draft}
+                setDraft={setDraft}
+                t={t}
+              />
             )}
             {step === 4 && (
               <SourceStep
@@ -842,50 +859,230 @@ function PartyEditor({
 }
 
 function ProgramStep({
+  catalog,
   draft,
   setDraft,
   t,
 }: {
+  catalog: ProgramManagementData;
   draft: DraftState;
   setDraft: SetDraft;
   t: WizardT;
 }) {
+  const locale = useLocale();
+  const selectedProgram = catalog.programs.find(
+    (program) => program.id === draft.programReferenceId,
+  );
+  const privateRates = draft.privateLessonLanguage
+    ? catalog.rates.filter(
+        (rate) => rate.language === draft.privateLessonLanguage,
+      )
+    : [];
+  const selectedRate = catalog.rates.find(
+    (rate) =>
+      rate.teacherUserId === draft.selectedTeacherUserId &&
+      rate.language === draft.privateLessonLanguage,
+  );
+
+  function chooseProgram(programId: string) {
+    const program = catalog.programs.find((item) => item.id === programId);
+    if (!program) return;
+
+    setDraft((current) => ({
+      ...current,
+      courseMode: program.kind,
+      discountCents: 0,
+      discountNote: undefined,
+      discountType: 'none',
+      discountValue: 0,
+      finalPriceCents:
+        program.kind === 'group' ? program.listPriceCents : undefined,
+      listPriceCents:
+        program.kind === 'group' ? program.listPriceCents : undefined,
+      privateLessonHours: undefined,
+      privateLessonLanguage: undefined,
+      privateLessonRateId: undefined,
+      programLabel:
+        program.systemKey === 'private-lesson'
+          ? t('options.private')
+          : program.name,
+      programReferenceId: program.id,
+      selectedTeacherUserId: undefined,
+    }));
+  }
+
+  function updatePrivateSelection(values: Partial<DraftState>) {
+    setDraft((current) => {
+      const next = { ...current, ...values };
+      const rate = catalog.rates.find(
+        (item) =>
+          item.teacherUserId === next.selectedTeacherUserId &&
+          item.language === next.privateLessonLanguage,
+      );
+      const basePrice =
+        rate && next.privateLessonHours
+          ? rate.hourlyPriceCents * next.privateLessonHours
+          : undefined;
+
+      return {
+        ...next,
+        discountCents: 0,
+        discountNote: undefined,
+        discountType: 'none',
+        discountValue: 0,
+        finalPriceCents: basePrice,
+        listPriceCents: basePrice,
+        privateLessonRateId: rate?.id,
+      };
+    });
+  }
+
   return (
-    <div className="grid gap-5 sm:grid-cols-2">
+    <div className="space-y-6">
       <SelectField
-        label={t('fields.courseMode')}
-        value={draft.courseMode ?? ''}
-        onChange={(value) =>
-          setDraft((current) => ({
-            ...current,
-            courseMode: value as 'group' | 'private',
-          }))
-        }
+        label={t('fields.program')}
+        value={draft.programReferenceId ?? ''}
+        onChange={chooseProgram}
         options={[
           ['', t('select')],
-          ['group', t('options.group')],
-          ['private', t('options.private')],
+          ...catalog.programs.map(
+            (program) =>
+              [
+                program.id,
+                program.systemKey === 'private-lesson'
+                  ? t('options.private')
+                  : program.name,
+              ] as const,
+          ),
         ]}
       />
-      <Field
-        label={t('fields.programLabel')}
-        value={draft.programLabel ?? ''}
-        onChange={(value) =>
-          setDraft((current) => ({ ...current, programLabel: value }))
-        }
-        placeholder={t('fields.programPlaceholder')}
-      />
-      <Field
-        label={t('fields.instagram')}
-        value={draft.instagramHandle ?? ''}
-        onChange={(value) =>
-          setDraft((current) => ({ ...current, instagramHandle: value }))
-        }
-        placeholder="@"
-      />
-      <div className="rounded-2xl bg-blue-50 p-4 text-sm font-medium leading-6 text-blue-700">
-        {t('programModuleNote')}
+
+      {selectedProgram?.kind === 'group' && (
+        <div className="grid gap-4 rounded-2xl bg-[#F8F7FB] p-5 sm:grid-cols-3">
+          <ProgramSummary
+            label={t('fields.language')}
+            value={
+              selectedProgram.language
+                ? t(`languages.${selectedProgram.language}`)
+                : '-'
+            }
+          />
+          <ProgramSummary
+            label={t('fields.levels')}
+            value={selectedProgram.levels.join(' · ')}
+          />
+          <ProgramSummary
+            label={t('fields.listPrice')}
+            value={formatTry(selectedProgram.listPriceCents ?? 0, locale)}
+          />
+        </div>
+      )}
+
+      {selectedProgram?.kind === 'private' && (
+        <div className="space-y-5 rounded-2xl border border-[#533089]/10 bg-[#533089]/[0.025] p-5">
+          <div className="grid gap-5 sm:grid-cols-2">
+            <SelectField
+              label={t('fields.privateLessonLanguage')}
+              value={draft.privateLessonLanguage ?? ''}
+              onChange={(value) =>
+                updatePrivateSelection({
+                  privateLessonLanguage: value as ProgramLanguage,
+                  selectedTeacherUserId: undefined,
+                })
+              }
+              options={[
+                ['', t('select')],
+                ...(['english', 'german', 'french', 'arabic'] as const).map(
+                  (language) =>
+                    [language, t(`languages.${language}`)] as const,
+                ),
+              ]}
+            />
+            <SelectField
+              label={t('fields.teacher')}
+              value={draft.selectedTeacherUserId ?? ''}
+              onChange={(value) =>
+                updatePrivateSelection({ selectedTeacherUserId: value })
+              }
+              options={[
+                ['', t('select')],
+                ...privateRates.map(
+                  (rate) => [rate.teacherUserId, rate.teacherName] as const,
+                ),
+              ]}
+            />
+            <Field
+              label={t('fields.privateLessonHours')}
+              type="number"
+              value={String(draft.privateLessonHours ?? '')}
+              onChange={(value) =>
+                updatePrivateSelection({
+                  privateLessonHours: Math.max(1, Number(value) || 1),
+                })
+              }
+            />
+            <div className="rounded-xl bg-white p-4">
+              <div className="text-xs font-bold text-[#2E286C]/45">
+                {t('fields.hourlyStudentPrice')}
+              </div>
+              <div className="mt-2 text-lg font-bold text-[#533089]">
+                {selectedRate
+                  ? formatTry(selectedRate.hourlyPriceCents, locale)
+                  : '-'}
+              </div>
+            </div>
+          </div>
+          {!privateRates.length && draft.privateLessonLanguage && (
+            <div className="rounded-xl bg-amber-50 p-4 text-sm font-semibold text-amber-700">
+              {t('noPrivateLessonRate')}
+            </div>
+          )}
+          {draft.listPriceCents !== undefined && (
+            <div className="flex items-center justify-between rounded-xl bg-[#533089] p-4 text-white">
+              <span className="text-sm font-semibold">
+                {t('privateLessonTotal')}
+              </span>
+              <span className="text-lg font-bold">
+                {formatTry(draft.listPriceCents, locale)}
+              </span>
+            </div>
+          )}
+          <p className="text-xs font-medium leading-5 text-[#2E286C]/45">
+            {t('privateLessonRateNote')}
+          </p>
+        </div>
+      )}
+
+      <div className="grid gap-5 sm:grid-cols-2">
+        <Field
+          label={t('fields.instagram')}
+          value={draft.instagramHandle ?? ''}
+          onChange={(value) =>
+            setDraft((current) => ({ ...current, instagramHandle: value }))
+          }
+          placeholder="@"
+        />
+        <div className="rounded-2xl bg-blue-50 p-4 text-sm font-medium leading-6 text-blue-700">
+          {t('programModuleNote')}
+        </div>
       </div>
+    </div>
+  );
+}
+
+function ProgramSummary({
+  label,
+  value,
+}: {
+  label: string;
+  value: string;
+}) {
+  return (
+    <div>
+      <div className="text-[10px] font-bold uppercase tracking-wider text-[#2E286C]/35">
+        {label}
+      </div>
+      <div className="mt-2 text-sm font-bold text-[#2E286C]">{value}</div>
     </div>
   );
 }
@@ -1046,28 +1243,63 @@ function FinanceStep({
   setDraft: SetDraft;
   t: WizardT;
 }) {
+  function updateDiscount(
+    discountType: DraftState['discountType'],
+    discountValue: number,
+  ) {
+    setDraft((current) =>
+      applyDiscount(current, discountType, discountValue),
+    );
+  }
+
   return (
     <div className="grid gap-5 sm:grid-cols-2">
       <MoneyField
         label={t('fields.listPrice')}
         cents={draft.listPriceCents}
-        onChange={(value) =>
-          setDraft((current) => ({ ...current, listPriceCents: value }))
-        }
+        disabled
+        onChange={() => undefined}
       />
-      <MoneyField
-        label={t('fields.discount')}
-        cents={draft.discountCents}
+      <SelectField
+        label={t('fields.discountType')}
+        value={draft.discountType}
         onChange={(value) =>
-          setDraft((current) => ({ ...current, discountCents: value }))
+          updateDiscount(
+            value as DraftState['discountType'],
+            value === 'none' ? 0 : draft.discountValue,
+          )
         }
+        options={[
+          ['none', t('options.discountNone')],
+          ['percentage', t('options.discountPercentage')],
+          ['fixed', t('options.discountFixed')],
+        ]}
       />
+      {draft.discountType === 'percentage' && (
+        <Field
+          label={t('fields.discountPercentage')}
+          type="number"
+          value={(draft.discountValue / 100).toString()}
+          onChange={(value) =>
+            updateDiscount(
+              'percentage',
+              Math.min(10_000, Math.max(0, Math.round(Number(value) * 100))),
+            )
+          }
+        />
+      )}
+      {draft.discountType === 'fixed' && (
+        <MoneyField
+          label={t('fields.discountAmount')}
+          cents={draft.discountValue}
+          onChange={(value) => updateDiscount('fixed', value)}
+        />
+      )}
       <MoneyField
         label={t('fields.finalPrice')}
         cents={draft.finalPriceCents}
-        onChange={(value) =>
-          setDraft((current) => ({ ...current, finalPriceCents: value }))
-        }
+        disabled
+        onChange={() => undefined}
       />
       <MoneyField
         label={t('fields.initialPayment')}
@@ -1102,6 +1334,18 @@ function FinanceStep({
           ['mixed', t('options.mixed')],
         ]}
       />
+      {draft.discountType !== 'none' && (
+        <div className="sm:col-span-2">
+          <TextAreaField
+            label={t('fields.discountNote')}
+            value={draft.discountNote ?? ''}
+            onChange={(value) =>
+              setDraft((current) => ({ ...current, discountNote: value }))
+            }
+            placeholder={t('fields.discountNotePlaceholder')}
+          />
+        </div>
+      )}
       <div className="sm:col-span-2">
         <TextAreaField
           label={t('fields.financialNotes')}
@@ -1255,10 +1499,12 @@ function Field({
 
 function MoneyField({
   cents,
+  disabled,
   label,
   onChange,
 }: {
   cents?: number;
+  disabled?: boolean;
   label: string;
   onChange: (value: number) => void;
 }) {
@@ -1267,6 +1513,7 @@ function MoneyField({
       <span className="text-xs font-bold text-[#2E286C]/60">{label}</span>
       <div className="relative">
         <Input
+          disabled={disabled}
           type="number"
           min="0"
           step="0.01"
@@ -1386,11 +1633,11 @@ function buildPatch(
   if (step === 3) {
     return {
       data: {
-        courseMode: draft.courseMode ?? 'group',
         instagramHandle: draft.instagramHandle,
-        programLabel: draft.programLabel,
-        programReferenceId: draft.programReferenceId,
-        sectionId: draft.sectionId,
+        privateLessonHours: draft.privateLessonHours,
+        privateLessonLanguage: draft.privateLessonLanguage,
+        programId: draft.programReferenceId ?? '',
+        teacherUserId: draft.selectedTeacherUserId,
       },
       step: 3,
     };
@@ -1410,12 +1657,12 @@ function buildPatch(
   if (step === 7) {
     return {
       data: {
-        discountCents: draft.discountCents,
-        finalPriceCents: draft.finalPriceCents ?? 0,
+        discountNote: draft.discountNote,
+        discountType: draft.discountType,
+        discountValue: draft.discountValue,
         financialNotes: draft.financialNotes,
         initialPaymentCents: draft.initialPaymentCents,
         installmentCount: draft.installmentCount,
-        listPriceCents: draft.listPriceCents ?? 0,
         paymentMethod: draft.paymentMethod,
       },
       step: 7,
@@ -1472,7 +1719,14 @@ function canAutosaveStep(
   }
 
   if (step === 3) {
-    return Boolean(draft.courseMode && draft.programLabel?.trim());
+    if (!draft.courseMode || !draft.programReferenceId) return false;
+    if (draft.courseMode === 'group') return true;
+    return Boolean(
+      draft.privateLessonLanguage &&
+        draft.selectedTeacherUserId &&
+        draft.privateLessonHours &&
+        draft.privateLessonRateId,
+    );
   }
 
   if (step === 5) {
@@ -1490,4 +1744,42 @@ function canAutosaveStep(
   }
 
   return true;
+}
+
+function applyDiscount(
+  draft: DraftState,
+  discountType: DraftState['discountType'],
+  rawValue: number,
+): DraftState {
+  const listPriceCents = draft.listPriceCents ?? 0;
+  const value = Math.max(0, Math.trunc(rawValue));
+  const discountValue =
+    discountType === 'percentage'
+      ? Math.min(10_000, value)
+      : discountType === 'fixed'
+        ? Math.min(listPriceCents, value)
+        : 0;
+  const discountCents =
+    discountType === 'percentage'
+      ? Math.round((listPriceCents * discountValue) / 10_000)
+      : discountType === 'fixed'
+        ? discountValue
+        : 0;
+
+  return {
+    ...draft,
+    discountCents,
+    discountNote:
+      discountType === 'none' ? undefined : draft.discountNote,
+    discountType,
+    discountValue,
+    finalPriceCents: listPriceCents - discountCents,
+  };
+}
+
+function formatTry(cents: number, locale: string) {
+  return new Intl.NumberFormat(locale, {
+    currency: 'TRY',
+    style: 'currency',
+  }).format(cents / 100);
 }

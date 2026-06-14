@@ -15,6 +15,7 @@ import {
 import { users } from './auth';
 import { candidateProfiles, contacts } from './candidates';
 import { mediaAssets } from './foundation';
+import { privateLessonStudentRates, programs } from './programs';
 
 export const enrollmentDraftStatusEnum = pgEnum('enrollment_draft_status', [
   'draft',
@@ -56,6 +57,12 @@ export const enrollmentStatusEnum = pgEnum('enrollment_status', [
   'cancelled',
 ]);
 
+export const discountTypeEnum = pgEnum('discount_type', [
+  'none',
+  'percentage',
+  'fixed',
+]);
+
 export type EnrollmentPartyRole =
   | 'guardian'
   | 'payer'
@@ -63,9 +70,18 @@ export type EnrollmentPartyRole =
   | 'other';
 
 export type ProgramSelectionSnapshot = {
+  basePriceCents?: number;
+  hourlyStudentPriceCents?: number;
   label?: string;
+  language?: string;
+  levels?: string[];
+  privateLessonHours?: number;
+  privateLessonRateId?: string;
   programId?: string;
   sectionId?: string;
+  teacherName?: string;
+  teacherUserId?: string;
+  type?: 'group' | 'private';
 };
 
 export type SchedulePreference = {
@@ -107,6 +123,19 @@ export const enrollmentDrafts = pgTable(
     instagramHandle: text('instagram_handle'),
     courseMode: courseModeEnum('course_mode'),
     programReferenceId: text('program_reference_id'),
+    programId: uuid('program_id').references(() => programs.id, {
+      onDelete: 'restrict',
+    }),
+    selectedTeacherUserId: text('selected_teacher_user_id').references(
+      () => users.id,
+      { onDelete: 'restrict' },
+    ),
+    privateLessonLanguage: text('private_lesson_language'),
+    privateLessonHours: integer('private_lesson_hours'),
+    privateLessonRateId: uuid('private_lesson_rate_id').references(
+      () => privateLessonStudentRates.id,
+      { onDelete: 'restrict' },
+    ),
     programSelection: jsonb('program_selection')
       .$type<ProgramSelectionSnapshot>()
       .notNull()
@@ -114,7 +143,14 @@ export const enrollmentDrafts = pgTable(
     correctedSource: text('corrected_source'),
     registrationChannel: text('registration_channel'),
     listPriceCents: integer('list_price_cents'),
+    discountType: discountTypeEnum('discount_type').notNull().default('none'),
+    discountValue: integer('discount_value').notNull().default(0),
     discountCents: integer('discount_cents').notNull().default(0),
+    discountAppliedByUserId: text('discount_applied_by_user_id').references(
+      () => users.id,
+      { onDelete: 'restrict' },
+    ),
+    discountNote: text('discount_note'),
     finalPriceCents: integer('final_price_cents'),
     initialPaymentCents: integer('initial_payment_cents').notNull().default(0),
     currency: text('currency').notNull().default('TRY'),
@@ -154,6 +190,8 @@ export const enrollmentDrafts = pgTable(
       table.lastSavedAt,
     ),
     index('enrollment_drafts_created_by_idx').on(table.createdByUserId),
+    index('enrollment_drafts_program_idx').on(table.programId),
+    index('enrollment_drafts_teacher_idx').on(table.selectedTeacherUserId),
     check(
       'enrollment_drafts_current_step_check',
       sql`${table.currentStep} between 1 and 9`,
@@ -165,9 +203,26 @@ export const enrollmentDrafts = pgTable(
     check(
       'enrollment_drafts_money_non_negative_check',
       sql`coalesce(${table.listPriceCents}, 0) >= 0
+        and ${table.discountValue} >= 0
         and ${table.discountCents} >= 0
         and coalesce(${table.finalPriceCents}, 0) >= 0
         and ${table.initialPaymentCents} >= 0`,
+    ),
+    check(
+      'enrollment_drafts_discount_value_check',
+      sql`(${table.discountType} = 'percentage' and ${table.discountValue} <= 10000)
+        or ${table.discountType} <> 'percentage'`,
+    ),
+    check(
+      'enrollment_drafts_private_lesson_fields_check',
+      sql`${table.courseMode} <> 'private'
+        or ${table.programId} is null
+        or (
+          ${table.selectedTeacherUserId} is not null
+          and ${table.privateLessonLanguage} is not null
+          and ${table.privateLessonHours} > 0
+          and ${table.privateLessonRateId} is not null
+        )`,
     ),
     check(
       'enrollment_drafts_installment_count_check',
@@ -298,6 +353,17 @@ export const enrollments = pgTable(
     status: enrollmentStatusEnum('status').notNull().default('active'),
     courseMode: courseModeEnum('course_mode').notNull(),
     programReferenceId: text('program_reference_id'),
+    programId: uuid('program_id').references(() => programs.id, {
+      onDelete: 'restrict',
+    }),
+    selectedTeacherUserId: text('selected_teacher_user_id').references(
+      () => users.id,
+      { onDelete: 'restrict' },
+    ),
+    privateLessonRateId: uuid('private_lesson_rate_id').references(
+      () => privateLessonStudentRates.id,
+      { onDelete: 'restrict' },
+    ),
     programSelection: jsonb('program_selection')
       .$type<ProgramSelectionSnapshot>()
       .notNull()
@@ -326,6 +392,8 @@ export const enrollments = pgTable(
     uniqueIndex('enrollments_draft_unique').on(table.draftId),
     index('enrollments_student_status_idx').on(table.studentId, table.status),
     index('enrollments_candidate_idx').on(table.candidateId),
+    index('enrollments_program_idx').on(table.programId),
+    index('enrollments_teacher_idx').on(table.selectedTeacherUserId),
     check('enrollments_currency_check', sql`${table.currency} = 'TRY'`),
     check(
       'enrollments_final_price_non_negative_check',
