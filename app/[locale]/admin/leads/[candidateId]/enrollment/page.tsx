@@ -1,6 +1,7 @@
 import { notFound } from 'next/navigation';
 import { requireWorkspaceRole } from '@/lib/server/authorization';
 import { getEnrollmentDraftForAdmin } from '@/lib/server/services/enrollments';
+import { getEnrollmentProgramCatalog } from '@/lib/server/services/programs';
 import { EnrollmentWizard } from './enrollment-wizard';
 
 type EnrollmentPageProps = {
@@ -12,11 +13,14 @@ export default async function EnrollmentPage({
 }: EnrollmentPageProps) {
   const { candidateId, locale } = await params;
   const principal = await requireWorkspaceRole('admin', locale);
-  const enrollment = await getEnrollmentDraftForAdmin(principal, candidateId);
+  const [enrollment, catalog] = await Promise.all([
+    getEnrollmentDraftForAdmin(principal, candidateId),
+    getEnrollmentProgramCatalog(principal),
+  ]);
 
   if (!enrollment) {
     notFound();
   }
 
-  return <EnrollmentWizard initial={enrollment} />;
+  return <EnrollmentWizard catalog={catalog} initial={enrollment} />;
 }

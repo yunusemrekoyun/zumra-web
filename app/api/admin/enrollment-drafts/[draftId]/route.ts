@@ -10,6 +10,7 @@ import {
   type EnrollmentDraftPatch,
   updateEnrollmentDraft,
 } from '@/lib/server/services/enrollments';
+import { supportedProgramLanguages } from '@/lib/server/services/programs';
 
 const identityType = z.enum(['national_id', 'passport']);
 const gender = z.enum([
@@ -61,11 +62,11 @@ const patchSchema = z.discriminatedUnion('step', [
   z.object({
     step: z.literal(3),
     data: z.object({
-      courseMode: z.enum(['group', 'private']),
       instagramHandle: z.string().trim().max(80).optional().or(z.literal('')),
-      programLabel: z.string().trim().min(2).max(180),
-      programReferenceId: z.string().trim().max(120).optional().or(z.literal('')),
-      sectionId: z.string().trim().max(120).optional().or(z.literal('')),
+      privateLessonHours: z.number().int().min(1).max(1000).optional(),
+      privateLessonLanguage: z.enum(supportedProgramLanguages).optional(),
+      programId: z.string().uuid(),
+      teacherUserId: z.string().min(1).max(160).optional(),
     }),
   }),
   z.object({
@@ -87,12 +88,12 @@ const patchSchema = z.discriminatedUnion('step', [
   z.object({
     step: z.literal(7),
     data: z.object({
-      discountCents: z.number().int().nonnegative(),
-      finalPriceCents: z.number().int().nonnegative(),
+      discountNote: z.string().trim().max(500).optional().or(z.literal('')),
+      discountType: z.enum(['none', 'percentage', 'fixed']),
+      discountValue: z.number().int().nonnegative(),
       financialNotes: z.string().trim().max(1000).optional().or(z.literal('')),
       initialPaymentCents: z.number().int().nonnegative(),
       installmentCount: z.number().int().min(1).max(120),
-      listPriceCents: z.number().int().nonnegative(),
       paymentMethod: z.string().trim().max(80).optional().or(z.literal('')),
     }),
   }),
