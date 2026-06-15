@@ -41,6 +41,7 @@ export type WorkspacePrincipal = {
 
 export type CreateInvitationInput = {
   email: string;
+  instructorProfileId?: string;
   locale: 'tr' | 'en';
   name: string;
   role: Exclude<UserRole, 'admin'>;

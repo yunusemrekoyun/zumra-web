@@ -1,4 +1,43 @@
 @import "tailwindcss";
+@import "react-day-picker/style.css";
+
+.zumra-calendar {
+  --rdp-accent-color: #533089;
+  --rdp-accent-background-color: rgba(83, 48, 137, 0.1);
+  --rdp-day-height: 2.5rem;
+  --rdp-day-width: 2.5rem;
+  --rdp-selected-border: 0;
+  color: #2E286C;
+  font-size: 0.875rem;
+}
+
+.zumra-calendar .rdp-month_caption {
+  font-family: var(--font-playfair), serif;
+  font-weight: 700;
+}
+
+.zumra-calendar .rdp-dropdown {
+  border: 1px solid rgba(83, 48, 137, 0.12);
+  border-radius: 0.625rem;
+  background: #F8F9FC;
+  padding: 0.35rem 0.5rem;
+  color: #2E286C;
+  font-weight: 700;
+}
+
+.zumra-calendar .rdp-day_button {
+  border-radius: 0.75rem;
+  font-weight: 600;
+}
+
+.zumra-calendar .rdp-selected .rdp-day_button {
+  background: #533089;
+  color: white;
+}
+
+.zumra-calendar .rdp-today:not(.rdp-selected) .rdp-day_button {
+  border: 1px solid rgba(83, 48, 137, 0.3);
+}
 
 @theme {
   --color-brand-primary: #533089;

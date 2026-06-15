@@ -10,12 +10,19 @@ import {
   candidateProfiles,
   contacts,
   enrollmentDrafts,
+  enrollmentBranchTransfers,
   enrollmentParties,
   enrollments,
+  programBranches,
   programs,
   studentProfiles,
   users,
 } from '@/lib/server/db/schema';
+import {
+  archiveProgramBranch,
+  deleteUnusedProgramBranch,
+  getProgramBranchArchivePreview,
+} from '@/lib/server/services/programs';
 import {
   beginEnrollmentDraft,
   completeEnrollment,
@@ -40,7 +47,14 @@ integration('candidate enrollment flow', () => {
     let draftId: string | undefined;
     let studentId: string | undefined;
     let enrollmentId: string | undefined;
+    let branchId: string | undefined;
     let programId: string | undefined;
+    let secondDraftId: string | undefined;
+    let targetBranchId: string | undefined;
+    let otherProgramId: string | undefined;
+    let otherBranchId: string | undefined;
+    let occupancyDraftId: string | undefined;
+    let occupancyEnrollmentId: string | undefined;
 
     const principal: WorkspacePrincipal = {
       accountStatus: 'active',
@@ -95,6 +109,20 @@ integration('candidate enrollment flow', () => {
         })
         .returning({ id: programs.id });
       programId = program!.id;
+      const [branch] = await database
+        .insert(programBranches)
+        .values({
+          createdByUserId: adminId,
+          maximumCapacity: 1,
+          minimumCapacity: 1,
+          name: 'Integration Class',
+          plannedEndDate: '2026-09-30',
+          plannedStartDate: '2026-07-01',
+          programId,
+          status: 'enrollment_open',
+        })
+        .returning({ id: programBranches.id });
+      branchId = branch!.id;
 
       const started = await beginEnrollmentDraft(principal, candidateId);
       draftId = started.id;
@@ -105,8 +133,10 @@ integration('candidate enrollment flow', () => {
 
       await updateEnrollmentDraft(principal, draftId, {
         data: {
+          birthAdministrativeArea: 'Istanbul',
+          birthCountryCode: 'TR',
           birthDate: '2000-01-01',
-          birthPlace: 'Istanbul',
+          birthLocality: 'Kadikoy',
           firstName: 'Enrollment',
           gender: 'prefer_not_to_say',
           identityDocument: 'TESTPASS123',
@@ -128,16 +158,20 @@ integration('candidate enrollment flow', () => {
       });
       await updateEnrollmentDraft(principal, draftId, {
         data: {
+          branchId,
           programId,
         },
         step: 3,
       });
       await updateEnrollmentDraft(principal, draftId, {
-        data: { correctedSource: 'integration_test' },
+        data: {
+          correctedSource: 'other',
+          correctedSourceDetail: 'Integration test',
+        },
         step: 4,
       });
       await updateEnrollmentDraft(principal, draftId, {
-        data: { registrationChannel: 'office' },
+        data: { registrationChannel: 'web' },
         step: 5,
       });
       await updateEnrollmentDraft(principal, draftId, {
@@ -188,6 +222,181 @@ integration('candidate enrollment flow', () => {
 
       const repeated = await completeEnrollment(principal, draftId);
       expect(repeated).toEqual({ id: enrollmentId, studentId });
+
+      const secondDraft = await beginEnrollmentDraft(principal, candidateId);
+      secondDraftId = secondDraft.id;
+      await expect(
+        updateEnrollmentDraft(principal, secondDraftId, {
+          data: { branchId, programId },
+          step: 3,
+        }),
+      ).rejects.toThrow('program_branch_capacity_full');
+
+      await updateEnrollmentDraft(principal, secondDraftId, {
+        data: {
+          branchId,
+          capacityOverride: true,
+          capacityOverrideNote: 'Integration capacity approval',
+          programId,
+        },
+        step: 3,
+      });
+      const [overriddenDraft] = await database
+        .select({
+          capacityOverride: enrollmentDrafts.capacityOverride,
+          capacityOverrideByUserId:
+            enrollmentDrafts.capacityOverrideByUserId,
+        })
+        .from(enrollmentDrafts)
+        .where(eq(enrollmentDrafts.id, secondDraftId))
+        .limit(1);
+      expect(overriddenDraft?.capacityOverride).toBe(true);
+      expect(overriddenDraft?.capacityOverrideByUserId).toBe(adminId);
+
+      const [targetBranch] = await database
+        .insert(programBranches)
+        .values({
+          createdByUserId: adminId,
+          maximumCapacity: 1,
+          minimumCapacity: 1,
+          name: 'Integration Target Class',
+          plannedEndDate: '2026-10-31',
+          plannedStartDate: '2026-07-01',
+          programId,
+          status: 'enrollment_open',
+        })
+        .returning({ id: programBranches.id });
+      targetBranchId = targetBranch!.id;
+
+      const [otherProgram] = await database
+        .insert(programs)
+        .values({
+          createdByUserId: adminId,
+          kind: 'group',
+          language: 'german',
+          levels: ['A1'],
+          listPriceCents: 90_000,
+          name: 'Integration Other Program',
+        })
+        .returning({ id: programs.id });
+      otherProgramId = otherProgram!.id;
+      const [otherBranch] = await database
+        .insert(programBranches)
+        .values({
+          createdByUserId: adminId,
+          maximumCapacity: 5,
+          minimumCapacity: 1,
+          name: 'Integration Other Class',
+          plannedEndDate: '2026-10-31',
+          plannedStartDate: '2026-07-01',
+          programId: otherProgramId,
+          status: 'enrollment_open',
+        })
+        .returning({ id: programBranches.id });
+      otherBranchId = otherBranch!.id;
+
+      const [occupancyDraft] = await database
+        .insert(enrollmentDrafts)
+        .values({
+          candidateId,
+          completedAt: new Date(),
+          createdByUserId: adminId,
+          currentStep: 9,
+          status: 'completed',
+        })
+        .returning({ id: enrollmentDrafts.id });
+      occupancyDraftId = occupancyDraft!.id;
+      const [occupancyEnrollment] = await database
+        .insert(enrollments)
+        .values({
+          branchId: targetBranchId,
+          candidateId,
+          courseMode: 'group',
+          draftId: occupancyDraftId,
+          finalPriceCents: 100_000,
+          programId,
+          programReferenceId: programId,
+          registeredByUserId: adminId,
+          studentId,
+        })
+        .returning({ id: enrollments.id });
+      occupancyEnrollmentId = occupancyEnrollment!.id;
+
+      const preview = await getProgramBranchArchivePreview(
+        principal,
+        branchId,
+      );
+      expect(preview.students).toEqual([
+        expect.objectContaining({ enrollmentId }),
+      ]);
+      expect(preview.targets.map((target) => target.id)).toContain(
+        targetBranchId,
+      );
+      expect(preview.targets.map((target) => target.id)).not.toContain(
+        otherBranchId,
+      );
+
+      await expect(
+        archiveProgramBranch(principal, branchId, {
+          reason: 'Invalid cross-program transfer',
+          transfers: [
+            {
+              enrollmentId,
+              targetBranchId: otherBranchId,
+            },
+          ],
+        }),
+      ).rejects.toThrow('branch_transfer_target_invalid');
+
+      await expect(
+        archiveProgramBranch(principal, branchId, {
+          reason: 'Missing capacity approval',
+          transfers: [
+            {
+              enrollmentId,
+              targetBranchId,
+            },
+          ],
+        }),
+      ).rejects.toThrow('branch_transfer_capacity_override_required');
+
+      const archived = await archiveProgramBranch(principal, branchId, {
+        reason: 'Integration branch closure',
+        transfers: [
+          {
+            capacityOverride: true,
+            capacityOverrideNote: 'Approved by integration test',
+            enrollmentId,
+            targetBranchId,
+          },
+        ],
+      });
+      expect(archived.transferred).toBe(1);
+      await expect(
+        deleteUnusedProgramBranch(principal, branchId),
+      ).rejects.toThrow('program_branch_in_use');
+
+      const [transferredEnrollment] = await database
+        .select({
+          branchId: enrollments.branchId,
+          capacityOverride: enrollments.capacityOverride,
+        })
+        .from(enrollments)
+        .where(eq(enrollments.id, enrollmentId))
+        .limit(1);
+      expect(transferredEnrollment).toMatchObject({
+        branchId: targetBranchId,
+        capacityOverride: true,
+      });
+      const [transferHistory] = await database
+        .select()
+        .from(enrollmentBranchTransfers)
+        .where(eq(enrollmentBranchTransfers.enrollmentId, enrollmentId))
+        .limit(1);
+      expect(transferHistory).toMatchObject({
+        fromBranchId: branchId,
+        toBranchId: targetBranchId,
+      });
     } finally {
       if (candidateId) {
         await database
@@ -196,8 +405,16 @@ integration('candidate enrollment flow', () => {
       }
       if (enrollmentId) {
         await database
+          .delete(enrollmentBranchTransfers)
+          .where(eq(enrollmentBranchTransfers.enrollmentId, enrollmentId));
+        await database
           .delete(enrollments)
           .where(eq(enrollments.id, enrollmentId));
+      }
+      if (occupancyEnrollmentId) {
+        await database
+          .delete(enrollments)
+          .where(eq(enrollments.id, occupancyEnrollmentId));
       }
       if (studentId) {
         await database
@@ -212,6 +429,16 @@ integration('candidate enrollment flow', () => {
           .delete(enrollmentDrafts)
           .where(eq(enrollmentDrafts.id, draftId));
       }
+      if (secondDraftId) {
+        await database
+          .delete(enrollmentDrafts)
+          .where(eq(enrollmentDrafts.id, secondDraftId));
+      }
+      if (occupancyDraftId) {
+        await database
+          .delete(enrollmentDrafts)
+          .where(eq(enrollmentDrafts.id, occupancyDraftId));
+      }
       if (candidateId) {
         await database
           .delete(candidateProfiles)
@@ -221,7 +448,18 @@ integration('candidate enrollment flow', () => {
         await database.delete(contacts).where(eq(contacts.id, contactId));
       }
       if (programId) {
+        await database
+          .delete(programBranches)
+          .where(eq(programBranches.programId, programId));
         await database.delete(programs).where(eq(programs.id, programId));
+      }
+      if (otherProgramId) {
+        await database
+          .delete(programBranches)
+          .where(eq(programBranches.programId, otherProgramId));
+        await database
+          .delete(programs)
+          .where(eq(programs.id, otherProgramId));
       }
       await database.delete(users).where(eq(users.id, adminId));
     }

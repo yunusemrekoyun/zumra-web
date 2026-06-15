@@ -2,6 +2,7 @@ import { sql } from 'drizzle-orm';
 import {
   boolean,
   check,
+  date,
   index,
   integer,
   jsonb,
@@ -15,7 +16,12 @@ import {
 import { users } from './auth';
 import { candidateProfiles, contacts } from './candidates';
 import { mediaAssets } from './foundation';
-import { privateLessonStudentRates, programs } from './programs';
+import { instructorProfiles } from './instructors';
+import {
+  privateLessonStudentRates,
+  programBranches,
+  programs,
+} from './programs';
 
 export const enrollmentDraftStatusEnum = pgEnum('enrollment_draft_status', [
   'draft',
@@ -71,6 +77,11 @@ export type EnrollmentPartyRole =
 
 export type ProgramSelectionSnapshot = {
   basePriceCents?: number;
+  branchEndDate?: string;
+  branchId?: string;
+  branchMaximumCapacity?: number;
+  branchName?: string;
+  branchStartDate?: string;
   hourlyStudentPriceCents?: number;
   label?: string;
   language?: string;
@@ -80,7 +91,7 @@ export type ProgramSelectionSnapshot = {
   programId?: string;
   sectionId?: string;
   teacherName?: string;
-  teacherUserId?: string;
+  instructorProfileId?: string;
   type?: 'group' | 'private';
 };
 
@@ -110,7 +121,10 @@ export const enrollmentDrafts = pgTable(
     firstName: text('first_name'),
     lastName: text('last_name'),
     birthPlace: text('birth_place'),
-    birthDate: timestamp('birth_date', { withTimezone: true }),
+    birthCountryCode: text('birth_country_code'),
+    birthAdministrativeArea: text('birth_administrative_area'),
+    birthLocality: text('birth_locality'),
+    birthDate: date('birth_date', { mode: 'string' }),
     gender: genderIdentityEnum('gender'),
     school: text('school'),
     primaryPhone: text('primary_phone'),
@@ -126,8 +140,21 @@ export const enrollmentDrafts = pgTable(
     programId: uuid('program_id').references(() => programs.id, {
       onDelete: 'restrict',
     }),
-    selectedTeacherUserId: text('selected_teacher_user_id').references(
-      () => users.id,
+    branchId: uuid('branch_id').references(() => programBranches.id, {
+      onDelete: 'restrict',
+    }),
+    capacityOverride: boolean('capacity_override').notNull().default(false),
+    capacityOverrideByUserId: text(
+      'capacity_override_by_user_id',
+    ).references(() => users.id, { onDelete: 'restrict' }),
+    capacityOverrideAt: timestamp('capacity_override_at', {
+      withTimezone: true,
+    }),
+    capacityOverrideNote: text('capacity_override_note'),
+    selectedInstructorProfileId: uuid(
+      'selected_instructor_profile_id',
+    ).references(
+      () => instructorProfiles.id,
       { onDelete: 'restrict' },
     ),
     privateLessonLanguage: text('private_lesson_language'),
@@ -141,6 +168,7 @@ export const enrollmentDrafts = pgTable(
       .notNull()
       .default({}),
     correctedSource: text('corrected_source'),
+    correctedSourceDetail: text('corrected_source_detail'),
     registrationChannel: text('registration_channel'),
     listPriceCents: integer('list_price_cents'),
     discountType: discountTypeEnum('discount_type').notNull().default('none'),
@@ -191,7 +219,10 @@ export const enrollmentDrafts = pgTable(
     ),
     index('enrollment_drafts_created_by_idx').on(table.createdByUserId),
     index('enrollment_drafts_program_idx').on(table.programId),
-    index('enrollment_drafts_teacher_idx').on(table.selectedTeacherUserId),
+    index('enrollment_drafts_branch_idx').on(table.branchId),
+    index('enrollment_drafts_instructor_idx').on(
+      table.selectedInstructorProfileId,
+    ),
     check(
       'enrollment_drafts_current_step_check',
       sql`${table.currentStep} between 1 and 9`,
@@ -218,10 +249,19 @@ export const enrollmentDrafts = pgTable(
       sql`${table.courseMode} <> 'private'
         or ${table.programId} is null
         or (
-          ${table.selectedTeacherUserId} is not null
+          ${table.selectedInstructorProfileId} is not null
           and ${table.privateLessonLanguage} is not null
           and ${table.privateLessonHours} > 0
           and ${table.privateLessonRateId} is not null
+        )`,
+    ),
+    check(
+      'enrollment_drafts_capacity_override_check',
+      sql`${table.capacityOverride} = false
+        or (
+          ${table.branchId} is not null
+          and ${table.capacityOverrideByUserId} is not null
+          and ${table.capacityOverrideAt} is not null
         )`,
     ),
     check(
@@ -356,8 +396,21 @@ export const enrollments = pgTable(
     programId: uuid('program_id').references(() => programs.id, {
       onDelete: 'restrict',
     }),
-    selectedTeacherUserId: text('selected_teacher_user_id').references(
-      () => users.id,
+    branchId: uuid('branch_id').references(() => programBranches.id, {
+      onDelete: 'restrict',
+    }),
+    capacityOverride: boolean('capacity_override').notNull().default(false),
+    capacityOverrideByUserId: text(
+      'capacity_override_by_user_id',
+    ).references(() => users.id, { onDelete: 'restrict' }),
+    capacityOverrideAt: timestamp('capacity_override_at', {
+      withTimezone: true,
+    }),
+    capacityOverrideNote: text('capacity_override_note'),
+    selectedInstructorProfileId: uuid(
+      'selected_instructor_profile_id',
+    ).references(
+      () => instructorProfiles.id,
       { onDelete: 'restrict' },
     ),
     privateLessonRateId: uuid('private_lesson_rate_id').references(
@@ -393,11 +446,65 @@ export const enrollments = pgTable(
     index('enrollments_student_status_idx').on(table.studentId, table.status),
     index('enrollments_candidate_idx').on(table.candidateId),
     index('enrollments_program_idx').on(table.programId),
-    index('enrollments_teacher_idx').on(table.selectedTeacherUserId),
+    index('enrollments_branch_idx').on(table.branchId),
+    index('enrollments_instructor_idx').on(
+      table.selectedInstructorProfileId,
+    ),
     check('enrollments_currency_check', sql`${table.currency} = 'TRY'`),
     check(
       'enrollments_final_price_non_negative_check',
       sql`${table.finalPriceCents} >= 0`,
+    ),
+    check(
+      'enrollments_capacity_override_check',
+      sql`${table.capacityOverride} = false
+        or (
+          ${table.branchId} is not null
+          and ${table.capacityOverrideByUserId} is not null
+          and ${table.capacityOverrideAt} is not null
+        )`,
+    ),
+  ],
+);
+
+export const enrollmentBranchTransfers = pgTable(
+  'enrollment_branch_transfers',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    enrollmentId: uuid('enrollment_id')
+      .notNull()
+      .references(() => enrollments.id, { onDelete: 'restrict' }),
+    fromBranchId: uuid('from_branch_id')
+      .notNull()
+      .references(() => programBranches.id, { onDelete: 'restrict' }),
+    toBranchId: uuid('to_branch_id')
+      .notNull()
+      .references(() => programBranches.id, { onDelete: 'restrict' }),
+    transferredByUserId: text('transferred_by_user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'restrict' }),
+    reason: text('reason').notNull(),
+    capacityOverride: boolean('capacity_override').notNull().default(false),
+    capacityOverrideNote: text('capacity_override_note'),
+    createdAt: timestamp('created_at', { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => [
+    index('enrollment_branch_transfers_enrollment_idx').on(
+      table.enrollmentId,
+      table.createdAt,
+    ),
+    index('enrollment_branch_transfers_from_idx').on(table.fromBranchId),
+    index('enrollment_branch_transfers_to_idx').on(table.toBranchId),
+    check(
+      'enrollment_branch_transfers_distinct_branch_check',
+      sql`${table.fromBranchId} <> ${table.toBranchId}`,
+    ),
+    check(
+      'enrollment_branch_transfers_override_note_check',
+      sql`${table.capacityOverride} = false
+        or length(trim(coalesce(${table.capacityOverrideNote}, ''))) >= 3`,
     ),
   ],
 );

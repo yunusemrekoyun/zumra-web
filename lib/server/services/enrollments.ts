@@ -2,6 +2,14 @@ import 'server-only';
 
 import { and, desc, eq, inArray } from 'drizzle-orm';
 import type { WorkspacePrincipal } from '@/lib/domain';
+import {
+  ageOnDate,
+  isValidBirthDate,
+} from '@/lib/domain/enrollment-validation';
+import {
+  normalizePhoneNumber,
+  phoneNumberIsValid,
+} from '@/lib/domain/phone';
 import { database } from '@/lib/server/db/client';
 import {
   assessmentAttempts,
@@ -24,6 +32,7 @@ import {
 } from '@/lib/server/security/identity';
 import {
   type ProgramLanguage,
+  resolveProgramBranchSelection,
   resolveProgramPricing,
 } from '@/lib/server/services/programs';
 
@@ -53,8 +62,10 @@ export type EnrollmentDraftPatch =
   | {
       step: 1;
       data: {
+        birthAdministrativeArea: string;
+        birthCountryCode: string;
         birthDate: string;
-        birthPlace: string;
+        birthLocality: string;
         firstName: string;
         gender: GenderIdentity;
         identityDocument?: string;
@@ -77,17 +88,21 @@ export type EnrollmentDraftPatch =
   | {
       step: 3;
       data: {
+        branchId?: string;
+        capacityOverride?: boolean;
+        capacityOverrideNote?: string;
         instagramHandle?: string;
         privateLessonHours?: number;
         privateLessonLanguage?: ProgramLanguage;
         programId: string;
-        teacherUserId?: string;
+        instructorProfileId?: string;
       };
     }
   | {
       step: 4;
       data: {
         correctedSource?: string;
+        correctedSourceDetail?: string;
       };
     }
   | {
@@ -145,9 +160,17 @@ export type EnrollmentDraftView = {
     type: string;
   }>;
   draft: {
+    birthAdministrativeArea?: string;
+    birthCountryCode?: string;
     birthDate?: string;
+    birthLocality?: string;
     birthPlace?: string;
+    branchId?: string;
+    branchName?: string;
+    capacityOverride: boolean;
+    capacityOverrideNote?: string;
     correctedSource?: string;
+    correctedSourceDetail?: string;
     courseMode?: 'group' | 'private';
     currency: 'TRY';
     currentStep: number;
@@ -189,7 +212,7 @@ export type EnrollmentDraftView = {
     school?: string;
     secondaryPhone?: string;
     sectionId?: string;
-    selectedTeacherUserId?: string;
+    selectedInstructorProfileId?: string;
     status: string;
     studentIsContractParty: boolean;
   };
@@ -221,7 +244,6 @@ export async function beginEnrollmentDraft(
         id: candidateProfiles.id,
         lastName: contacts.lastName,
         phone: contacts.phone,
-        stage: candidateProfiles.stage,
       })
       .from(candidateProfiles)
       .innerJoin(contacts, eq(contacts.id, candidateProfiles.contactId))
@@ -249,10 +271,6 @@ export async function beginEnrollmentDraft(
 
     if (existing) {
       return { created: false, id: existing.id };
-    }
-
-    if (candidate.stage === 'enrolled') {
-      throw new PublicFlowError('candidate_already_enrolled', 409);
     }
 
     const [draft] = await transaction
@@ -295,8 +313,16 @@ export async function getEnrollmentDraftForAdmin(
 
   const [row] = await database
     .select({
+      branchId: enrollmentDrafts.branchId,
       candidateId: candidateProfiles.id,
+      birthAdministrativeArea:
+        enrollmentDrafts.birthAdministrativeArea,
+      birthCountryCode: enrollmentDrafts.birthCountryCode,
+      birthLocality: enrollmentDrafts.birthLocality,
+      capacityOverride: enrollmentDrafts.capacityOverride,
+      capacityOverrideNote: enrollmentDrafts.capacityOverrideNote,
       correctedSource: enrollmentDrafts.correctedSource,
+      correctedSourceDetail: enrollmentDrafts.correctedSourceDetail,
       courseMode: enrollmentDrafts.courseMode,
       createdByName: users.name,
       currency: enrollmentDrafts.currency,
@@ -341,7 +367,8 @@ export async function getEnrollmentDraftForAdmin(
       scheduleNotes: enrollmentDrafts.scheduleNotes,
       schedulePreferences: enrollmentDrafts.schedulePreferences,
       secondaryPhone: enrollmentDrafts.secondaryPhone,
-      selectedTeacherUserId: enrollmentDrafts.selectedTeacherUserId,
+      selectedInstructorProfileId:
+        enrollmentDrafts.selectedInstructorProfileId,
       status: enrollmentDrafts.status,
       studentIsContractParty: enrollmentDrafts.studentIsContractParty,
     })
@@ -403,11 +430,20 @@ export async function getEnrollmentDraftForAdmin(
     createdByName: row.createdByName,
     documents,
     draft: {
-      birthDate: row.draftBirthDate
-        ? row.draftBirthDate.toISOString().slice(0, 10)
-        : undefined,
+      birthAdministrativeArea:
+        row.birthAdministrativeArea ?? row.draftBirthPlace ?? undefined,
+      birthCountryCode:
+        row.birthCountryCode ?? (row.draftBirthPlace ? 'TR' : undefined),
+      birthDate: row.draftBirthDate ?? undefined,
+      birthLocality:
+        row.birthLocality ?? row.draftBirthPlace ?? undefined,
       birthPlace: row.draftBirthPlace ?? undefined,
+      branchId: row.branchId ?? undefined,
+      branchName: row.programSelection.branchName,
+      capacityOverride: row.capacityOverride,
+      capacityOverrideNote: row.capacityOverrideNote ?? undefined,
       correctedSource: row.correctedSource ?? undefined,
+      correctedSourceDetail: row.correctedSourceDetail ?? undefined,
       courseMode: row.courseMode ?? undefined,
       currency: 'TRY',
       currentStep: row.currentStep,
@@ -456,7 +492,8 @@ export async function getEnrollmentDraftForAdmin(
       school: row.draftSchool ?? undefined,
       secondaryPhone: row.secondaryPhone ?? undefined,
       sectionId: row.programSelection.sectionId,
-      selectedTeacherUserId: row.selectedTeacherUserId ?? undefined,
+      selectedInstructorProfileId:
+        row.selectedInstructorProfileId ?? undefined,
       status: row.status,
       studentIsContractParty: row.studentIsContractParty,
     },
@@ -521,6 +558,13 @@ export async function updateEnrollmentDraft(
     };
 
     if (patch.step === 1) {
+      if (
+        !/^[A-Z]{2}$/.test(patch.data.birthCountryCode.toUpperCase()) ||
+        !clean(patch.data.birthAdministrativeArea) ||
+        !clean(patch.data.birthLocality)
+      ) {
+        throw new PublicFlowError('invalid_birth_location', 400);
+      }
       const identity = patch.data.identityDocument
         ? protectIdentityDocument(
             patch.data.identityDocumentType,
@@ -536,8 +580,17 @@ export async function updateEnrollmentDraft(
         .update(enrollmentDrafts)
         .set({
           ...common,
+          birthAdministrativeArea: clean(
+            patch.data.birthAdministrativeArea,
+          ),
+          birthCountryCode: patch.data.birthCountryCode.toUpperCase(),
           birthDate: parseDateOnly(patch.data.birthDate),
-          birthPlace: clean(patch.data.birthPlace),
+          birthLocality: clean(patch.data.birthLocality),
+          birthPlace: [
+            clean(patch.data.birthLocality),
+            clean(patch.data.birthAdministrativeArea),
+            patch.data.birthCountryCode.toUpperCase(),
+          ].join(', '),
           firstName: clean(patch.data.firstName),
           gender: patch.data.gender,
           identityDocumentBlindIndex: identity?.blindIndex,
@@ -565,16 +618,26 @@ export async function updateEnrollmentDraft(
 
     if (patch.step === 2) {
       const normalizedEmail = patch.data.email.trim().toLowerCase();
-      const normalizedPhone = normalizePhone(patch.data.primaryPhone);
+      const primaryPhone = normalizePhoneNumber(patch.data.primaryPhone);
+      const secondaryPhone = patch.data.secondaryPhone
+        ? normalizePhoneNumber(patch.data.secondaryPhone)
+        : null;
+
+      if (
+        !phoneNumberIsValid(primaryPhone) ||
+        (secondaryPhone && !phoneNumberIsValid(secondaryPhone))
+      ) {
+        throw new PublicFlowError('invalid_phone', 400);
+      }
 
       await transaction
         .update(enrollmentDrafts)
         .set({
           ...common,
           email: normalizedEmail,
-          primaryPhone: clean(patch.data.primaryPhone),
+          primaryPhone,
           residenceAddress: clean(patch.data.residenceAddress),
-          secondaryPhone: cleanOptional(patch.data.secondaryPhone),
+          secondaryPhone,
           studentIsContractParty: patch.data.studentIsContractParty,
         })
         .where(eq(enrollmentDrafts.id, draftId));
@@ -584,8 +647,8 @@ export async function updateEnrollmentDraft(
         .set({
           email: normalizedEmail,
           normalizedEmail,
-          normalizedPhone,
-          phone: clean(patch.data.primaryPhone),
+          normalizedPhone: primaryPhone,
+          phone: primaryPhone,
           updatedAt: now,
         })
         .where(eq(contacts.id, draft.contactId));
@@ -612,6 +675,21 @@ export async function updateEnrollmentDraft(
                     party.identityDocument,
                   )
                 : null;
+            const phone = party.phone
+              ? normalizePhoneNumber(party.phone)
+              : null;
+            if (
+              clean(party.fullName).length < 2 ||
+              !party.roles.length ||
+              (party.relationship === 'other' &&
+                !cleanOptional(party.relationshipOther)) ||
+              (phone && !phoneNumberIsValid(phone))
+            ) {
+              throw new PublicFlowError(
+                'invalid_enrollment_party',
+                400,
+              );
+            }
 
             return {
               draftId,
@@ -629,7 +707,7 @@ export async function updateEnrollmentDraft(
               identityDocumentType:
                 party.identityDocumentType ??
                 existingParty?.identityDocumentType,
-              phone: cleanOptional(party.phone),
+              phone,
               relationship: party.relationship,
               relationshipOther:
                 party.relationship === 'other'
@@ -646,16 +724,30 @@ export async function updateEnrollmentDraft(
 
     if (patch.step === 3) {
       const pricing = await resolveProgramPricing(transaction, {
+        branchId: patch.data.branchId,
+        capacityOverride: patch.data.capacityOverride,
         privateLessonHours: patch.data.privateLessonHours,
         privateLessonLanguage: patch.data.privateLessonLanguage,
         programId: patch.data.programId,
-        teacherUserId: patch.data.teacherUserId,
+        instructorProfileId: patch.data.instructorProfileId,
       });
+      const capacityOverride =
+        pricing.courseMode === 'group' &&
+        pricing.atCapacity &&
+        patch.data.capacityOverride === true;
 
       await transaction
         .update(enrollmentDrafts)
         .set({
           ...common,
+          branchId:
+            pricing.courseMode === 'group' ? pricing.branch.id : null,
+          capacityOverride,
+          capacityOverrideAt: capacityOverride ? now : null,
+          capacityOverrideByUserId: capacityOverride ? principal.id : null,
+          capacityOverrideNote: capacityOverride
+            ? cleanOptional(patch.data.capacityOverrideNote)
+            : null,
           courseMode: pricing.courseMode,
           discountAppliedByUserId: null,
           discountCents: 0,
@@ -678,14 +770,24 @@ export async function updateEnrollmentDraft(
           programId: pricing.program.id,
           programReferenceId: pricing.program.id,
           programSelection: pricing.snapshot,
-          selectedTeacherUserId:
+          selectedInstructorProfileId:
             pricing.courseMode === 'private'
-              ? patch.data.teacherUserId
+              ? patch.data.instructorProfileId
               : null,
         })
         .where(eq(enrollmentDrafts.id, draftId));
       return {
         draft: {
+          branchId:
+            pricing.courseMode === 'group' ? pricing.branch.id : undefined,
+          branchName:
+            pricing.courseMode === 'group'
+              ? pricing.branch.name
+              : undefined,
+          capacityOverride,
+          capacityOverrideNote: capacityOverride
+            ? cleanOptional(patch.data.capacityOverrideNote) ?? undefined
+            : undefined,
           courseMode: pricing.courseMode,
           discountCents: 0,
           discountType: 'none' as const,
@@ -700,22 +802,39 @@ export async function updateEnrollmentDraft(
     }
 
     if (patch.step === 4) {
+      const correctedSource = cleanOptional(patch.data.correctedSource);
+      const correctedSourceDetail =
+        correctedSource === 'other'
+          ? cleanOptional(patch.data.correctedSourceDetail)
+          : undefined;
+      if (correctedSource === 'other' && !correctedSourceDetail) {
+        throw new PublicFlowError('source_detail_required', 400);
+      }
       await transaction
         .update(enrollmentDrafts)
         .set({
           ...common,
-          correctedSource: cleanOptional(patch.data.correctedSource),
+          correctedSource,
+          correctedSourceDetail: correctedSourceDetail ?? null,
         })
         .where(eq(enrollmentDrafts.id, draftId));
       return;
     }
 
     if (patch.step === 5) {
+      const registrationChannel = clean(patch.data.registrationChannel);
+      if (
+        !['web', 'phone', 'whatsapp', 'video_call', 'other'].includes(
+          registrationChannel,
+        )
+      ) {
+        throw new PublicFlowError('invalid_registration_channel', 400);
+      }
       await transaction
         .update(enrollmentDrafts)
         .set({
           ...common,
-          registrationChannel: clean(patch.data.registrationChannel),
+          registrationChannel,
         })
         .where(eq(enrollmentDrafts.id, draftId));
       return;
@@ -898,6 +1017,18 @@ export async function completeEnrollment(
       throw new PublicFlowError(`enrollment_incomplete:${errors.join(',')}`, 400);
     }
 
+    if (
+      draft.courseMode === 'group' &&
+      draft.programId &&
+      draft.branchId
+    ) {
+      await resolveProgramBranchSelection(transaction, {
+        branchId: draft.branchId,
+        capacityOverride: draft.capacityOverride,
+        programId: draft.programId,
+      });
+    }
+
     const [candidate] = await transaction
       .select({
         contactId: candidateProfiles.contactId,
@@ -925,14 +1056,24 @@ export async function completeEnrollment(
       .orderBy(desc(candidateInquiries.createdAt))
       .limit(1);
 
-    const [student] = await transaction
-      .insert(studentProfiles)
-      .values({
-        candidateId: candidate.id,
-        contactId: candidate.contactId,
-        currentLevel: latestAttempt?.resultLevel,
-      })
-      .returning({ id: studentProfiles.id });
+    const [existingStudent] = await transaction
+      .select({ id: studentProfiles.id })
+      .from(studentProfiles)
+      .where(eq(studentProfiles.candidateId, candidate.id))
+      .limit(1);
+
+    const student =
+      existingStudent ??
+      (
+        await transaction
+          .insert(studentProfiles)
+          .values({
+            candidateId: candidate.id,
+            contactId: candidate.contactId,
+            currentLevel: latestAttempt?.resultLevel,
+          })
+          .returning({ id: studentProfiles.id })
+      )[0];
 
     if (!student) {
       throw new Error('Student profile could not be created.');
@@ -941,7 +1082,12 @@ export async function completeEnrollment(
     const [enrollment] = await transaction
       .insert(enrollments)
       .values({
+        branchId: draft.branchId,
         candidateId: candidate.id,
+        capacityOverride: draft.capacityOverride,
+        capacityOverrideAt: draft.capacityOverrideAt,
+        capacityOverrideByUserId: draft.capacityOverrideByUserId,
+        capacityOverrideNote: draft.capacityOverrideNote,
         courseMode: draft.courseMode!,
         currency: 'TRY',
         draftId,
@@ -968,7 +1114,7 @@ export async function completeEnrollment(
           notes: draft.scheduleNotes,
           preferences: draft.schedulePreferences,
         },
-        selectedTeacherUserId: draft.selectedTeacherUserId,
+        selectedInstructorProfileId: draft.selectedInstructorProfileId,
         studentId: student.id,
       })
       .returning({ id: enrollments.id });
@@ -1002,6 +1148,7 @@ export async function completeEnrollment(
       candidateId: candidate.id,
       inquiryId: latestAttempt?.inquiryId,
       metadata: {
+        branchId: draft.branchId,
         draftId,
         enrollmentId: enrollment.id,
         studentId: student.id,
@@ -1024,7 +1171,9 @@ function validateEnrollmentDraft(
     ['first_name', draft.firstName],
     ['last_name', draft.lastName],
     ['birth_date', draft.birthDate],
-    ['birth_place', draft.birthPlace],
+    ['birth_country', draft.birthCountryCode],
+    ['birth_administrative_area', draft.birthAdministrativeArea],
+    ['birth_locality', draft.birthLocality],
     ['gender', draft.gender],
     ['school', draft.school],
     ['phone', draft.primaryPhone],
@@ -1040,6 +1189,10 @@ function validateEnrollmentDraft(
     if (!value) errors.push(key);
   }
 
+  if (draft.courseMode === 'group' && !draft.branchId) {
+    errors.push('program_branch');
+  }
+
   if (draft.finalPriceCents === null || draft.listPriceCents === null) {
     errors.push('financial_plan');
   } else if (
@@ -1052,7 +1205,7 @@ function validateEnrollmentDraft(
 
   if (
     draft.courseMode === 'private' &&
-    (!draft.selectedTeacherUserId ||
+    (!draft.selectedInstructorProfileId ||
       !draft.privateLessonLanguage ||
       !draft.privateLessonHours ||
       !draft.privateLessonRateId)
@@ -1086,24 +1239,15 @@ function assertAdmin(principal: WorkspacePrincipal) {
 }
 
 function parseDateOnly(value: string) {
-  const date = new Date(`${value}T12:00:00.000Z`);
-  if (Number.isNaN(date.getTime())) {
+  if (!isValidBirthDate(value)) {
     throw new PublicFlowError('invalid_birth_date', 400);
   }
-  return date;
+  return value;
 }
 
-function isMinor(birthDate: Date) {
-  const today = new Date();
-  let age = today.getUTCFullYear() - birthDate.getUTCFullYear();
-  const month = today.getUTCMonth() - birthDate.getUTCMonth();
-  if (
-    month < 0 ||
-    (month === 0 && today.getUTCDate() < birthDate.getUTCDate())
-  ) {
-    age -= 1;
-  }
-  return age < 18;
+function isMinor(birthDate: string) {
+  const age = ageOnDate(birthDate);
+  return age !== undefined && age < 18;
 }
 
 function clean(value: string) {
@@ -1113,10 +1257,6 @@ function clean(value: string) {
 function cleanOptional(value?: string) {
   const cleaned = value ? clean(value) : '';
   return cleaned || null;
-}
-
-function normalizePhone(value: string) {
-  return value.replace(/\D/g, '');
 }
 
 function calculateDiscount(

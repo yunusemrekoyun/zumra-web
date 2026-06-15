@@ -1,7 +1,7 @@
 import 'server-only';
 
 import { randomUUID } from 'node:crypto';
-import { and, eq, gt } from 'drizzle-orm';
+import { and, eq, gt, isNull } from 'drizzle-orm';
 import { hashPassword } from 'better-auth/crypto';
 import type {
   CreateInvitationInput,
@@ -9,7 +9,13 @@ import type {
   WorkspacePrincipal,
 } from '@/lib/domain';
 import { database } from '@/lib/server/db/client';
-import { accounts, userInvitations, users } from '@/lib/server/db/schema';
+import {
+  accounts,
+  instructorAccountInvitations,
+  instructorProfiles,
+  userInvitations,
+  users,
+} from '@/lib/server/db/schema';
 import { getAuthEnv } from '@/lib/server/env';
 import { createOpaqueToken, hashToken } from '@/lib/server/security/tokens';
 import { assertValidUsername } from '@/lib/server/security/username';
@@ -30,28 +36,88 @@ function assertAdmin(actor: WorkspacePrincipal) {
 export const invitationService: InvitationService = {
   async create(actor, input: CreateInvitationInput) {
     assertAdmin(actor);
+    if (
+      (input.role === 'teacher' && !input.instructorProfileId) ||
+      (input.role !== 'teacher' && input.instructorProfileId)
+    ) {
+      throw new Error('Teacher accounts require an instructor profile.');
+    }
     const username = assertValidUsername(input.username);
     const email = input.email.trim().toLocaleLowerCase('en-US');
     const { hash, token } = createOpaqueToken();
     const expiresAt = new Date(Date.now() + INVITATION_TTL_MS);
 
-    const [created] = await database
-      .insert(userInvitations)
-      .values({
-        email,
-        expiresAt,
-        invitedByUserId: actor.id,
-        name: input.name.trim(),
-        role: input.role,
-        tokenHash: hash,
-        username,
-      })
-      .returning({
-        expiresAt: userInvitations.expiresAt,
-        id: userInvitations.id,
-        status: userInvitations.status,
-        username: userInvitations.username,
-      });
+    const created = await database.transaction(async (transaction) => {
+      if (input.instructorProfileId) {
+        const [profile] = await transaction
+          .select({
+            email: instructorProfiles.email,
+            id: instructorProfiles.id,
+            userId: instructorProfiles.userId,
+          })
+          .from(instructorProfiles)
+          .where(eq(instructorProfiles.id, input.instructorProfileId))
+          .limit(1)
+          .for('update');
+        if (
+          !profile ||
+          profile.userId ||
+          profile.email !== email ||
+          input.role !== 'teacher'
+        ) {
+          throw new Error('Instructor invitation cannot be created.');
+        }
+
+        const [pendingInvitation] = await transaction
+          .select({ id: userInvitations.id })
+          .from(instructorAccountInvitations)
+          .innerJoin(
+            userInvitations,
+            eq(userInvitations.id, instructorAccountInvitations.invitationId),
+          )
+          .where(
+            and(
+              eq(
+                instructorAccountInvitations.instructorId,
+                input.instructorProfileId,
+              ),
+              eq(userInvitations.status, 'pending'),
+              gt(userInvitations.expiresAt, new Date()),
+            ),
+          )
+          .limit(1);
+        if (pendingInvitation) {
+          throw new Error('Instructor invitation is already pending.');
+        }
+      }
+
+      const [invitation] = await transaction
+        .insert(userInvitations)
+        .values({
+          email,
+          expiresAt,
+          invitedByUserId: actor.id,
+          name: input.name.trim(),
+          role: input.role,
+          tokenHash: hash,
+          username,
+        })
+        .returning({
+          expiresAt: userInvitations.expiresAt,
+          id: userInvitations.id,
+          status: userInvitations.status,
+          username: userInvitations.username,
+        });
+
+      if (invitation && input.instructorProfileId) {
+        await transaction.insert(instructorAccountInvitations).values({
+          instructorId: input.instructorProfileId,
+          invitationId: invitation.id,
+        });
+      }
+
+      return invitation;
+    });
 
     if (!created) {
       throw new Error('Invitation could not be created.');
@@ -120,6 +186,25 @@ export const invitationService: InvitationService = {
         throw new Error('Invitation cannot be activated.');
       }
 
+      const [linkedInstructor] =
+        invitation.role === 'teacher'
+          ? await transaction
+              .select({
+                instructorId: instructorAccountInvitations.instructorId,
+              })
+              .from(instructorAccountInvitations)
+              .where(
+                eq(
+                  instructorAccountInvitations.invitationId,
+                  invitation.id,
+                ),
+              )
+              .limit(1)
+          : [];
+      if (invitation.role === 'teacher' && !linkedInstructor) {
+        throw new Error('Instructor invitation cannot be activated.');
+      }
+
       const userId = randomUUID();
       const now = new Date();
 
@@ -145,6 +230,23 @@ export const invitationService: InvitationService = {
         updatedAt: now,
         userId,
       });
+
+      if (linkedInstructor) {
+        const [linkedProfile] = await transaction
+          .update(instructorProfiles)
+          .set({ userId, updatedAt: now })
+          .where(
+            and(
+              eq(instructorProfiles.id, linkedInstructor.instructorId),
+              isNull(instructorProfiles.userId),
+              eq(instructorProfiles.email, invitation.email),
+            ),
+          )
+          .returning({ id: instructorProfiles.id });
+        if (!linkedProfile) {
+          throw new Error('Instructor invitation cannot be activated.');
+        }
+      }
 
       await transaction
         .update(userInvitations)

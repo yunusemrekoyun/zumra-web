@@ -1,11 +1,16 @@
 import { z } from 'zod';
+import { phoneNumberIsValid } from '@/lib/domain/phone';
 import { requireAdminSession } from '@/lib/server/authorization';
 import {
   apiErrorResponse,
   apiResponse,
   requestId,
 } from '@/lib/server/http/api-errors';
-import { isTrustedRequestOrigin } from '@/lib/server/security/network';
+import {
+  isTrustedRequestOrigin,
+  requestIp,
+} from '@/lib/server/security/network';
+import { auditService } from '@/lib/server/services/audit';
 import {
   type EnrollmentDraftPatch,
   updateEnrollmentDraft,
@@ -26,7 +31,13 @@ const party = z.object({
   id: z.string().uuid().optional(),
   identityDocument: z.string().trim().max(32).optional().or(z.literal('')),
   identityDocumentType: identityType.optional(),
-  phone: z.string().trim().max(32).optional().or(z.literal('')),
+  phone: z
+    .string()
+    .trim()
+    .max(32)
+    .refine((value) => !value || phoneNumberIsValid(value))
+    .optional()
+    .or(z.literal('')),
   relationship: z.enum(['mother', 'father', 'sibling', 'other']),
   relationshipOther: z.string().trim().max(80).optional().or(z.literal('')),
   roles: z
@@ -38,8 +49,10 @@ const patchSchema = z.discriminatedUnion('step', [
   z.object({
     step: z.literal(1),
     data: z.object({
+      birthAdministrativeArea: z.string().trim().min(1).max(120),
+      birthCountryCode: z.string().trim().length(2),
       birthDate: z.string().date(),
-      birthPlace: z.string().trim().min(2).max(120),
+      birthLocality: z.string().trim().min(1).max(120),
       firstName: z.string().trim().min(2).max(80),
       gender,
       identityDocument: z.string().trim().max(32).optional().or(z.literal('')),
@@ -53,32 +66,86 @@ const patchSchema = z.discriminatedUnion('step', [
     data: z.object({
       email: z.string().email(),
       parties: z.array(party).max(100),
-      primaryPhone: z.string().trim().min(7).max(32),
+      primaryPhone: z
+        .string()
+        .trim()
+        .min(7)
+        .max(32)
+        .refine(phoneNumberIsValid),
       residenceAddress: z.string().trim().min(8).max(500),
-      secondaryPhone: z.string().trim().max(32).optional().or(z.literal('')),
+      secondaryPhone: z
+        .string()
+        .trim()
+        .max(32)
+        .refine((value) => !value || phoneNumberIsValid(value))
+        .optional()
+        .or(z.literal('')),
       studentIsContractParty: z.boolean(),
     }),
   }),
   z.object({
     step: z.literal(3),
     data: z.object({
+      branchId: z.string().uuid().optional(),
+      capacityOverride: z.boolean().optional(),
+      capacityOverrideNote: z
+        .string()
+        .trim()
+        .max(500)
+        .optional()
+        .or(z.literal('')),
       instagramHandle: z.string().trim().max(80).optional().or(z.literal('')),
       privateLessonHours: z.number().int().min(1).max(1000).optional(),
       privateLessonLanguage: z.enum(supportedProgramLanguages).optional(),
       programId: z.string().uuid(),
-      teacherUserId: z.string().min(1).max(160).optional(),
+      instructorProfileId: z.string().uuid().optional(),
     }),
   }),
   z.object({
     step: z.literal(4),
-    data: z.object({
-      correctedSource: z.string().trim().max(120).optional().or(z.literal('')),
-    }),
+    data: z
+      .object({
+        correctedSource: z
+          .enum([
+            'instagram',
+            'google',
+            'referral',
+            'web_level_test',
+            'whatsapp',
+            'other',
+          ])
+          .optional()
+          .or(z.literal('')),
+        correctedSourceDetail: z
+          .string()
+          .trim()
+          .max(160)
+          .optional()
+          .or(z.literal('')),
+      })
+      .superRefine((value, context) => {
+        if (
+          value.correctedSource === 'other' &&
+          !value.correctedSourceDetail?.trim()
+        ) {
+          context.addIssue({
+            code: 'custom',
+            message: 'source_detail_required',
+            path: ['correctedSourceDetail'],
+          });
+        }
+      }),
   }),
   z.object({
     step: z.literal(5),
     data: z.object({
-      registrationChannel: z.string().trim().min(2).max(120),
+      registrationChannel: z.enum([
+        'web',
+        'phone',
+        'whatsapp',
+        'video_call',
+        'other',
+      ]),
     }),
   }),
   z.object({
@@ -138,7 +205,19 @@ export async function PATCH(
       await request.json().catch(() => null),
     );
     if (!parsed.success) {
-      return apiResponse({ error: 'invalid_request' }, 400, id);
+      return apiResponse(
+        {
+          error: 'invalid_request',
+          fieldErrors: Object.fromEntries(
+            parsed.error.issues.map((issue) => [
+              String(issue.path.at(-1) ?? 'form'),
+              issue.code,
+            ]),
+          ),
+        },
+        400,
+        id,
+      );
     }
 
     const principal = await requireAdminSession();
@@ -148,6 +227,21 @@ export async function PATCH(
       draftId,
       parsed.data as EnrollmentDraftPatch,
     );
+    if (
+      parsed.data.step === 3 &&
+      'draft' in result &&
+      result.draft?.capacityOverride === true
+    ) {
+      await auditService.record({
+        action: 'program_branch.capacity_overridden',
+        actorUserId: principal.id,
+        ip: requestIp(request.headers),
+        requestId: id,
+        result: 'success',
+        targetId: parsed.data.data.branchId,
+        targetType: 'program_branch',
+      });
+    }
     return apiResponse(result, 200, id);
   } catch (error) {
     return apiErrorResponse(error, id);

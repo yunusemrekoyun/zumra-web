@@ -85,6 +85,27 @@
       "when": 1781383089400,
       "tag": "0011_military_shinobi_shaw",
       "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "7",
+      "when": 1781429645171,
+      "tag": "0012_dark_thunderbolt",
+      "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "7",
+      "when": 1781434912484,
+      "tag": "0013_natural_the_stranger",
+      "breakpoints": true
+    },
+    {
+      "idx": 14,
+      "version": "7",
+      "when": 1781530597524,
+      "tag": "0014_groovy_ikaris",
+      "breakpoints": true
     }
   ]
 }

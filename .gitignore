@@ -10,6 +10,7 @@ node_modules/
 # Next.js Build Outputs
 # ===========================
 .next/
+.next-dev/
 out/
 build/
 .vercel/
