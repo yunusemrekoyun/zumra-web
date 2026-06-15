@@ -21,12 +21,26 @@ import {
 import {
   ActionBar,
   Button,
+  CountrySelect,
+  DatePicker,
+  FormField,
+  IdentityDocumentInput,
   Input,
   ModulePanel,
   PageHeader,
+  PhoneInput,
   StatusChip,
 } from '@/components/ui';
 import { Link, useRouter } from '@/i18n/navigation';
+import {
+  ageOnDate,
+  type EnrollmentFieldErrors,
+  validateEnrollmentStep,
+} from '@/lib/domain/enrollment-validation';
+import {
+  getTurkeyDistrictOptions,
+  getTurkeyProvinceOptions,
+} from '@/lib/domain/locations';
 import type {
   EnrollmentDraftPatch,
   EnrollmentDraftView,
@@ -38,6 +52,10 @@ import type {
 } from '@/lib/server/services/programs';
 
 type DraftState = EnrollmentDraftView['draft'] & {
+  birthLocationCache: Record<
+    string,
+    { administrativeArea: string; locality: string }
+  >;
   identityDocument: string;
 };
 
@@ -54,8 +72,21 @@ export function EnrollmentWizard({
   const locale = useLocale();
   const router = useRouter();
   const [step, setStep] = useState(Math.min(initial.draft.currentStep, 9));
+  const [highestReachedStep, setHighestReachedStep] = useState(
+    Math.min(initial.draft.currentStep, 9),
+  );
   const [draft, setDraft] = useState<DraftState>({
     ...initial.draft,
+    birthCountryCode: initial.draft.birthCountryCode ?? 'TR',
+    birthLocationCache: initial.draft.birthCountryCode
+      ? {
+          [initial.draft.birthCountryCode]: {
+            administrativeArea:
+              initial.draft.birthAdministrativeArea ?? '',
+            locality: initial.draft.birthLocality ?? '',
+          },
+        }
+      : {},
     identityDocument: '',
   });
   const [parties, setParties] = useState(initial.parties);
@@ -66,6 +97,7 @@ export function EnrollmentWizard({
   const [confirmationPassword, setConfirmationPassword] = useState('');
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState('');
+  const [fieldErrors, setFieldErrors] = useState<EnrollmentFieldErrors>({});
   const [lastSavedAt, setLastSavedAt] = useState(initial.draft.lastSavedAt);
   const isCompleted = initial.draft.status === 'completed';
   const progress = Math.round((step / stepNumbers.length) * 100);
@@ -76,23 +108,14 @@ export function EnrollmentWizard({
 
   const birthDateIsMinor = useMemo(() => {
     if (!draft.birthDate) return false;
-    const birthDate = new Date(`${draft.birthDate}T12:00:00Z`);
-    const today = new Date();
-    let age = today.getUTCFullYear() - birthDate.getUTCFullYear();
-    const month = today.getUTCMonth() - birthDate.getUTCMonth();
-    if (
-      month < 0 ||
-      (month === 0 && today.getUTCDate() < birthDate.getUTCDate())
-    ) {
-      age -= 1;
-    }
-    return age < 18;
+    const age = ageOnDate(draft.birthDate);
+    return age !== undefined && age < 18;
   }, [draft.birthDate]);
 
   useEffect(() => {
     if (
       isCompleted ||
-      !canAutosaveStep(step, draft, parties, birthDateIsMinor)
+      !canAutosaveStep(step, draft, parties, birthDateIsMinor, catalog)
     ) {
       return;
     }
@@ -129,6 +152,7 @@ export function EnrollmentWizard({
   }, [
     autosaveSignature,
     birthDateIsMinor,
+    catalog,
     draft.id,
     draft,
     isCompleted,
@@ -138,8 +162,23 @@ export function EnrollmentWizard({
 
   async function saveCurrentStep(event?: FormEvent) {
     event?.preventDefault();
+    const errors = validateCurrentStep(
+      step,
+      draft,
+      parties,
+      birthDateIsMinor,
+      t,
+    );
+    if (Object.keys(errors).length) {
+      setFieldErrors(errors);
+      setMessage(t('validation.stepHasErrors'));
+      focusField(Object.keys(errors)[0]);
+      return;
+    }
+
     setBusy(true);
     setMessage('');
+    setFieldErrors({});
 
     try {
       const payload = buildPatch(step, draft, parties);
@@ -154,6 +193,10 @@ export function EnrollmentWizard({
       );
       const body = await response.json().catch(() => ({}));
       if (!response.ok) {
+        if (body.fieldErrors) {
+          setFieldErrors(body.fieldErrors);
+          focusField(Object.keys(body.fieldErrors)[0]);
+        }
         throw new Error(body.error ?? 'save_failed');
       }
       setLastSavedAt(body.savedAt);
@@ -162,7 +205,9 @@ export function EnrollmentWizard({
       }
       setMessage(t('saved'));
       if (step < 9) {
-        setStep((current) => current + 1);
+        const nextStep = step + 1;
+        setHighestReachedStep((current) => Math.max(current, nextStep));
+        setStep(nextStep);
       }
     } catch {
       setMessage(t('saveError'));
@@ -195,11 +240,35 @@ export function EnrollmentWizard({
       router.refresh();
     } catch (error) {
       const code = error instanceof Error ? error.message : '';
-      setMessage(
-        code.startsWith('enrollment_incomplete:')
-          ? t('incomplete')
-          : t('completeError'),
-      );
+      if (code.startsWith('enrollment_incomplete:')) {
+        const missingFields = code
+          .slice('enrollment_incomplete:'.length)
+          .split(',')
+          .filter(Boolean);
+        const firstMissingStep = Math.min(
+          ...missingFields.map(enrollmentIssueStep),
+        );
+        const targetStep = Number.isFinite(firstMissingStep)
+          ? firstMissingStep
+          : 1;
+        setStep(targetStep);
+        setHighestReachedStep((current) => Math.max(current, targetStep));
+        const firstField = enrollmentIssueField(missingFields[0]);
+        if (firstField) focusField(firstField);
+        setMessage(
+          t('incompleteFields', {
+            fields: missingFields
+              .map((field) => t(`validation.${field}`))
+              .join(', '),
+          }),
+        );
+      } else {
+        setMessage(
+          code === 'forbidden'
+            ? t('confirmationError')
+            : t('completeError'),
+        );
+      }
     } finally {
       setBusy(false);
     }
@@ -332,17 +401,22 @@ export function EnrollmentWizard({
               <button
                 key={number}
                 type="button"
+                disabled={busy || number > highestReachedStep}
                 onClick={() => setStep(number)}
-                className={`flex min-h-11 w-full items-center gap-3 rounded-xl px-3 text-left text-xs font-bold transition-colors ${
+                className={`flex min-h-11 w-full items-center gap-3 rounded-xl px-3 text-left text-xs font-bold transition-colors disabled:cursor-not-allowed disabled:opacity-35 ${
                   step === number
                     ? 'bg-[#533089] text-white'
-                    : number < step
+                    : number < highestReachedStep
                       ? 'bg-emerald-50 text-emerald-700'
                       : 'text-[#2E286C]/55 hover:bg-black/[0.03]'
                 }`}
               >
                 <span className="flex h-6 w-6 items-center justify-center rounded-full border border-current/20">
-                  {number < step ? <Check className="h-3.5 w-3.5" /> : number}
+                  {number < highestReachedStep ? (
+                    <Check className="h-3.5 w-3.5" />
+                  ) : (
+                    number
+                  )}
                 </span>
                 {t(`steps.${number}`)}
               </button>
@@ -377,7 +451,12 @@ export function EnrollmentWizard({
             </div>
 
             {step === 1 && (
-              <IdentityStep draft={draft} setDraft={setDraft} t={t} />
+              <IdentityStep
+                draft={draft}
+                errors={fieldErrors}
+                setDraft={setDraft}
+                t={t}
+              />
             )}
             {step === 2 && (
               <ContactStep
@@ -387,6 +466,7 @@ export function EnrollmentWizard({
                 setDraft={setDraft}
                 setParties={setParties}
                 t={t}
+                errors={fieldErrors}
               />
             )}
             {step === 3 && (
@@ -395,6 +475,7 @@ export function EnrollmentWizard({
                 draft={draft}
                 setDraft={setDraft}
                 t={t}
+                errors={fieldErrors}
               />
             )}
             {step === 4 && (
@@ -403,10 +484,16 @@ export function EnrollmentWizard({
                 originalSource={initial.candidate.originalSource}
                 setDraft={setDraft}
                 t={t}
+                errors={fieldErrors}
               />
             )}
             {step === 5 && (
-              <ChannelStep draft={draft} setDraft={setDraft} t={t} />
+              <ChannelStep
+                draft={draft}
+                errors={fieldErrors}
+                setDraft={setDraft}
+                t={t}
+              />
             )}
             {step === 6 && (
               <DocumentsStep
@@ -420,7 +507,12 @@ export function EnrollmentWizard({
               />
             )}
             {step === 7 && (
-              <FinanceStep draft={draft} setDraft={setDraft} t={t} />
+              <FinanceStep
+                draft={draft}
+                errors={fieldErrors}
+                setDraft={setDraft}
+                t={t}
+              />
             )}
             {step === 8 && (
               <ScheduleStep draft={draft} setDraft={setDraft} t={t} />
@@ -434,6 +526,15 @@ export function EnrollmentWizard({
                 confirmationPassword={confirmationPassword}
                 setConfirmationPassword={setConfirmationPassword}
                 setDraft={setDraft}
+                onIssueClick={(issue, issueStep) => {
+                  const targetStep = issueStep ?? enrollmentIssueStep(issue);
+                  setStep(targetStep);
+                  setHighestReachedStep((current) =>
+                    Math.max(current, targetStep),
+                  );
+                  const field = enrollmentIssueField(issue);
+                  if (field) focusField(field);
+                }}
                 t={t}
               />
             )}
@@ -456,8 +557,12 @@ export function EnrollmentWizard({
                 </Button>
                 {step < 9 ? (
                   <Button type="submit" disabled={busy || isCompleted}>
-                    {busy ? t('saving') : t('saveAndContinue')}
-                    {busy ? <Save className="h-4 w-4" /> : <ArrowRight className="h-4 w-4" />}
+                    {busy ? t('saving') : t('next')}
+                    {busy ? (
+                      <Save className="h-4 w-4" />
+                    ) : (
+                      <ArrowRight className="h-4 w-4" />
+                    )}
                   </Button>
                 ) : (
                   <Button
@@ -487,22 +592,38 @@ type SetDraft = React.Dispatch<React.SetStateAction<DraftState>>;
 
 function IdentityStep({
   draft,
+  errors,
   setDraft,
   t,
 }: {
   draft: DraftState;
+  errors: EnrollmentFieldErrors;
   setDraft: SetDraft;
   t: WizardT;
 }) {
+  const locale = useLocale();
+  const isTurkey = (draft.birthCountryCode ?? 'TR') === 'TR';
+  const provinces = getTurkeyProvinceOptions();
+  const districts = getTurkeyDistrictOptions(
+    draft.birthAdministrativeArea ?? '',
+  );
+  const identityType = draft.identityDocumentType ?? 'national_id';
+
   return (
     <div className="grid gap-5 sm:grid-cols-2">
       <SelectField
+        id="identityDocumentType"
         label={t('fields.identityType')}
-        value={draft.identityDocumentType ?? 'national_id'}
+        required
+        value={identityType}
         onChange={(value) =>
           setDraft((current) => ({
             ...current,
             identityDocument: '',
+            identityDocumentMasked:
+              current.identityDocumentType === value
+                ? current.identityDocumentMasked
+                : undefined,
             identityDocumentType: value as 'national_id' | 'passport',
           }))
         }
@@ -511,53 +632,173 @@ function IdentityStep({
           ['passport', t('options.passport')],
         ]}
       />
-      <Field
+      <FormField
+        error={errors.identityDocument}
+        htmlFor="identityDocument"
         label={
-          draft.identityDocumentMasked
-            ? `${t('fields.identityNumber')} (${draft.identityDocumentMasked})`
-            : t('fields.identityNumber')
+          identityType === 'national_id'
+            ? t('fields.nationalIdNumber')
+            : t('fields.passportNumber')
         }
-        value={draft.identityDocument}
-        onChange={(value) =>
-          setDraft((current) => ({ ...current, identityDocument: value }))
-        }
-        placeholder={
-          draft.identityDocumentMasked
-            ? t('fields.leaveBlankToKeep')
-            : t('fields.identityPlaceholder')
-        }
-      />
+        required={!draft.identityDocumentMasked}
+      >
+        <IdentityDocumentInput
+          error={Boolean(errors.identityDocument)}
+          id="identityDocument"
+          maskedValue={draft.identityDocumentMasked}
+          onChange={(identityDocument) =>
+            setDraft((current) => ({ ...current, identityDocument }))
+          }
+          placeholder={
+            draft.identityDocumentMasked
+              ? t('fields.leaveBlankToKeep')
+              : t('fields.identityPlaceholder')
+          }
+          type={identityType}
+          value={draft.identityDocument}
+        />
+      </FormField>
       <Field
+        error={errors.firstName}
+        id="firstName"
         label={t('fields.firstName')}
+        required
         value={draft.firstName}
         onChange={(value) =>
           setDraft((current) => ({ ...current, firstName: value }))
         }
       />
       <Field
+        error={errors.lastName}
+        id="lastName"
         label={t('fields.lastName')}
+        required
         value={draft.lastName}
         onChange={(value) =>
           setDraft((current) => ({ ...current, lastName: value }))
         }
       />
-      <Field
-        label={t('fields.birthPlace')}
-        value={draft.birthPlace ?? ''}
-        onChange={(value) =>
-          setDraft((current) => ({ ...current, birthPlace: value }))
-        }
-      />
-      <Field
+      <FormField
+        error={errors.birthCountryCode}
+        htmlFor="birthCountryCode"
+        label={t('fields.birthCountry')}
+        required
+      >
+        <CountrySelect
+          error={Boolean(errors.birthCountryCode)}
+          id="birthCountryCode"
+          locale={locale}
+          onChange={(birthCountryCode) =>
+            setDraft((current) => {
+              const currentCode = current.birthCountryCode ?? 'TR';
+              const cache = {
+                ...current.birthLocationCache,
+                [currentCode]: {
+                  administrativeArea:
+                    current.birthAdministrativeArea ?? '',
+                  locality: current.birthLocality ?? '',
+                },
+              };
+              const restored = cache[birthCountryCode];
+              return {
+                ...current,
+                birthAdministrativeArea:
+                  restored?.administrativeArea ?? '',
+                birthCountryCode,
+                birthLocality: restored?.locality ?? '',
+                birthLocationCache: cache,
+              };
+            })
+          }
+          placeholder={t('select')}
+          value={draft.birthCountryCode ?? 'TR'}
+        />
+      </FormField>
+      {isTurkey ? (
+        <>
+          <SelectField
+            error={errors.birthAdministrativeArea}
+            id="birthAdministrativeArea"
+            label={t('fields.birthProvince')}
+            required
+            value={draft.birthAdministrativeArea ?? ''}
+            onChange={(birthAdministrativeArea) =>
+              setDraft((current) => ({
+                ...current,
+                birthAdministrativeArea,
+                birthLocality: '',
+              }))
+            }
+            options={[
+              ['', t('select')],
+              ...provinces.map((province) => [province, province] as const),
+            ]}
+          />
+          <SelectField
+            error={errors.birthLocality}
+            id="birthLocality"
+            label={t('fields.birthDistrict')}
+            required
+            value={draft.birthLocality ?? ''}
+            onChange={(birthLocality) =>
+              setDraft((current) => ({ ...current, birthLocality }))
+            }
+            options={[
+              ['', t('select')],
+              ...districts.map((district) => [district, district] as const),
+            ]}
+          />
+        </>
+      ) : (
+        <>
+          <Field
+            error={errors.birthAdministrativeArea}
+            id="birthAdministrativeArea"
+            label={t('fields.birthRegion')}
+            required
+            value={draft.birthAdministrativeArea ?? ''}
+            onChange={(birthAdministrativeArea) =>
+              setDraft((current) => ({
+                ...current,
+                birthAdministrativeArea,
+              }))
+            }
+          />
+          <Field
+            error={errors.birthLocality}
+            id="birthLocality"
+            label={t('fields.birthCity')}
+            required
+            value={draft.birthLocality ?? ''}
+            onChange={(birthLocality) =>
+              setDraft((current) => ({ ...current, birthLocality }))
+            }
+          />
+        </>
+      )}
+      <FormField
+        error={errors.birthDate}
+        htmlFor="birthDate"
         label={t('fields.birthDate')}
-        type="date"
-        value={draft.birthDate ?? ''}
-        onChange={(value) =>
-          setDraft((current) => ({ ...current, birthDate: value }))
-        }
-      />
+        required
+      >
+        <DatePicker
+          disabledAfter={new Date()}
+          error={Boolean(errors.birthDate)}
+          id="birthDate"
+          locale={locale}
+          onChange={(birthDate) =>
+            setDraft((current) => ({ ...current, birthDate }))
+          }
+          placeholder={t('fields.datePlaceholder')}
+          value={draft.birthDate ?? ''}
+        />
+      </FormField>
       <SelectField
+        error={errors.gender}
+        id="gender"
         label={t('fields.gender')}
+        required
         value={draft.gender ?? ''}
         onChange={(value) =>
           setDraft((current) => ({
@@ -575,7 +816,10 @@ function IdentityStep({
         ]}
       />
       <Field
+        error={errors.school}
+        id="school"
         label={t('fields.school')}
+        required
         value={draft.school ?? ''}
         onChange={(value) =>
           setDraft((current) => ({ ...current, school: value }))
@@ -587,6 +831,7 @@ function IdentityStep({
 
 function ContactStep({
   draft,
+  errors,
   isMinor,
   parties,
   setDraft,
@@ -594,6 +839,7 @@ function ContactStep({
   t,
 }: {
   draft: DraftState;
+  errors: EnrollmentFieldErrors;
   isMinor: boolean;
   parties: EnrollmentDraftView['parties'];
   setDraft: SetDraft;
@@ -602,6 +848,8 @@ function ContactStep({
   >;
   t: WizardT;
 }) {
+  const locale = useLocale();
+
   function addParty() {
     setParties((current) => [
       ...current,
@@ -617,22 +865,43 @@ function ContactStep({
   return (
     <div className="space-y-7">
       <div className="grid gap-5 sm:grid-cols-2">
-        <Field
+        <FormField
+          error={errors.primaryPhone}
+          htmlFor="primaryPhone"
           label={t('fields.primaryPhone')}
-          value={draft.primaryPhone}
-          onChange={(value) =>
-            setDraft((current) => ({ ...current, primaryPhone: value }))
-          }
-        />
-        <Field
+          required
+        >
+          <PhoneInput
+            error={Boolean(errors.primaryPhone)}
+            id="primaryPhone"
+            locale={locale}
+            value={draft.primaryPhone}
+            onChange={(primaryPhone) =>
+              setDraft((current) => ({ ...current, primaryPhone }))
+            }
+          />
+        </FormField>
+        <FormField
+          error={errors.secondaryPhone}
+          htmlFor="secondaryPhone"
           label={t('fields.secondaryPhone')}
-          value={draft.secondaryPhone ?? ''}
-          onChange={(value) =>
-            setDraft((current) => ({ ...current, secondaryPhone: value }))
-          }
-        />
+          optionalLabel={t('optional')}
+        >
+          <PhoneInput
+            error={Boolean(errors.secondaryPhone)}
+            id="secondaryPhone"
+            locale={locale}
+            value={draft.secondaryPhone ?? ''}
+            onChange={(secondaryPhone) =>
+              setDraft((current) => ({ ...current, secondaryPhone }))
+            }
+          />
+        </FormField>
         <Field
+          error={errors.email}
+          id="email"
           label={t('fields.email')}
+          required
           type="email"
           value={draft.email}
           onChange={(value) =>
@@ -641,7 +910,10 @@ function ContactStep({
         />
         <div className="sm:col-span-2">
           <TextAreaField
+            error={errors.residenceAddress}
+            id="residenceAddress"
             label={t('fields.address')}
+            required
             value={draft.residenceAddress}
             onChange={(value) =>
               setDraft((current) => ({
@@ -684,6 +956,7 @@ function ContactStep({
         <div className="space-y-4">
           {parties.map((party, index) => (
             <PartyEditor
+              errors={errors}
               key={party.id}
               index={index}
               party={party}
@@ -703,11 +976,13 @@ function ContactStep({
 }
 
 function PartyEditor({
+  errors,
   index,
   party,
   setParties,
   t,
 }: {
+  errors: EnrollmentFieldErrors;
   index: number;
   party: EnrollmentDraftView['parties'][number];
   setParties: React.Dispatch<
@@ -715,6 +990,8 @@ function PartyEditor({
   >;
   t: WizardT;
 }) {
+  const locale = useLocale();
+  const partyPrefix = `party-${party.id}`;
   function update(values: Partial<typeof party>) {
     setParties((current) =>
       current.map((item) =>
@@ -751,12 +1028,18 @@ function PartyEditor({
       </div>
       <div className="grid gap-4 sm:grid-cols-2">
         <Field
+          error={errors[`${partyPrefix}-fullName`]}
+          id={`${partyPrefix}-fullName`}
           label={t('fields.fullName')}
+          required
           value={party.fullName}
           onChange={(value) => update({ fullName: value })}
         />
         <SelectField
+          error={errors[`${partyPrefix}-relationship`]}
+          id={`${partyPrefix}-relationship`}
           label={t('fields.relationship')}
+          required
           value={party.relationship}
           onChange={(value) =>
             update({
@@ -773,27 +1056,48 @@ function PartyEditor({
         />
         {party.relationship === 'other' && (
           <Field
+            error={errors[`${partyPrefix}-relationshipOther`]}
+            id={`${partyPrefix}-relationshipOther`}
             label={t('fields.relationshipOther')}
+            required
             value={party.relationshipOther ?? ''}
             onChange={(value) => update({ relationshipOther: value })}
           />
         )}
-        <Field
+        <FormField
+          error={errors[`${partyPrefix}-phone`]}
+          htmlFor={`${partyPrefix}-phone`}
           label={t('fields.phone')}
-          value={party.phone ?? ''}
-          onChange={(value) => update({ phone: value })}
-        />
+          optionalLabel={t('optional')}
+        >
+          <PhoneInput
+            error={Boolean(errors[`${partyPrefix}-phone`])}
+            id={`${partyPrefix}-phone`}
+            locale={locale}
+            value={party.phone ?? ''}
+            onChange={(phone) => update({ phone })}
+          />
+        </FormField>
         <Field
+          error={errors[`${partyPrefix}-email`]}
+          id={`${partyPrefix}-email`}
           label={t('fields.email')}
+          optionalLabel={t('optional')}
           type="email"
           value={party.email ?? ''}
           onChange={(value) => update({ email: value })}
         />
         <SelectField
+          id={`${partyPrefix}-identityType`}
           label={t('fields.identityType')}
+          optionalLabel={t('optional')}
           value={party.identityDocumentType ?? ''}
           onChange={(value) =>
             update({
+              identityDocumentMasked:
+                party.identityDocumentType === value
+                  ? party.identityDocumentMasked
+                  : undefined,
               identityDocumentType:
                 (value || undefined) as
                   | 'national_id'
@@ -807,25 +1111,33 @@ function PartyEditor({
             ['passport', t('options.passport')],
           ]}
         />
-        <Field
-          label={
-            party.identityDocumentMasked
-              ? `${t('fields.identityNumber')} (${party.identityDocumentMasked})`
-              : t('fields.identityNumber')
-          }
-          value={
-            (party as typeof party & { identityDocument?: string })
-              .identityDocument ?? ''
-          }
-          onChange={(value) =>
-            update({ identityDocument: value } as Partial<typeof party>)
-          }
-          placeholder={
-            party.identityDocumentMasked
-              ? t('fields.leaveBlankToKeep')
-              : undefined
-          }
-        />
+        {party.identityDocumentType && (
+          <FormField
+            error={errors[`${partyPrefix}-identityDocument`]}
+            htmlFor={`${partyPrefix}-identityDocument`}
+            label={
+              party.identityDocumentType === 'national_id'
+                ? t('fields.nationalIdNumber')
+                : t('fields.passportNumber')
+            }
+            optionalLabel={t('optional')}
+          >
+            <IdentityDocumentInput
+              error={Boolean(errors[`${partyPrefix}-identityDocument`])}
+              id={`${partyPrefix}-identityDocument`}
+              maskedValue={party.identityDocumentMasked}
+              onChange={(identityDocument) =>
+                update({ identityDocument } as Partial<typeof party>)
+              }
+              placeholder={t('fields.identityPlaceholder')}
+              type={party.identityDocumentType}
+              value={
+                (party as typeof party & { identityDocument?: string })
+                  .identityDocument ?? ''
+              }
+            />
+          </FormField>
+        )}
       </div>
       <div className="mt-5">
         <div className="mb-3 text-xs font-bold text-[#2E286C]/55">
@@ -861,11 +1173,13 @@ function PartyEditor({
 function ProgramStep({
   catalog,
   draft,
+  errors,
   setDraft,
   t,
 }: {
   catalog: ProgramManagementData;
   draft: DraftState;
+  errors: EnrollmentFieldErrors;
   setDraft: SetDraft;
   t: WizardT;
 }) {
@@ -873,6 +1187,17 @@ function ProgramStep({
   const selectedProgram = catalog.programs.find(
     (program) => program.id === draft.programReferenceId,
   );
+  const availableBranches = selectedProgram
+    ? catalog.branches.filter(
+        (branch) => branch.programId === selectedProgram.id,
+      )
+    : [];
+  const selectedBranch = catalog.branches.find(
+    (branch) => branch.id === draft.branchId,
+  );
+  const branchAtCapacity = selectedBranch
+    ? selectedBranch.currentEnrollmentCount >= selectedBranch.maximumCapacity
+    : false;
   const privateRates = draft.privateLessonLanguage
     ? catalog.rates.filter(
         (rate) => rate.language === draft.privateLessonLanguage,
@@ -880,7 +1205,7 @@ function ProgramStep({
     : [];
   const selectedRate = catalog.rates.find(
     (rate) =>
-      rate.teacherUserId === draft.selectedTeacherUserId &&
+      rate.instructorProfileId === draft.selectedInstructorProfileId &&
       rate.language === draft.privateLessonLanguage,
   );
 
@@ -890,6 +1215,10 @@ function ProgramStep({
 
     setDraft((current) => ({
       ...current,
+      branchId: undefined,
+      branchName: undefined,
+      capacityOverride: false,
+      capacityOverrideNote: undefined,
       courseMode: program.kind,
       discountCents: 0,
       discountNote: undefined,
@@ -907,7 +1236,7 @@ function ProgramStep({
           ? t('options.private')
           : program.name,
       programReferenceId: program.id,
-      selectedTeacherUserId: undefined,
+      selectedInstructorProfileId: undefined,
     }));
   }
 
@@ -916,7 +1245,7 @@ function ProgramStep({
       const next = { ...current, ...values };
       const rate = catalog.rates.find(
         (item) =>
-          item.teacherUserId === next.selectedTeacherUserId &&
+          item.instructorProfileId === next.selectedInstructorProfileId &&
           item.language === next.privateLessonLanguage,
       );
       const basePrice =
@@ -940,7 +1269,10 @@ function ProgramStep({
   return (
     <div className="space-y-6">
       <SelectField
+        error={errors.programReferenceId}
+        id="programReferenceId"
         label={t('fields.program')}
+        required
         value={draft.programReferenceId ?? ''}
         onChange={chooseProgram}
         options={[
@@ -958,23 +1290,120 @@ function ProgramStep({
       />
 
       {selectedProgram?.kind === 'group' && (
-        <div className="grid gap-4 rounded-2xl bg-[#F8F7FB] p-5 sm:grid-cols-3">
-          <ProgramSummary
-            label={t('fields.language')}
-            value={
-              selectedProgram.language
-                ? t(`languages.${selectedProgram.language}`)
-                : '-'
-            }
-          />
-          <ProgramSummary
-            label={t('fields.levels')}
-            value={selectedProgram.levels.join(' · ')}
-          />
-          <ProgramSummary
-            label={t('fields.listPrice')}
-            value={formatTry(selectedProgram.listPriceCents ?? 0, locale)}
-          />
+        <div className="space-y-5">
+          <div className="grid gap-4 rounded-2xl bg-[#F8F7FB] p-5 sm:grid-cols-3">
+            <ProgramSummary
+              label={t('fields.language')}
+              value={
+                selectedProgram.language
+                  ? t(`languages.${selectedProgram.language}`)
+                  : '-'
+              }
+            />
+            <ProgramSummary
+              label={t('fields.levels')}
+              value={selectedProgram.levels.join(' · ')}
+            />
+            <ProgramSummary
+              label={t('fields.listPrice')}
+              value={formatTry(selectedProgram.listPriceCents ?? 0, locale)}
+            />
+          </div>
+
+          {availableBranches.length ? (
+            <>
+              <SelectField
+                error={errors.branchId}
+                id="branchId"
+                label={t('fields.branch')}
+                required
+                value={draft.branchId ?? ''}
+                onChange={(branchId) => {
+                  const branch = catalog.branches.find(
+                    (item) => item.id === branchId,
+                  );
+                  setDraft((current) => ({
+                    ...current,
+                    branchId: branch?.id,
+                    branchName: branch?.name,
+                    capacityOverride: false,
+                    capacityOverrideNote: undefined,
+                  }));
+                }}
+                options={[
+                  ['', t('select')],
+                  ...availableBranches.map(
+                    (branch) =>
+                      [
+                        branch.id,
+                        `${branch.name} · ${branch.currentEnrollmentCount}/${branch.maximumCapacity}`,
+                      ] as const,
+                  ),
+                ]}
+              />
+
+              {selectedBranch && (
+                <div className="grid gap-4 rounded-2xl border border-black/[0.05] bg-white p-5 sm:grid-cols-3">
+                  <ProgramSummary
+                    label={t('fields.branchDates')}
+                    value={`${formatDate(selectedBranch.plannedStartDate, locale)} – ${formatDate(selectedBranch.plannedEndDate, locale)}`}
+                  />
+                  <ProgramSummary
+                    label={t('fields.capacity')}
+                    value={`${selectedBranch.currentEnrollmentCount} / ${selectedBranch.maximumCapacity}`}
+                  />
+                  <ProgramSummary
+                    label={t('fields.teacher')}
+                    value={
+                      selectedBranch.instructorName ??
+                      t('teacherAssignmentPending')
+                    }
+                  />
+                </div>
+              )}
+
+              {branchAtCapacity && (
+                <div className="space-y-4 rounded-2xl border border-amber-200 bg-amber-50 p-5">
+                  <p className="text-sm font-semibold leading-6 text-amber-800">
+                    {t('branchCapacityWarning')}
+                  </p>
+                  <label className="flex items-start gap-3 text-sm font-semibold text-amber-900">
+                    <input
+                      type="checkbox"
+                      checked={draft.capacityOverride}
+                      onChange={(event) =>
+                        setDraft((current) => ({
+                          ...current,
+                          capacityOverride: event.target.checked,
+                          capacityOverrideNote: event.target.checked
+                            ? current.capacityOverrideNote
+                            : undefined,
+                        }))
+                      }
+                      className="mt-0.5 h-4 w-4 accent-[#533089]"
+                    />
+                    {t('capacityOverrideApproval')}
+                  </label>
+                  {draft.capacityOverride && (
+                    <Field
+                      label={t('fields.capacityOverrideNote')}
+                      value={draft.capacityOverrideNote ?? ''}
+                      onChange={(capacityOverrideNote) =>
+                        setDraft((current) => ({
+                          ...current,
+                          capacityOverrideNote,
+                        }))
+                      }
+                    />
+                  )}
+                </div>
+              )}
+            </>
+          ) : (
+            <div className="rounded-2xl border border-dashed border-amber-300 bg-amber-50 p-5 text-sm font-semibold text-amber-800">
+              {t('noOpenBranch')}
+            </div>
+          )}
         </div>
       )}
 
@@ -982,12 +1411,15 @@ function ProgramStep({
         <div className="space-y-5 rounded-2xl border border-[#533089]/10 bg-[#533089]/[0.025] p-5">
           <div className="grid gap-5 sm:grid-cols-2">
             <SelectField
+              error={errors.privateLesson}
+              id="privateLessonLanguage"
               label={t('fields.privateLessonLanguage')}
+              required
               value={draft.privateLessonLanguage ?? ''}
               onChange={(value) =>
                 updatePrivateSelection({
                   privateLessonLanguage: value as ProgramLanguage,
-                  selectedTeacherUserId: undefined,
+                  selectedInstructorProfileId: undefined,
                 })
               }
               options={[
@@ -999,20 +1431,27 @@ function ProgramStep({
               ]}
             />
             <SelectField
+              error={errors.privateLesson}
+              id="selectedInstructorProfileId"
               label={t('fields.teacher')}
-              value={draft.selectedTeacherUserId ?? ''}
+              required
+              value={draft.selectedInstructorProfileId ?? ''}
               onChange={(value) =>
-                updatePrivateSelection({ selectedTeacherUserId: value })
+                updatePrivateSelection({ selectedInstructorProfileId: value })
               }
               options={[
                 ['', t('select')],
                 ...privateRates.map(
-                  (rate) => [rate.teacherUserId, rate.teacherName] as const,
+                  (rate) =>
+                    [rate.instructorProfileId, rate.instructorName] as const,
                 ),
               ]}
             />
             <Field
+              error={errors.privateLesson}
+              id="privateLessonHours"
               label={t('fields.privateLessonHours')}
+              required
               type="number"
               value={String(draft.privateLessonHours ?? '')}
               onChange={(value) =>
@@ -1089,57 +1528,102 @@ function ProgramSummary({
 
 function SourceStep({
   draft,
+  errors,
   originalSource,
   setDraft,
   t,
 }: {
   draft: DraftState;
+  errors: EnrollmentFieldErrors;
   originalSource?: string;
   setDraft: SetDraft;
   t: WizardT;
 }) {
   return (
-    <div className="grid gap-5 sm:grid-cols-2">
-      <Field
-        disabled
-        label={t('fields.originalSource')}
-        value={originalSource ?? t('unknown')}
-        onChange={() => undefined}
-      />
-      <Field
+    <div className="space-y-5">
+      <div className="rounded-2xl bg-[#F8F7FB] p-5">
+        <div className="text-xs font-bold text-[#2E286C]/45">
+          {t('fields.originalSource')}
+        </div>
+        <div className="mt-2 text-sm font-bold text-[#2E286C]">
+          {originalSource ?? t('unknown')}
+        </div>
+        <p className="mt-2 text-xs leading-5 text-[#2E286C]/45">
+          {t('originalSourceHelp')}
+        </p>
+      </div>
+      <SelectField
+        error={errors.correctedSource}
+        id="correctedSource"
         label={t('fields.correctedSource')}
+        optionalLabel={t('optional')}
         value={draft.correctedSource ?? ''}
-        onChange={(value) =>
-          setDraft((current) => ({ ...current, correctedSource: value }))
+        onChange={(correctedSource) =>
+          setDraft((current) => ({
+            ...current,
+            correctedSource,
+            correctedSourceDetail:
+              correctedSource === 'other'
+                ? current.correctedSourceDetail
+                : undefined,
+          }))
         }
-        placeholder={t('fields.correctedSourcePlaceholder')}
+        options={[
+          ['', t('select')],
+          ['instagram', t('sourceOptions.instagram')],
+          ['google', t('sourceOptions.google')],
+          ['referral', t('sourceOptions.referral')],
+          ['web_level_test', t('sourceOptions.webLevelTest')],
+          ['whatsapp', t('sourceOptions.whatsapp')],
+          ['other', t('options.other')],
+        ]}
       />
+      {draft.correctedSource === 'other' && (
+        <Field
+          error={errors.correctedSourceDetail}
+          id="correctedSourceDetail"
+          label={t('fields.correctedSourceDetail')}
+          required
+          value={draft.correctedSourceDetail ?? ''}
+          onChange={(correctedSourceDetail) =>
+            setDraft((current) => ({
+              ...current,
+              correctedSourceDetail,
+            }))
+          }
+        />
+      )}
     </div>
   );
 }
 
 function ChannelStep({
   draft,
+  errors,
   setDraft,
   t,
 }: {
   draft: DraftState;
+  errors: EnrollmentFieldErrors;
   setDraft: SetDraft;
   t: WizardT;
 }) {
   return (
     <SelectField
+      error={errors.registrationChannel}
+      id="registrationChannel"
       label={t('fields.registrationChannel')}
+      required
       value={draft.registrationChannel ?? ''}
       onChange={(value) =>
         setDraft((current) => ({ ...current, registrationChannel: value }))
       }
       options={[
         ['', t('select')],
-        ['office', t('options.office')],
+        ['web', t('options.web')],
         ['phone', t('options.phone')],
-        ['online', t('options.online')],
-        ['event', t('options.event')],
+        ['whatsapp', t('options.whatsapp')],
+        ['video_call', t('options.videoCall')],
         ['other', t('options.other')],
       ]}
     />
@@ -1236,10 +1720,12 @@ function DocumentsStep({
 
 function FinanceStep({
   draft,
+  errors,
   setDraft,
   t,
 }: {
   draft: DraftState;
+  errors: EnrollmentFieldErrors;
   setDraft: SetDraft;
   t: WizardT;
 }) {
@@ -1302,7 +1788,10 @@ function FinanceStep({
         onChange={() => undefined}
       />
       <MoneyField
+        error={errors.initialPaymentCents}
+        id="initialPaymentCents"
         label={t('fields.initialPayment')}
+        required
         cents={draft.initialPaymentCents}
         onChange={(value) =>
           setDraft((current) => ({ ...current, initialPaymentCents: value }))
@@ -1402,6 +1891,7 @@ function ReviewStep({
   documents,
   draft,
   isMinor,
+  onIssueClick,
   parties,
   setConfirmationPassword,
   setDraft,
@@ -1411,38 +1901,104 @@ function ReviewStep({
   documents: EnrollmentDraftView['documents'];
   draft: DraftState;
   isMinor: boolean;
+  onIssueClick: (issue: string, step?: number) => void;
   parties: EnrollmentDraftView['parties'];
   setConfirmationPassword: (value: string) => void;
   setDraft: SetDraft;
   t: WizardT;
 }) {
+  const messages = validationMessages(t);
+  const issues = [1, 2, 3, 4, 5, 7].flatMap((reviewStep) =>
+    Object.entries(
+      validateCurrentStep(reviewStep, draft, parties, isMinor, t),
+    ).map(([field, message]) => ({
+      field,
+      message,
+      step: reviewStep,
+    })),
+  );
   const checks = [
-    [Boolean(draft.identityDocumentMasked || draft.identityDocument), t('checks.identity')],
-    [Boolean(draft.primaryPhone && draft.email && draft.residenceAddress), t('checks.contact')],
-    [!isMinor || parties.some((party) => party.roles.includes('guardian')), t('checks.guardian')],
-    [Boolean(draft.courseMode), t('checks.program')],
-    [draft.finalPriceCents !== undefined, t('checks.finance')],
-  ] as const;
+    {
+      complete: !Object.keys(
+        validateEnrollmentStep(1, draft, parties, isMinor, messages),
+      ).length,
+      label: t('checks.identity'),
+      step: 1,
+    },
+    {
+      complete: !Object.keys(
+        validateEnrollmentStep(2, draft, parties, isMinor, messages),
+      ).length,
+      label: t('checks.contact'),
+      step: 2,
+    },
+    {
+      complete:
+        !isMinor ||
+        parties.some((party) => party.roles.includes('guardian')),
+      label: t('checks.guardian'),
+      step: 2,
+    },
+    {
+      complete: !Object.keys(
+        validateEnrollmentStep(3, draft, parties, isMinor, messages),
+      ).length,
+      label: t('checks.program'),
+      step: 3,
+    },
+    {
+      complete: !Object.keys(
+        validateEnrollmentStep(7, draft, parties, isMinor, messages),
+      ).length,
+      label: t('checks.finance'),
+      step: 7,
+    },
+  ];
 
   return (
     <div className="space-y-6">
       <div className="grid gap-3 sm:grid-cols-2">
-        {checks.map(([complete, label]) => (
-          <div
-            key={label}
+        {checks.map(({ complete, label, step: checkStep }) => (
+          <button
+            type="button"
+            key={`${checkStep}-${label}`}
+            onClick={() => {
+              const issue = issues.find((item) => item.step === checkStep);
+              if (!complete && issue) onIssueClick(issue.field, issue.step);
+            }}
             className={`flex items-center gap-3 rounded-2xl p-4 text-sm font-bold ${
               complete
                 ? 'bg-emerald-50 text-emerald-700'
-                : 'bg-amber-50 text-amber-700'
+                : 'bg-amber-50 text-left text-amber-700 hover:bg-amber-100'
             }`}
           >
             <span className="flex h-6 w-6 items-center justify-center rounded-full bg-white">
               {complete ? <Check className="h-4 w-4" /> : '!'}
             </span>
             {label}
-          </div>
+          </button>
         ))}
       </div>
+      {issues.length > 0 && (
+        <div className="rounded-2xl border border-amber-200 bg-amber-50 p-5">
+          <div className="text-sm font-bold text-amber-900">
+            {t('reviewIssuesTitle')}
+          </div>
+          <div className="mt-3 space-y-2">
+            {issues.map((issue) => (
+              <button
+                key={`${issue.step}-${issue.field}`}
+                type="button"
+                onClick={() => onIssueClick(issue.field, issue.step)}
+                className="flex w-full items-center justify-between gap-3 rounded-xl bg-white px-4 py-3 text-left text-xs font-semibold text-amber-800 hover:bg-amber-100"
+              >
+                <span>{issue.message}</span>
+                <ArrowRight className="h-3.5 w-3.5 shrink-0" />
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
       <div className="rounded-2xl bg-[#F8F7FB] p-5 text-sm text-[#2E286C]/60">
         {t('reviewSummary', {
           documents: documents.length,
@@ -1469,50 +2025,70 @@ function ReviewStep({
 
 function Field({
   disabled,
+  error,
+  id,
   label,
   onChange,
+  optionalLabel,
   placeholder,
+  required,
   type = 'text',
   value,
 }: {
   disabled?: boolean;
+  error?: string;
+  id?: string;
   label: string;
   onChange: (value: string) => void;
+  optionalLabel?: string;
   placeholder?: string;
+  required?: boolean;
   type?: string;
   value: string;
 }) {
   return (
-    <label className="block space-y-2">
-      <span className="text-xs font-bold text-[#2E286C]/60">{label}</span>
+    <FormField
+      error={error}
+      htmlFor={id}
+      label={label}
+      optionalLabel={optionalLabel}
+      required={required}
+    >
       <Input
+        id={id}
         disabled={disabled}
         type={type}
         value={value}
         placeholder={placeholder}
         onChange={(event) => onChange(event.target.value)}
-        className="h-12"
+        className={`h-12 ${error ? 'border-red-400 focus:border-red-500' : ''}`}
       />
-    </label>
+    </FormField>
   );
 }
 
 function MoneyField({
   cents,
   disabled,
+  error,
+  id,
   label,
   onChange,
+  required,
 }: {
   cents?: number;
   disabled?: boolean;
+  error?: string;
+  id?: string;
   label: string;
   onChange: (value: number) => void;
+  required?: boolean;
 }) {
   return (
-    <label className="block space-y-2">
-      <span className="text-xs font-bold text-[#2E286C]/60">{label}</span>
+    <FormField error={error} htmlFor={id} label={label} required={required}>
       <div className="relative">
         <Input
+          id={id}
           disabled={disabled}
           type="number"
           min="0"
@@ -1521,34 +2097,50 @@ function MoneyField({
           onChange={(event) =>
             onChange(Math.round((Number(event.target.value) || 0) * 100))
           }
-          className="h-12 pr-16"
+          className={`h-12 pr-16 ${error ? 'border-red-400 focus:border-red-500' : ''}`}
         />
         <span className="absolute right-4 top-1/2 -translate-y-1/2 text-xs font-bold text-[#533089]">
           TRY
         </span>
       </div>
-    </label>
+    </FormField>
   );
 }
 
 function SelectField({
+  error,
+  id,
   label,
   onChange,
+  optionalLabel,
   options,
+  required,
   value,
 }: {
+  error?: string;
+  id?: string;
   label: string;
   onChange: (value: string) => void;
+  optionalLabel?: string;
   options: Array<readonly [string, string]>;
+  required?: boolean;
   value: string;
 }) {
   return (
-    <label className="block space-y-2">
-      <span className="text-xs font-bold text-[#2E286C]/60">{label}</span>
+    <FormField
+      error={error}
+      htmlFor={id}
+      label={label}
+      optionalLabel={optionalLabel}
+      required={required}
+    >
       <select
+        id={id}
         value={value}
         onChange={(event) => onChange(event.target.value)}
-        className="h-12 w-full rounded-xl border border-transparent bg-[#F8F9FC] px-4 text-sm font-medium text-[#2E286C] outline-none focus:border-[#533089]/30"
+        className={`h-12 w-full rounded-xl border bg-[#F8F9FC] px-4 text-sm font-medium text-[#2E286C] outline-none focus:border-[#533089]/30 ${
+          error ? 'border-red-400' : 'border-transparent'
+        }`}
       >
         {options.map(([optionValue, optionLabel]) => (
           <option key={optionValue} value={optionValue}>
@@ -1556,32 +2148,48 @@ function SelectField({
           </option>
         ))}
       </select>
-    </label>
+    </FormField>
   );
 }
 
 function TextAreaField({
+  error,
+  id,
   label,
   onChange,
+  optionalLabel,
   placeholder,
+  required,
   value,
 }: {
+  error?: string;
+  id?: string;
   label: string;
   onChange: (value: string) => void;
+  optionalLabel?: string;
   placeholder?: string;
+  required?: boolean;
   value: string;
 }) {
   return (
-    <label className="block space-y-2">
-      <span className="text-xs font-bold text-[#2E286C]/60">{label}</span>
+    <FormField
+      error={error}
+      htmlFor={id}
+      label={label}
+      optionalLabel={optionalLabel}
+      required={required}
+    >
       <textarea
+        id={id}
         value={value}
         placeholder={placeholder}
         onChange={(event) => onChange(event.target.value)}
         rows={4}
-        className="w-full rounded-xl border border-transparent bg-[#F8F9FC] px-4 py-3 text-sm font-medium text-[#2E286C] outline-none placeholder:text-[#2E286C]/35 focus:border-[#533089]/30"
+        className={`w-full rounded-xl border bg-[#F8F9FC] px-4 py-3 text-sm font-medium text-[#2E286C] outline-none placeholder:text-[#2E286C]/35 focus:border-[#533089]/30 ${
+          error ? 'border-red-400' : 'border-transparent'
+        }`}
       />
-    </label>
+    </FormField>
   );
 }
 
@@ -1593,8 +2201,10 @@ function buildPatch(
   if (step === 1) {
     return {
       data: {
+        birthAdministrativeArea: draft.birthAdministrativeArea ?? '',
+        birthCountryCode: draft.birthCountryCode ?? 'TR',
         birthDate: draft.birthDate ?? '',
-        birthPlace: draft.birthPlace ?? '',
+        birthLocality: draft.birthLocality ?? '',
         firstName: draft.firstName,
         gender: draft.gender ?? 'prefer_not_to_say',
         identityDocument: draft.identityDocument,
@@ -1633,17 +2243,26 @@ function buildPatch(
   if (step === 3) {
     return {
       data: {
+        branchId: draft.branchId,
+        capacityOverride: draft.capacityOverride,
+        capacityOverrideNote: draft.capacityOverrideNote,
         instagramHandle: draft.instagramHandle,
         privateLessonHours: draft.privateLessonHours,
         privateLessonLanguage: draft.privateLessonLanguage,
         programId: draft.programReferenceId ?? '',
-        teacherUserId: draft.selectedTeacherUserId,
+        instructorProfileId: draft.selectedInstructorProfileId,
       },
       step: 3,
     };
   }
   if (step === 4) {
-    return { data: { correctedSource: draft.correctedSource }, step: 4 };
+    return {
+      data: {
+        correctedSource: draft.correctedSource,
+        correctedSourceDetail: draft.correctedSourceDetail,
+      },
+      step: 4,
+    };
   }
   if (step === 5) {
     return {
@@ -1686,11 +2305,14 @@ function canAutosaveStep(
   draft: DraftState,
   parties: EnrollmentDraftView['parties'],
   isMinor: boolean,
+  catalog: ProgramManagementData,
 ) {
   if (step === 1) {
     return Boolean(
-      draft.birthDate &&
-        draft.birthPlace &&
+      draft.birthAdministrativeArea &&
+        draft.birthCountryCode &&
+        draft.birthDate &&
+        draft.birthLocality &&
         draft.firstName &&
         draft.gender &&
         (draft.identityDocument || draft.identityDocumentMasked) &&
@@ -1711,7 +2333,32 @@ function canAutosaveStep(
       !isMinor || parties.some((party) => party.roles.includes('guardian'));
     return Boolean(
       draft.email.includes('@') &&
-        draft.primaryPhone.replace(/\D/g, '').length >= 7 &&
+        !Object.keys(
+          validateEnrollmentStep(
+            2,
+            draft,
+            parties,
+            isMinor,
+            {
+              address: '',
+              birthDate: '',
+              birthLocation: '',
+              branch: '',
+              email: '',
+              firstName: '',
+              gender: '',
+              guardian: '',
+              identity: '',
+              initialPayment: '',
+              lastName: '',
+              phone: '',
+              privateLesson: '',
+              program: '',
+              registrationChannel: '',
+              school: '',
+            },
+          ),
+        ).length &&
         draft.residenceAddress.trim().length >= 8 &&
         partiesValid &&
         guardianValid,
@@ -1720,10 +2367,18 @@ function canAutosaveStep(
 
   if (step === 3) {
     if (!draft.courseMode || !draft.programReferenceId) return false;
-    if (draft.courseMode === 'group') return true;
+    if (draft.courseMode === 'group') {
+      const branch = catalog.branches.find(
+        (item) => item.id === draft.branchId,
+      );
+      if (!branch) return false;
+      const atCapacity =
+        branch.currentEnrollmentCount >= branch.maximumCapacity;
+      return !atCapacity || draft.capacityOverride;
+    }
     return Boolean(
       draft.privateLessonLanguage &&
-        draft.selectedTeacherUserId &&
+        draft.selectedInstructorProfileId &&
         draft.privateLessonHours &&
         draft.privateLessonRateId,
     );
@@ -1744,6 +2399,91 @@ function canAutosaveStep(
   }
 
   return true;
+}
+
+function validationMessages(t: WizardT) {
+  return {
+    address: t('fieldErrors.address'),
+    birthDate: t('fieldErrors.birthDate'),
+    birthLocation: t('fieldErrors.birthLocation'),
+    branch: t('fieldErrors.branch'),
+    email: t('fieldErrors.email'),
+    firstName: t('fieldErrors.firstName'),
+    gender: t('fieldErrors.gender'),
+    guardian: t('fieldErrors.guardian'),
+    identity: t('fieldErrors.identity'),
+    initialPayment: t('fieldErrors.initialPayment'),
+    lastName: t('fieldErrors.lastName'),
+    phone: t('fieldErrors.phone'),
+    privateLesson: t('fieldErrors.privateLesson'),
+    program: t('fieldErrors.program'),
+    registrationChannel: t('fieldErrors.registrationChannel'),
+    school: t('fieldErrors.school'),
+  };
+}
+
+function validateCurrentStep(
+  step: number,
+  draft: DraftState,
+  parties: EnrollmentDraftView['parties'],
+  isMinor: boolean,
+  t: WizardT,
+) {
+  const errors = validateEnrollmentStep(
+    step,
+    draft,
+    parties,
+    isMinor,
+    validationMessages(t),
+  );
+
+  if (step === 2) {
+    for (const party of parties) {
+      const prefix = `party-${party.id}`;
+      if (party.fullName.trim().length < 2) {
+        errors[`${prefix}-fullName`] = t('fieldErrors.partyName');
+      }
+      if (
+        party.relationship === 'other' &&
+        !party.relationshipOther?.trim()
+      ) {
+        errors[`${prefix}-relationshipOther`] = t(
+          'fieldErrors.relationshipOther',
+        );
+      }
+      if (party.phone && !/^\+\d{7,15}$/.test(party.phone)) {
+        errors[`${prefix}-phone`] = t('fieldErrors.phone');
+      }
+      if (
+        party.email &&
+        !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(party.email)
+      ) {
+        errors[`${prefix}-email`] = t('fieldErrors.email');
+      }
+      if (!party.roles.length) {
+        errors[`${prefix}-relationship`] = t('fieldErrors.partyRole');
+      }
+    }
+  }
+
+  if (
+    step === 4 &&
+    draft.correctedSource === 'other' &&
+    !draft.correctedSourceDetail?.trim()
+  ) {
+    errors.correctedSourceDetail = t('fieldErrors.sourceDetail');
+  }
+
+  return errors;
+}
+
+function focusField(fieldId?: string) {
+  if (!fieldId) return;
+  window.setTimeout(() => {
+    const element = document.getElementById(fieldId);
+    element?.focus({ preventScroll: true });
+    element?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  }, 50);
 }
 
 function applyDiscount(
@@ -1782,4 +2522,88 @@ function formatTry(cents: number, locale: string) {
     currency: 'TRY',
     style: 'currency',
   }).format(cents / 100);
+}
+
+function formatDate(value: string, locale: string) {
+  return new Intl.DateTimeFormat(locale, {
+    day: '2-digit',
+    month: 'short',
+    year: 'numeric',
+  }).format(new Date(`${value}T12:00:00Z`));
+}
+
+function enrollmentIssueStep(issue: string) {
+  if (
+    [
+      'identity',
+      'first_name',
+      'last_name',
+      'birth_date',
+      'birth_country',
+      'birth_administrative_area',
+      'birth_locality',
+      'birth_place',
+      'gender',
+      'school',
+    ].includes(issue)
+  ) {
+    return 1;
+  }
+
+  if (
+    ['phone', 'email', 'address', 'contract_party', 'guardian'].includes(issue)
+  ) {
+    return 2;
+  }
+
+  if (
+    [
+      'course_mode',
+      'program_id',
+      'program',
+      'program_branch',
+      'private_lesson_selection',
+    ].includes(issue)
+  ) {
+    return 3;
+  }
+
+  if (issue === 'registration_channel') {
+    return 5;
+  }
+
+  if (['financial_plan', 'financial_totals'].includes(issue)) {
+    return 7;
+  }
+
+  return 1;
+}
+
+function enrollmentIssueField(issue: string) {
+  const fields: Record<string, string> = {
+    address: 'residenceAddress',
+    birth_administrative_area: 'birthAdministrativeArea',
+    birth_country: 'birthCountryCode',
+    birth_date: 'birthDate',
+    birth_locality: 'birthLocality',
+    birth_place: 'birthAdministrativeArea',
+    contract_party: 'primaryPhone',
+    course_mode: 'programReferenceId',
+    email: 'email',
+    financial_plan: 'initialPaymentCents',
+    financial_totals: 'initialPaymentCents',
+    first_name: 'firstName',
+    gender: 'gender',
+    guardian: 'primaryPhone',
+    identity: 'identityDocument',
+    last_name: 'lastName',
+    phone: 'primaryPhone',
+    private_lesson_selection: 'privateLessonLanguage',
+    program: 'programReferenceId',
+    program_branch: 'branchId',
+    program_id: 'programReferenceId',
+    registration_channel: 'registrationChannel',
+    school: 'school',
+  };
+  return fields[issue] ?? issue;
 }

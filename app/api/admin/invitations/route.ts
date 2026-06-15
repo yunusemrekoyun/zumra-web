@@ -18,7 +18,7 @@ const inputSchema = z.object({
   locale: z.enum(['tr', 'en']).default('tr'),
   name: z.string().min(2).max(100),
   password: z.string().min(12).max(128),
-  role: z.enum(['advisor', 'teacher', 'student']),
+  role: z.enum(['advisor', 'student']),
   username: z.string().min(5).max(30),
 });
 

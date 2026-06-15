@@ -4,6 +4,7 @@ import { workspacePathnames } from '@/lib/workspace/manifest';
 export const routing = defineRouting({
   locales: ['tr', 'en'],
   defaultLocale: 'tr',
+  localeDetection: false,
   localePrefix: 'always',
   pathnames: workspacePathnames,
 });

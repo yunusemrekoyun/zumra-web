@@ -1,22 +1,17 @@
-import { Presentation } from 'lucide-react';
-import { useTranslations } from 'next-intl';
-import { EmptyState, Button } from '@/components/ui';
-import { withWorkspacePage } from '@/lib/server/workspace-page';
+import { requireWorkspaceRole } from '@/lib/server/authorization';
+import { getInstructorDirectory } from '@/lib/server/services/instructors';
+import { InstructorsClient } from './instructors-client';
 
-function InstructorsPage() {
-  const t = useTranslations('admin.empty.instructors');
-  const common = useTranslations('common.actions');
+type InstructorsPageProps = {
+  params: Promise<{ locale: string }>;
+};
 
-  return (
-    <div className="admin-page">
-      <EmptyState
-        icon={Presentation}
-        title={t('title')}
-        description={t('description')}
-        action={<Button variant="secondary" disabled>{common('soon')}</Button>}
-      />
-    </div>
-  );
+export default async function InstructorsPage({
+  params,
+}: InstructorsPageProps) {
+  const { locale } = await params;
+  const principal = await requireWorkspaceRole('admin', locale);
+  const instructors = await getInstructorDirectory(principal);
+
+  return <InstructorsClient initial={instructors} />;
 }
-
-export default withWorkspacePage('admin', InstructorsPage);

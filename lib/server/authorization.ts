@@ -13,7 +13,7 @@ import { canAuthorizeWorkspaceAction } from '@/lib/domain';
 import type { UserRole } from '@/lib/domain/types';
 import { auth } from '@/lib/server/auth';
 import { database } from '@/lib/server/db/client';
-import { accounts } from '@/lib/server/db/schema';
+import { accounts, sessions } from '@/lib/server/db/schema';
 import {
   AuthenticationRequiredError,
   AuthorizationDeniedError,
@@ -102,15 +102,7 @@ export async function requireFreshSession() {
 }
 
 export async function requireCriticalAdmin(password: string) {
-  const principal = await requireFreshSession();
-
-  if (
-    principal.role !== 'admin' ||
-    principal.sessionSecurityLevel !== 'mfa' ||
-    !principal.twoFactorEnabled
-  ) {
-    throw new AuthorizationDeniedError('Admin MFA is required.');
-  }
+  const principal = await requireAdminSession();
 
   const limit = await consumeRateLimit(
     `critical-admin:${principal.id}`,
@@ -140,7 +132,30 @@ export async function requireCriticalAdmin(password: string) {
     throw new AuthorizationDeniedError('Password confirmation failed.');
   }
 
-  return principal;
+  const verifiedAt = new Date();
+  const [refreshedSession] = await database
+    .update(sessions)
+    .set({
+      lastVerifiedAt: verifiedAt,
+      updatedAt: verifiedAt,
+    })
+    .where(
+      and(
+        eq(sessions.id, principal.sessionId),
+        eq(sessions.userId, principal.id),
+        eq(sessions.securityLevel, 'mfa'),
+      ),
+    )
+    .returning({ id: sessions.id });
+
+  if (!refreshedSession) {
+    throw new AuthorizationDeniedError('Admin session could not be refreshed.');
+  }
+
+  return {
+    ...principal,
+    sessionLastVerifiedAt: verifiedAt.toISOString(),
+  };
 }
 
 export async function requireAdminSession() {

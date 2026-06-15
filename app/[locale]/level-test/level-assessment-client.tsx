@@ -15,12 +15,16 @@ import {
   CalendarDays,
   Check,
   CheckCircle2,
-  Clock3,
   LockKeyhole,
   Sparkles,
 } from 'lucide-react';
 import { Link } from '@/i18n/navigation';
-import { Button, Input, LanguageSwitcher } from '@/components/ui';
+import {
+  Button,
+  DateTimePicker,
+  Input,
+  LanguageSwitcher,
+} from '@/components/ui';
 
 type Locale = 'en' | 'tr';
 
@@ -779,12 +783,17 @@ function AppointmentForm({
     () => Intl.DateTimeFormat().resolvedOptions().timeZone || 'Europe/Istanbul',
     [],
   );
+  const [preferences, setPreferences] = useState(['', '', '']);
+  const minimumDate = useMemo(
+    () => new Date(Date.now() + 60 * 60 * 1000),
+    [],
+  );
 
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    const form = new FormData(event.currentTarget);
-    const values = [1, 2, 3].map((rank) =>
-      new Date(String(form.get(`preference${rank}`))).toISOString(),
+    if (preferences.some((preference) => !preference)) return;
+    const values = preferences.map((preference) =>
+      new Date(preference).toISOString(),
     );
     void onSubmit({ locale, preferences: values, timezone });
   }
@@ -809,16 +818,19 @@ function AppointmentForm({
       <div className="mt-8 grid gap-4">
         {[1, 2, 3].map((rank) => (
           <Field key={rank} label={t('appointment.preference', { rank })}>
-            <div className="relative">
-              <Clock3 className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-[#533089]" />
-              <input
-                className={`w-full pl-11 ${fieldClass}`}
-                min={toLocalDateTime(new Date(Date.now() + 60 * 60 * 1000))}
-                name={`preference${rank}`}
-                required
-                type="datetime-local"
-              />
-            </div>
+            <DateTimePicker
+              locale={locale}
+              min={minimumDate}
+              onChange={(value) =>
+                setPreferences((current) =>
+                  current.map((item, index) =>
+                    index === rank - 1 ? value : item,
+                  ),
+                )
+              }
+              placeholder={t('appointment.preference', { rank })}
+              value={preferences[rank - 1] ?? ''}
+            />
           </Field>
         ))}
       </div>
@@ -827,7 +839,12 @@ function AppointmentForm({
         <div className="mb-4 rounded-2xl bg-[#F8F7FB] px-4 py-3 text-xs font-semibold text-[#2E286C]/55">
           {t('profile.timezone')}: {timezone}
         </div>
-        <Button disabled={submitting} size="lg" type="submit" className="w-full">
+        <Button
+          disabled={submitting || preferences.some((preference) => !preference)}
+          size="lg"
+          type="submit"
+          className="w-full"
+        >
           {t('appointment.submit')}
           <ArrowRight className="h-4 w-4" />
         </Button>
@@ -853,9 +870,4 @@ function Field({
       {children}
     </label>
   );
-}
-
-function toLocalDateTime(date: Date) {
-  const local = new Date(date.getTime() - date.getTimezoneOffset() * 60_000);
-  return local.toISOString().slice(0, 16);
 }

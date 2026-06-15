@@ -7,11 +7,24 @@ import type { WorkspacePrincipal } from '@/lib/domain';
 import { database, databasePool } from '@/lib/server/db/client';
 import {
   privateLessonStudentRates,
+  programBranches,
   programs,
+  instructorLanguageCompetencies,
+  instructorProfiles,
   users,
 } from '@/lib/server/db/schema';
 import {
+  createInstructorProfile,
+  getInstructorDirectory,
+} from '@/lib/server/services/instructors';
+import {
+  archiveProgram,
+  archiveProgramBranch,
+  createProgramBranch,
   createProgram,
+  deleteUnusedProgram,
+  deleteUnusedProgramBranch,
+  getProgramManagementData,
   PRIVATE_LESSON_PROGRAM_ID,
   resolveProgramPricing,
   setPrivateLessonStudentRate,
@@ -29,8 +42,9 @@ integration('program catalog and private lesson student pricing', () => {
   it('keeps catalog prices and private lesson rates historically stable', async () => {
     const marker = randomUUID();
     const adminId = `program-admin-${marker}`;
-    const teacherId = `program-teacher-${marker}`;
+    let instructorId: string | undefined;
     let programId: string | undefined;
+    let branchId: string | undefined;
     const rateIds: string[] = [];
 
     const principal: WorkspacePrincipal = {
@@ -57,15 +71,22 @@ integration('program catalog and private lesson student pricing', () => {
           role: 'admin',
           twoFactorEnabled: true,
         },
-        {
-          accountStatus: 'active',
-          email: `program-teacher-${marker}@example.invalid`,
-          emailVerified: true,
-          id: teacherId,
-          name: 'Program Teacher',
-          role: 'teacher',
-        },
       ]);
+      const instructor = await createInstructorProfile(principal, {
+        competencies: [
+          {
+            language: 'english',
+            levels: ['A1', 'A2', 'B1'],
+          },
+        ],
+        email: `program-teacher-${marker}@example.invalid`,
+        firstName: 'Program',
+        lastName: 'Teacher',
+        phone: '+905551234567',
+        specialties: [],
+        status: 'active',
+      });
+      instructorId = instructor.id;
 
       const program = await createProgram(principal, {
         active: true,
@@ -86,23 +107,50 @@ integration('program catalog and private lesson student pricing', () => {
         name: 'Integration Group Program',
       });
 
+      const branch = await createProgramBranch(principal, {
+        maximumCapacity: 12,
+        minimumCapacity: 4,
+        name: 'Integration Morning Class',
+        plannedEndDate: '2026-09-30',
+        plannedStartDate: '2026-07-01',
+        programId,
+        instructorProfileId: instructorId,
+      });
+      branchId = branch!.id;
+
       const groupPricing = await database.transaction((transaction) =>
-        resolveProgramPricing(transaction, { programId: programId! }),
+        resolveProgramPricing(transaction, {
+          branchId,
+          programId: programId!,
+        }),
       );
       expect(groupPricing.basePriceCents).toBe(130_000);
       expect(groupPricing.snapshot.levels).toEqual(['A1', 'A2', 'B1']);
+      expect(groupPricing.snapshot.branchName).toBe(
+        'Integration Morning Class',
+      );
+
+      const management = await getProgramManagementData(principal);
+      const managedBranch = management.branches.find(
+        (item) => item.id === branchId,
+      );
+      expect(managedBranch?.instructorProfileId).toBe(instructorId);
+      expect(managedBranch?.instructorName).toBe('Program Teacher');
+      expect(managedBranch?.currentEnrollmentCount).toBe(0);
+      expect(managedBranch?.status).toBe('enrollment_open');
+      expect(managedBranch?.canDelete).toBe(true);
 
       const firstRate = await setPrivateLessonStudentRate(principal, {
         hourlyPriceCents: 2_000,
         language: 'english',
-        teacherUserId: teacherId,
+        instructorProfileId: instructorId,
       });
       rateIds.push(firstRate!.id);
 
       const secondRate = await setPrivateLessonStudentRate(principal, {
         hourlyPriceCents: 2_500,
         language: 'english',
-        teacherUserId: teacherId,
+        instructorProfileId: instructorId,
       });
       rateIds.push(secondRate!.id);
 
@@ -111,7 +159,7 @@ integration('program catalog and private lesson student pricing', () => {
           privateLessonHours: 12,
           privateLessonLanguage: 'english',
           programId: PRIVATE_LESSON_PROGRAM_ID,
-          teacherUserId: teacherId,
+          instructorProfileId: instructorId,
         }),
       );
       expect(privatePricing.basePriceCents).toBe(30_000);
@@ -123,7 +171,10 @@ integration('program catalog and private lesson student pricing', () => {
         .from(privateLessonStudentRates)
         .where(
           and(
-            eq(privateLessonStudentRates.teacherUserId, teacherId),
+            eq(
+              privateLessonStudentRates.instructorProfileId,
+              instructorId!,
+            ),
             eq(privateLessonStudentRates.language, 'english'),
             eq(privateLessonStudentRates.active, true),
             isNull(privateLessonStudentRates.effectiveUntil),
@@ -131,16 +182,72 @@ integration('program catalog and private lesson student pricing', () => {
         );
       expect(currentRates).toHaveLength(1);
       expect(currentRates[0]?.id).toBe(secondRate!.id);
+
+      const directory = await getInstructorDirectory(principal);
+      const managedInstructor = directory.find(
+        (item) => item.id === instructorId,
+      );
+      expect(managedInstructor?.userId).toBeUndefined();
+      expect(managedInstructor?.branchCount).toBe(1);
+      expect(managedInstructor?.privateLessonLanguages).toEqual(['english']);
+
+      await expect(
+        setPrivateLessonStudentRate(principal, {
+          hourlyPriceCents: 2_500,
+          language: 'german',
+          instructorProfileId: instructorId,
+        }),
+      ).rejects.toThrow();
+
+      await expect(
+        archiveProgram(principal, programId),
+      ).rejects.toThrow('program_has_unarchived_branches');
+      const archivedBranch = await archiveProgramBranch(
+        principal,
+        branchId,
+        {
+          reason: 'Integration empty branch closure',
+          transfers: [],
+        },
+      );
+      expect(archivedBranch.transferred).toBe(0);
+      expect(['cancelled', 'completed']).toContain(archivedBranch.status);
+      await deleteUnusedProgramBranch(principal, branchId);
+      branchId = undefined;
+      const archived = await archiveProgram(principal, programId);
+      expect(archived.archivedAt).toBeTruthy();
+      await deleteUnusedProgram(principal, programId);
+      programId = undefined;
     } finally {
       if (rateIds.length) {
         await database
           .delete(privateLessonStudentRates)
-          .where(eq(privateLessonStudentRates.teacherUserId, teacherId));
+          .where(
+            eq(
+              privateLessonStudentRates.instructorProfileId,
+              instructorId!,
+            ),
+          );
       }
       if (programId) {
+        await database
+          .delete(programBranches)
+          .where(eq(programBranches.programId, programId));
         await database.delete(programs).where(eq(programs.id, programId));
       }
-      await database.delete(users).where(eq(users.id, teacherId));
+      if (instructorId) {
+        await database
+          .delete(instructorLanguageCompetencies)
+          .where(
+            eq(
+              instructorLanguageCompetencies.instructorId,
+              instructorId,
+            ),
+          );
+        await database
+          .delete(instructorProfiles)
+          .where(eq(instructorProfiles.id, instructorId));
+      }
       await database.delete(users).where(eq(users.id, adminId));
     }
   });

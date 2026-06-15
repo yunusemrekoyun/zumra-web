@@ -17,8 +17,8 @@ import {
 
 const rateSchema = z.object({
   hourlyPriceCents: z.number().int().positive(),
+  instructorProfileId: z.string().uuid(),
   language: z.enum(supportedProgramLanguages),
-  teacherUserId: z.string().min(1).max(160),
 });
 
 export const runtime = 'nodejs';
