@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
+import { PublicFlowError } from '@/lib/server/http/errors';
 import { consumeRateLimit } from '@/lib/server/redis/rate-limit';
 import {
   isTrustedRequestOrigin,
@@ -33,13 +34,26 @@ export async function POST(request: Request) {
   const parsed = inputSchema.safeParse(await request.json().catch(() => null));
 
   if (!parsed.success) {
-    return NextResponse.json({ error: 'invalid_request' }, { status: 400 });
+    const passwordIssue = parsed.error.issues.some(
+      (issue) => issue.path[0] === 'password',
+    );
+    return NextResponse.json(
+      { error: passwordIssue ? 'invalid_password' : 'invalid_request' },
+      { status: 400 },
+    );
   }
 
   try {
     await invitationService.activate(parsed.data.token, parsed.data.password);
     return NextResponse.json({ activated: true });
-  } catch {
+  } catch (error) {
+    if (error instanceof PublicFlowError) {
+      return NextResponse.json(
+        { error: error.code },
+        { status: error.status },
+      );
+    }
+
     return NextResponse.json(
       { error: 'invalid_or_expired_invitation' },
       { status: 400 },

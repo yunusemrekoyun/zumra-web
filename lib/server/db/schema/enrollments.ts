@@ -15,7 +15,7 @@ import {
 } from 'drizzle-orm/pg-core';
 import { users } from './auth';
 import { candidateProfiles, contacts } from './candidates';
-import { mediaAssets } from './foundation';
+import { mediaAssets, userInvitations } from './foundation';
 import { instructorProfiles } from './instructors';
 import {
   privateLessonStudentRates,
@@ -130,6 +130,7 @@ export const enrollmentDrafts = pgTable(
     primaryPhone: text('primary_phone'),
     secondaryPhone: text('secondary_phone'),
     email: text('email'),
+    studentUsername: text('student_username'),
     residenceAddress: text('residence_address'),
     studentIsContractParty: boolean('student_is_contract_party')
       .notNull()
@@ -371,6 +372,28 @@ export const studentProfiles = pgTable(
       .on(table.userId)
       .where(sql`${table.userId} is not null`),
     index('student_profiles_status_idx').on(table.status),
+  ],
+);
+
+export const studentAccountInvitations = pgTable(
+  'student_account_invitations',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    studentId: uuid('student_id')
+      .notNull()
+      .references(() => studentProfiles.id, { onDelete: 'cascade' }),
+    invitationId: uuid('invitation_id')
+      .notNull()
+      .references(() => userInvitations.id, { onDelete: 'cascade' }),
+    createdAt: timestamp('created_at', { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => [
+    uniqueIndex('student_account_invitation_unique').on(
+      table.invitationId,
+    ),
+    index('student_account_student_idx').on(table.studentId),
   ],
 );
 

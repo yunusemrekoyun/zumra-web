@@ -16,7 +16,7 @@ export const mailTransport = nodemailer.createTransport({
   host: env.SMTP_HOST,
   pool: true,
   port: env.SMTP_PORT,
-  requireTLS: env.NODE_ENV === 'production',
+  requireTLS: env.SMTP_REQUIRE_TLS,
   secure: env.SMTP_SECURE,
 });
 

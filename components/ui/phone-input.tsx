@@ -46,10 +46,13 @@ export function PhoneInput({
     if (parsed?.country) {
       setCountry(parsed.country);
       setDisplayValue(parsed.formatNational());
+      if (parsed.number !== value) {
+        onChange(parsed.number);
+      }
     } else if (!value) {
       setDisplayValue('');
     }
-  }, [value]);
+  }, [onChange, value]);
 
   function updatePhone(rawValue: string, nextCountry = country) {
     const formatter = new AsYouType(nextCountry);
@@ -100,4 +103,3 @@ export function PhoneInput({
     </div>
   );
 }
-

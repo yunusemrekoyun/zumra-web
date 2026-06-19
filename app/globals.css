@@ -39,6 +39,76 @@
   border: 1px solid rgba(83, 48, 137, 0.3);
 }
 
+.zumra-calendar-large {
+  width: 100%;
+}
+
+.zumra-calendar-large .rdp-months,
+.zumra-calendar-large .rdp-month {
+  width: 100%;
+}
+
+.zumra-calendar-large .rdp-month_grid {
+  width: 100%;
+}
+
+.zumra-calendar .zumra-calendar-booked .rdp-day_button {
+  position: relative;
+  background: rgba(83, 48, 137, 0.1);
+  color: #533089;
+}
+
+.zumra-calendar .zumra-calendar-booked .rdp-day_button::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  bottom: 0.25rem;
+  width: 0.25rem;
+  height: 0.25rem;
+  border-radius: 999px;
+  background: #533089;
+  transform: translateX(-50%);
+}
+
+.zumra-calendar .rdp-selected.zumra-calendar-booked .rdp-day_button {
+  background: #533089;
+  color: white;
+}
+
+.zumra-calendar .rdp-selected.zumra-calendar-booked .rdp-day_button::after {
+  background: white;
+}
+
+.zumra-modal-overlay {
+  transition: opacity 180ms cubic-bezier(0.23, 1, 0.32, 1);
+
+  @starting-style {
+    opacity: 0;
+  }
+}
+
+.zumra-modal-panel {
+  transition:
+    opacity 220ms cubic-bezier(0.23, 1, 0.32, 1),
+    transform 220ms cubic-bezier(0.23, 1, 0.32, 1);
+
+  @starting-style {
+    opacity: 0;
+    transform: translateY(0.5rem) scale(0.98);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .zumra-modal-overlay,
+  .zumra-modal-panel {
+    transition: opacity 120ms ease;
+  }
+
+  .zumra-modal-panel {
+    transform: none;
+  }
+}
+
 @theme {
   --color-brand-primary: #533089;
   --color-brand-muted: #9E8BAF;

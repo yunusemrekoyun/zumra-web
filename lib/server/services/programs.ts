@@ -13,21 +13,27 @@ import {
 import type { WorkspacePrincipal } from '@/lib/domain';
 import { database } from '@/lib/server/db/client';
 import {
+  branchLessonScheduleRules,
+  contacts,
   enrollments,
   enrollmentBranchTransfers,
   enrollmentDrafts,
   instructorLanguageCompetencies,
   instructorProfiles,
+  lessonSessions,
   privateLessonStudentRates,
   programBranches,
   programs,
   studentProfiles,
-  contacts,
 } from '@/lib/server/db/schema';
 import {
   AuthorizationDeniedError,
   PublicFlowError,
 } from '@/lib/server/http/errors';
+import {
+  getBranchLessonScheduleMap,
+  type BranchLessonScheduleView,
+} from '@/lib/server/services/lesson-schedules';
 
 export const PRIVATE_LESSON_PROGRAM_ID =
   '00000000-0000-4000-8000-000000000001';
@@ -86,6 +92,7 @@ export type ProgramBranchView = {
   canDelete: boolean;
   currentEnrollmentCount: number;
   id: string;
+  lessonSchedule?: BranchLessonScheduleView;
   maximumCapacity: number;
   minimumCapacity: number;
   name: string;
@@ -162,7 +169,10 @@ export async function getProgramManagementData(
 
   const [programRows, branchRows, branchCounts, instructorRows, rateRows] =
     await Promise.all([
-    database.select().from(programs).orderBy(asc(programs.kind), asc(programs.name)),
+      database
+        .select()
+        .from(programs)
+        .orderBy(asc(programs.kind), asc(programs.name)),
     database
       .select({
         archivedAt: programBranches.archivedAt,
@@ -315,13 +325,19 @@ export async function getProgramManagementData(
       )
       .map((item) => [item.branchId, Number(item.currentEnrollmentCount)]),
   );
+  const lessonScheduleByBranch = await getBranchLessonScheduleMap(
+    branchRows.map((branch) => branch.id),
+  );
 
   return {
     branches: branchRows.map((branch) => ({
       archivedAt: branch.archivedAt?.toISOString(),
-      canDelete: !usedBranchIds.has(branch.id),
+      canDelete:
+        !usedBranchIds.has(branch.id) &&
+        !lessonScheduleByBranch.has(branch.id),
       currentEnrollmentCount: countByBranch.get(branch.id) ?? 0,
       id: branch.id,
+      lessonSchedule: lessonScheduleByBranch.get(branch.id),
       maximumCapacity: branch.maximumCapacity,
       minimumCapacity: branch.minimumCapacity,
       name: branch.name,
@@ -788,6 +804,16 @@ export async function deleteUnusedProgramBranch(
       .select({ id: enrollmentBranchTransfers.id })
       .from(enrollmentBranchTransfers)
       .where(eq(enrollmentBranchTransfers.toBranchId, branchId))
+      .limit(1),
+    database
+      .select({ id: branchLessonScheduleRules.id })
+      .from(branchLessonScheduleRules)
+      .where(eq(branchLessonScheduleRules.branchId, branchId))
+      .limit(1),
+    database
+      .select({ id: lessonSessions.id })
+      .from(lessonSessions)
+      .where(eq(lessonSessions.branchId, branchId))
       .limit(1),
   ]);
   if (references.some((rows) => rows.length > 0)) {

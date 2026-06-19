@@ -68,10 +68,40 @@ const authEnvSchema = z
     }
   });
 
+const googleMeetEnvSchema = z
+  .object({
+    GOOGLE_MEET_ENABLED: booleanString.default(false),
+    GOOGLE_MEET_IMPERSONATED_USER: z.string().email().optional(),
+    GOOGLE_SERVICE_ACCOUNT_CLIENT_EMAIL: z.string().email().optional(),
+    GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY: z.string().min(1).optional(),
+    GOOGLE_SERVICE_ACCOUNT_PROJECT_ID: z.string().min(1).optional(),
+  })
+  .superRefine((value, context) => {
+    if (!value.GOOGLE_MEET_ENABLED) {
+      return;
+    }
+
+    for (const key of [
+      'GOOGLE_MEET_IMPERSONATED_USER',
+      'GOOGLE_SERVICE_ACCOUNT_CLIENT_EMAIL',
+      'GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY',
+      'GOOGLE_SERVICE_ACCOUNT_PROJECT_ID',
+    ] as const) {
+      if (!value[key]) {
+        context.addIssue({
+          code: 'custom',
+          message: `${key} is required when GOOGLE_MEET_ENABLED is true.`,
+          path: [key],
+        });
+      }
+    }
+  });
+
 const mailEnvSchema = z.object({
   NODE_ENV: nodeEnv,
   SMTP_HOST: z.string().min(1),
   SMTP_PORT: z.coerce.number().int().positive().default(587),
+  SMTP_REQUIRE_TLS: booleanString.default(false),
   SMTP_SECURE: booleanString.default(false),
   SMTP_FROM: z.string().min(3),
   SMTP_RELAY_USER: z.string().optional(),
@@ -88,6 +118,7 @@ const identityEnvSchema = z.object({
 
 export type RuntimeEnv = z.infer<typeof runtimeEnvSchema>;
 export type AuthEnv = z.infer<typeof authEnvSchema>;
+export type GoogleMeetEnv = z.infer<typeof googleMeetEnvSchema>;
 export type MailEnv = z.infer<typeof mailEnvSchema>;
 export type OutboxEnv = {
   OUTBOX_ENCRYPTION_SECRET: string;
@@ -99,6 +130,7 @@ export type ServerEnv = RuntimeEnv & AuthEnv & OutboxEnv;
 
 let cachedRuntimeEnv: RuntimeEnv | undefined;
 let cachedAuthEnv: AuthEnv | undefined;
+let cachedGoogleMeetEnv: GoogleMeetEnv | undefined;
 let cachedMailEnv: MailEnv | undefined;
 let cachedOutboxEnv: OutboxEnv | undefined;
 let cachedIdentityEnv: IdentityEnv | undefined;
@@ -139,6 +171,19 @@ export function getAuthEnv(): AuthEnv {
 export function isGoogleAuthConfigured() {
   const env = getAuthEnv();
   return Boolean(env.GOOGLE_CLIENT_ID && env.GOOGLE_CLIENT_SECRET);
+}
+
+export function getGoogleMeetEnv(): GoogleMeetEnv {
+  cachedGoogleMeetEnv ??= parseEnv(
+    googleMeetEnvSchema,
+    'google meet',
+    productionBuildDefaults,
+  );
+  return cachedGoogleMeetEnv;
+}
+
+export function isGoogleMeetConfigured() {
+  return getGoogleMeetEnv().GOOGLE_MEET_ENABLED;
 }
 
 export function getMailEnv(): MailEnv {
@@ -209,6 +254,7 @@ export function getServerEnv(): ServerEnv {
 export function resetServerEnvForTests() {
   cachedRuntimeEnv = undefined;
   cachedAuthEnv = undefined;
+  cachedGoogleMeetEnv = undefined;
   cachedMailEnv = undefined;
   cachedOutboxEnv = undefined;
   cachedIdentityEnv = undefined;

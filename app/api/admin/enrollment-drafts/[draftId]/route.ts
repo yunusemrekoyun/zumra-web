@@ -49,16 +49,26 @@ const patchSchema = z.discriminatedUnion('step', [
   z.object({
     step: z.literal(1),
     data: z.object({
-      birthAdministrativeArea: z.string().trim().min(1).max(120),
-      birthCountryCode: z.string().trim().length(2),
-      birthDate: z.string().date(),
-      birthLocality: z.string().trim().min(1).max(120),
+      birthAdministrativeArea: z
+        .string()
+        .trim()
+        .max(120)
+        .optional()
+        .or(z.literal('')),
+      birthCountryCode: z
+        .string()
+        .trim()
+        .length(2)
+        .optional()
+        .or(z.literal('')),
+      birthDate: z.string().date().optional().or(z.literal('')),
+      birthLocality: z.string().trim().max(120).optional().or(z.literal('')),
       firstName: z.string().trim().min(2).max(80),
-      gender,
+      gender: gender.optional().or(z.literal('')),
       identityDocument: z.string().trim().max(32).optional().or(z.literal('')),
       identityDocumentType: identityType,
       lastName: z.string().trim().min(2).max(80),
-      school: z.string().trim().min(2).max(180),
+      school: z.string().trim().max(180).optional().or(z.literal('')),
     }),
   }),
   z.object({
@@ -81,6 +91,12 @@ const patchSchema = z.discriminatedUnion('step', [
         .optional()
         .or(z.literal('')),
       studentIsContractParty: z.boolean(),
+      username: z
+        .string()
+        .trim()
+        .min(5)
+        .max(30)
+        .regex(/^[a-z0-9](?:[a-z0-9._-]*[a-z0-9])?$/i),
     }),
   }),
   z.object({

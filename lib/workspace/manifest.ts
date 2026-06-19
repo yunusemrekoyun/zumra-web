@@ -108,6 +108,7 @@ export const workspaceModules = [
   { scope: 'admin', kind: 'account', labelKey: 'workspace.nav.settings', path: '/admin/settings', iconKey: 'settings', mobile: 'more' },
 
   { scope: 'student', kind: 'nav', labelKey: 'student.nav.lessons', path: '/ogrenci', iconKey: 'book', mobile: 'tab' },
+  { scope: 'student', kind: 'nav', labelKey: 'student.nav.calendar', path: '/ogrenci/takvim', iconKey: 'calendar', mobile: 'tab' },
   { scope: 'student', kind: 'nav', labelKey: 'student.nav.progress', path: '/ogrenci/ilerleme', iconKey: 'trending', mobile: 'tab' },
   { scope: 'student', kind: 'nav', labelKey: 'student.nav.messages', path: '/ogrenci/mesajlar', iconKey: 'messages', mobile: 'tab' },
   { scope: 'student', kind: 'nav', labelKey: 'student.nav.profile', path: '/ogrenci/profil', iconKey: 'profile', mobile: 'tab' },

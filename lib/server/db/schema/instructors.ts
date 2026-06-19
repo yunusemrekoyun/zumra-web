@@ -60,7 +60,12 @@ export const instructorProfiles = pgTable(
     uniqueIndex('instructor_profiles_user_unique')
       .on(table.userId)
       .where(sql`${table.userId} is not null`),
-    uniqueIndex('instructor_profiles_email_unique').on(table.email),
+    uniqueIndex('instructor_profiles_active_email_unique')
+      .on(table.email)
+      .where(sql`${table.status} <> 'archived'`),
+    uniqueIndex('instructor_profiles_active_phone_unique')
+      .on(table.phone)
+      .where(sql`${table.status} <> 'archived'`),
     index('instructor_profiles_status_name_idx').on(
       table.status,
       table.lastName,

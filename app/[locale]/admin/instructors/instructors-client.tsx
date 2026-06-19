@@ -3,6 +3,7 @@
 import { type FormEvent, useMemo, useState } from 'react';
 import { useTranslations } from 'next-intl';
 import {
+  ArchiveRestore,
   BookOpenCheck,
   Mail,
   Plus,
@@ -38,35 +39,91 @@ export function InstructorsClient({
   const [creating, setCreating] = useState(false);
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState('');
+  const [view, setView] = useState<'active' | 'archived'>('active');
+  const [archivedConflict, setArchivedConflict] = useState<{
+    email: string;
+    fullName: string;
+    id: string;
+    phone: string;
+  }>();
   const [draft, setDraft] = useState<InstructorEditorValue>(
     emptyInstructorEditor(),
   );
+  const activeCount = initial.filter(
+    (instructor) => instructor.status !== 'archived',
+  ).length;
+  const archivedCount = initial.length - activeCount;
   const visible = useMemo(() => {
     const normalized = query.trim().toLocaleLowerCase('tr-TR');
-    if (!normalized) return initial;
-    return initial.filter((instructor) =>
+    const scoped = initial.filter((instructor) =>
+      view === 'archived'
+        ? instructor.status === 'archived'
+        : instructor.status !== 'archived',
+    );
+    if (!normalized) return scoped;
+    return scoped.filter((instructor) =>
       `${instructor.fullName} ${instructor.email} ${instructor.phone}`
         .toLocaleLowerCase('tr-TR')
         .includes(normalized),
     );
-  }, [initial, query]);
+  }, [initial, query, view]);
 
   async function createInstructor(event: FormEvent) {
     event.preventDefault();
+    await submitCreate(false);
+  }
+
+  async function submitCreate(allowArchivedDuplicate: boolean) {
     setBusy(true);
     setMessage('');
     try {
       const response = await fetch('/api/admin/instructors', {
-        body: JSON.stringify(editorPayload(draft)),
+        body: JSON.stringify({
+          ...editorPayload(draft),
+          allowArchivedDuplicate,
+        }),
         credentials: 'same-origin',
         headers: { 'content-type': 'application/json' },
         method: 'POST',
       });
       const body = await response.json().catch(() => ({}));
-      if (!response.ok || !body.id) throw new Error('save_failed');
+      if (!response.ok || !body.id) {
+        if (body.error === 'archived_instructor_conflict' && body.instructor) {
+          setArchivedConflict(body.instructor);
+          setBusy(false);
+          return;
+        }
+        throw new Error(String(body.error ?? 'save_failed'));
+      }
       router.push(`/admin/instructors/${body.id}`);
+    } catch (error) {
+      const code = error instanceof Error ? error.message : '';
+      setMessage(
+        code === 'instructor_identity_conflict'
+          ? t('identityConflict')
+          : t('saveError'),
+      );
+      setBusy(false);
+    }
+  }
+
+  async function restoreArchivedConflict() {
+    if (!archivedConflict) return;
+    setBusy(true);
+    setMessage('');
+    try {
+      const response = await fetch(
+        `/api/admin/instructors/${archivedConflict.id}/restore`,
+        {
+          credentials: 'same-origin',
+          method: 'POST',
+        },
+      );
+      const body = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(String(body.error ?? 'restore_failed'));
+      router.push(`/admin/instructors/${archivedConflict.id}`);
     } catch {
-      setMessage(t('saveError'));
+      setMessage(t('restoreError'));
       setBusy(false);
     }
   }
@@ -96,12 +153,32 @@ export function InstructorsClient({
       >
         <ModulePanel padded={false} className="overflow-hidden rounded-3xl">
           <div className="border-b border-black/[0.04] p-4 lg:p-5">
-            <SearchInput
-              value={query}
-              onChange={(event) => setQuery(event.target.value)}
-              placeholder={t('search')}
-              containerClassName="max-w-md"
-            />
+            <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+              <SearchInput
+                value={query}
+                onChange={(event) => setQuery(event.target.value)}
+                placeholder={t('search')}
+                containerClassName="max-w-md"
+              />
+              <div className="flex rounded-2xl bg-[#F8F7FB] p-1">
+                {(['active', 'archived'] as const).map((item) => (
+                  <button
+                    key={item}
+                    type="button"
+                    onClick={() => setView(item)}
+                    className={`min-h-10 rounded-xl px-4 text-xs font-bold ${
+                      view === item
+                        ? 'bg-white text-[#533089] shadow-sm'
+                        : 'text-[#2E286C]/45'
+                    }`}
+                  >
+                    {t(`tabs.${item}`, {
+                      count: item === 'active' ? activeCount : archivedCount,
+                    })}
+                  </button>
+                ))}
+              </div>
+            </div>
           </div>
           <div className="grid gap-4 p-4 md:grid-cols-2 lg:p-6 2xl:grid-cols-3">
             {visible.map((instructor) => (
@@ -206,6 +283,59 @@ export function InstructorsClient({
           </ModulePanel>
         )}
       </div>
+
+      {archivedConflict && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#1F1646]/35 p-4">
+          <ModulePanel className="w-full max-w-lg rounded-3xl bg-white p-6 shadow-2xl">
+            <div className="mb-3 inline-flex items-center gap-2 rounded-full bg-amber-50 px-3 py-1 text-[11px] font-bold uppercase tracking-wider text-amber-700">
+              <ArchiveRestore className="h-4 w-4" />
+              {t('archivedConflictBadge')}
+            </div>
+            <h2 className="text-xl font-bold text-[#2E286C]">
+              {t('archivedConflictTitle')}
+            </h2>
+            <p className="mt-2 text-sm font-medium leading-6 text-[#2E286C]/60">
+              {t('archivedConflictDescription', {
+                name: archivedConflict.fullName,
+              })}
+            </p>
+            <div className="mt-4 rounded-2xl bg-[#F8F7FB] p-4 text-sm font-semibold text-[#2E286C]">
+              <div>{archivedConflict.email}</div>
+              <div className="mt-1 text-[#2E286C]/50">
+                {archivedConflict.phone}
+              </div>
+            </div>
+            <div className="mt-5 flex flex-wrap gap-3">
+              <Button
+                type="button"
+                disabled={busy}
+                onClick={restoreArchivedConflict}
+              >
+                {t('restoreOld')}
+              </Button>
+              <Button
+                type="button"
+                variant="secondary"
+                disabled={busy}
+                onClick={() => {
+                  setArchivedConflict(undefined);
+                  void submitCreate(true);
+                }}
+              >
+                {t('createSeparate')}
+              </Button>
+              <Button
+                type="button"
+                variant="ghost"
+                disabled={busy}
+                onClick={() => setArchivedConflict(undefined)}
+              >
+                {t('cancel')}
+              </Button>
+            </div>
+          </ModulePanel>
+        </div>
+      )}
     </div>
   );
 }

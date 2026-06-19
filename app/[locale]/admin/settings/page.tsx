@@ -1,20 +1,22 @@
-import { Settings } from 'lucide-react';
 import { useTranslations } from 'next-intl';
-import { EmptyState, Button } from '@/components/ui';
+import { PageHeader } from '@/components/ui';
 import { withWorkspacePage } from '@/lib/server/workspace-page';
+import { BackgroundJobsCard } from './background-jobs-card';
+import { DevResetCard } from './dev-reset-card';
 
 function SettingsPage() {
-  const t = useTranslations('admin.empty.settings');
-  const common = useTranslations('common.actions');
+  const t = useTranslations('admin.settings');
 
   return (
     <div className="admin-page">
-      <EmptyState
-        icon={Settings}
+      <PageHeader
         title={t('title')}
         description={t('description')}
-        action={<Button variant="secondary" disabled>{common('soon')}</Button>}
       />
+      <div className="grid gap-6">
+        <BackgroundJobsCard />
+        <DevResetCard enabled />
+      </div>
     </div>
   );
 }

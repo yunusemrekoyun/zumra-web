@@ -31,6 +31,7 @@ const messages = {
   program: 'program',
   registrationChannel: 'registrationChannel',
   school: 'school',
+  username: 'username',
 };
 
 describe('enrollment form domain rules', () => {
@@ -67,14 +68,8 @@ describe('enrollment form domain rules', () => {
     const errors = validateEnrollmentStep(
       1,
       {
-        birthAdministrativeArea: '',
-        birthCountryCode: 'TR',
-        birthDate: '2027-01-01',
-        birthLocality: '',
         email: '',
         firstName: '',
-        identityDocument: '123',
-        identityDocumentType: 'passport',
         initialPaymentCents: 0,
         lastName: '',
         primaryPhone: '',
@@ -86,13 +81,54 @@ describe('enrollment form domain rules', () => {
     );
 
     expect(errors).toMatchObject({
-      birthAdministrativeArea: 'birthLocation',
+      firstName: 'firstName',
+      lastName: 'lastName',
+    });
+  });
+
+  it('keeps identity profile details optional but validates provided values', () => {
+    expect(
+      validateEnrollmentStep(
+        1,
+        {
+          email: '',
+          firstName: 'Ada',
+          initialPaymentCents: 0,
+          lastName: 'Lovelace',
+          primaryPhone: '',
+          residenceAddress: '',
+        },
+        [],
+        false,
+        messages,
+      ),
+    ).toEqual({});
+
+    expect(
+      validateEnrollmentStep(
+        1,
+        {
+          birthAdministrativeArea: 'Istanbul',
+          birthCountryCode: 'TR',
+          birthDate: '2027-01-01',
+          birthLocality: '',
+          email: '',
+          firstName: 'Ada',
+          identityDocument: '123',
+          identityDocumentType: 'passport',
+          initialPaymentCents: 0,
+          lastName: 'Lovelace',
+          primaryPhone: '',
+          residenceAddress: '',
+        },
+        [],
+        false,
+        messages,
+      ),
+    ).toMatchObject({
       birthDate: 'birthDate',
       birthLocality: 'birthLocation',
-      firstName: 'firstName',
       identityDocument: 'identity',
-      lastName: 'lastName',
-      school: 'school',
     });
   });
 

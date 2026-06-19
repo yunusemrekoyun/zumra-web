@@ -1,6 +1,7 @@
 export { Avatar } from './avatar';
 export { ActionBar } from './action-bar';
 export { Button } from './button';
+export { CalendarBoard } from './calendar-board';
 export { Card } from './card';
 export { CountUp } from './count-up';
 export { CountrySelect } from './country-select';

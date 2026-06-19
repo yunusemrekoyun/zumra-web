@@ -15,6 +15,7 @@ import { completeEnrollment } from '@/lib/server/services/enrollments';
 export const runtime = 'nodejs';
 
 const completeSchema = z.object({
+  locale: z.enum(['tr', 'en']).default('tr'),
   password: z.string().min(12).max(128),
 });
 
@@ -38,7 +39,11 @@ export async function POST(
       return apiResponse({ error: 'invalid_request' }, 400, id);
     }
     const principal = await requireCriticalAdmin(parsed.data.password);
-    const enrollment = await completeEnrollment(principal, draftId);
+    const enrollment = await completeEnrollment(
+      principal,
+      draftId,
+      parsed.data.locale,
+    );
     await auditService.record({
       action: 'candidate.enrollment_completed',
       actorUserId: principal.id,

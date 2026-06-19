@@ -2,8 +2,10 @@ import 'dotenv/config';
 
 import os from 'node:os';
 import { QueueEvents } from 'bullmq';
+import { getMeetQueue } from '@/lib/server/queues/meet';
 import { databasePool } from '@/lib/server/db/client';
 import { getMediaQueue } from '@/lib/server/queues/media';
+import { verifyMailTransport } from '@/lib/server/mail/transport';
 import { getNotificationQueue } from '@/lib/server/queues/notifications';
 import {
   getBullConnection,
@@ -19,6 +21,11 @@ import {
   startMediaReconciliation,
 } from './media-worker';
 import {
+  createMeetWorker,
+  requeuePendingMeetOperations,
+  startMeetReconciliation,
+} from './meet-worker';
+import {
   createNotificationWorker,
   requeuePendingNotifications,
   startNotificationReconciliation,
@@ -27,8 +34,13 @@ import {
 async function main() {
   const workerId = `${os.hostname()}:${process.pid}`;
   const mediaWorker = createMediaWorker(workerId);
+  const meetWorker = createMeetWorker(workerId);
   const notificationWorker = createNotificationWorker();
   const mediaEvents = new QueueEvents(queueNames.media, {
+    connection: getBullConnection(),
+    prefix: 'zumra',
+  });
+  const meetEvents = new QueueEvents(queueNames.meet, {
     connection: getBullConnection(),
     prefix: 'zumra',
   });
@@ -39,16 +51,42 @@ async function main() {
   const stopHeartbeat = startWorkerHeartbeat(workerId);
   const stopMediaSourceCleanup = startMediaSourceCleanup();
   const stopMediaReconciliation = startMediaReconciliation();
+  const stopMeetReconciliation = startMeetReconciliation();
   const stopNotificationReconciliation = startNotificationReconciliation();
+
+  await verifyMailTransport()
+    .then(() => {
+      console.log(
+        JSON.stringify({
+          event: 'mail.transport_verified',
+          timestamp: new Date().toISOString(),
+        }),
+      );
+    })
+    .catch((error) => {
+      console.error(
+        JSON.stringify({
+          event: 'mail.transport_verify_failed',
+          message:
+            error instanceof Error
+              ? error.message.slice(0, 500)
+              : 'unknown',
+          timestamp: new Date().toISOString(),
+        }),
+      );
+    });
 
   await requeuePendingNotifications();
   await requeuePendingMedia();
+  await requeuePendingMeetOperations();
 
-  for (const events of [mediaEvents, notificationEvents]) {
+  for (const events of [mediaEvents, meetEvents, notificationEvents]) {
     events.on('error', (error) => {
       reportQueueConnectionError(
         events === mediaEvents
           ? 'media-queue-events'
+          : events === meetEvents
+            ? 'meet-queue-events'
           : 'notification-queue-events',
         error,
       );
@@ -85,12 +123,16 @@ async function main() {
     await stopHeartbeat();
     stopMediaSourceCleanup();
     stopMediaReconciliation();
+    stopMeetReconciliation();
     stopNotificationReconciliation();
     await Promise.all([
       mediaWorker.close(),
+      meetWorker.close(),
       notificationWorker.close(),
       mediaEvents.close(),
+      meetEvents.close(),
       notificationEvents.close(),
+      getMeetQueue().close(),
       getMediaQueue().close(),
       getNotificationQueue().close(),
     ]);

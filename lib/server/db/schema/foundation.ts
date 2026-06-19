@@ -1,3 +1,4 @@
+import { sql } from 'drizzle-orm';
 import {
   bigint,
   boolean,
@@ -119,6 +120,7 @@ export const externalIdentities = pgTable(
       .references(() => users.id, { onDelete: 'cascade' }),
     provider: externalIdentityProviderEnum('provider').notNull(),
     providerAccountId: text('provider_account_id').notNull(),
+    meetUserId: text('meet_user_id'),
     verifiedEmail: text('verified_email').notNull(),
     displayName: text('display_name').notNull(),
     givenName: text('given_name'),
@@ -148,6 +150,9 @@ export const externalIdentities = pgTable(
       table.provider,
       table.providerAccountId,
     ),
+    uniqueIndex('external_identities_meet_user_unique')
+      .on(table.meetUserId)
+      .where(sql`${table.meetUserId} is not null`),
     index('external_identities_verified_email_idx').on(table.verifiedEmail),
   ],
 );

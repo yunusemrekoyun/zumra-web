@@ -13,9 +13,12 @@ import {
   enrollmentBranchTransfers,
   enrollmentParties,
   enrollments,
+  notificationOutbox,
   programBranches,
   programs,
+  studentAccountInvitations,
   studentProfiles,
+  userInvitations,
   users,
 } from '@/lib/server/db/schema';
 import {
@@ -42,6 +45,7 @@ integration('candidate enrollment flow', () => {
     const marker = randomUUID();
     const adminId = `enrollment-admin-${marker}`;
     const email = `enrollment-${marker}@example.invalid`;
+    const username = `student.${marker.slice(0, 8)}`;
     let contactId: string | undefined;
     let candidateId: string | undefined;
     let draftId: string | undefined;
@@ -55,6 +59,7 @@ integration('candidate enrollment flow', () => {
     let otherBranchId: string | undefined;
     let occupancyDraftId: string | undefined;
     let occupancyEnrollmentId: string | undefined;
+    let invitationId: string | undefined;
 
     const principal: WorkspacePrincipal = {
       accountStatus: 'active',
@@ -153,6 +158,7 @@ integration('candidate enrollment flow', () => {
           primaryPhone: '+905551110000',
           residenceAddress: 'Integration Test Address 1',
           studentIsContractParty: true,
+          username,
         },
         step: 2,
       });
@@ -173,6 +179,32 @@ integration('candidate enrollment flow', () => {
       await updateEnrollmentDraft(principal, draftId, {
         data: { registrationChannel: 'web' },
         step: 5,
+      });
+      await database
+        .update(programs)
+        .set({ listPriceCents: 120_000 })
+        .where(eq(programs.id, programId));
+      const pricingSync = await updateEnrollmentDraft(principal, draftId, {
+        data: {},
+        step: 6,
+      });
+      expect(
+        'draft' in pricingSync ? pricingSync.draft : undefined,
+      ).toMatchObject({
+        finalPriceCents: 120_000,
+        listPriceCents: 120_000,
+      });
+      const [syncedDraft] = await database
+        .select({
+          finalPriceCents: enrollmentDrafts.finalPriceCents,
+          listPriceCents: enrollmentDrafts.listPriceCents,
+        })
+        .from(enrollmentDrafts)
+        .where(eq(enrollmentDrafts.id, draftId))
+        .limit(1);
+      expect(syncedDraft).toMatchObject({
+        finalPriceCents: 120_000,
+        listPriceCents: 120_000,
       });
       await updateEnrollmentDraft(principal, draftId, {
         data: {
@@ -212,6 +244,27 @@ integration('candidate enrollment flow', () => {
       expect(completed).toBeDefined();
       studentId = completed!.studentId;
       enrollmentId = completed!.id;
+
+      const [studentInvitation] = await database
+        .select({
+          email: userInvitations.email,
+          id: userInvitations.id,
+          status: userInvitations.status,
+          username: userInvitations.username,
+        })
+        .from(studentAccountInvitations)
+        .innerJoin(
+          userInvitations,
+          eq(userInvitations.id, studentAccountInvitations.invitationId),
+        )
+        .where(eq(studentAccountInvitations.studentId, studentId))
+        .limit(1);
+      invitationId = studentInvitation?.id;
+      expect(studentInvitation).toMatchObject({
+        email,
+        status: 'pending',
+        username,
+      });
 
       const [candidateAfter] = await database
         .select({ stage: candidateProfiles.stage })
@@ -417,6 +470,19 @@ integration('candidate enrollment flow', () => {
           .where(eq(enrollments.id, occupancyEnrollmentId));
       }
       if (studentId) {
+        if (invitationId) {
+          await database
+            .delete(notificationOutbox)
+            .where(
+              eq(notificationOutbox.idempotencyKey, `invitation:${invitationId}`),
+            );
+          await database
+            .delete(studentAccountInvitations)
+            .where(eq(studentAccountInvitations.studentId, studentId));
+          await database
+            .delete(userInvitations)
+            .where(eq(userInvitations.id, invitationId));
+        }
         await database
           .delete(studentProfiles)
           .where(eq(studentProfiles.id, studentId));

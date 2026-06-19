@@ -1,0 +1,3 @@
+DROP INDEX "instructor_profiles_email_unique";--> statement-breakpoint
+CREATE UNIQUE INDEX "instructor_profiles_active_email_unique" ON "instructor_profiles" USING btree ("email") WHERE "instructor_profiles"."status" <> 'archived';--> statement-breakpoint
+CREATE UNIQUE INDEX "instructor_profiles_active_phone_unique" ON "instructor_profiles" USING btree ("phone") WHERE "instructor_profiles"."status" <> 'archived';
