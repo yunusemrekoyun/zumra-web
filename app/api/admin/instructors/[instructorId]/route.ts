@@ -11,7 +11,10 @@ import {
   requestIp,
 } from '@/lib/server/security/network';
 import { auditService } from '@/lib/server/services/audit';
-import { updateInstructorProfile } from '@/lib/server/services/instructors';
+import {
+  InstructorIdentityConflictError,
+  updateInstructorProfile,
+} from '@/lib/server/services/instructors';
 import {
   supportedProgramLanguages,
   supportedProgramLevels,
@@ -74,6 +77,13 @@ export async function PATCH(
     });
     return apiResponse(instructor, 200, id);
   } catch (error) {
+    if (error instanceof InstructorIdentityConflictError) {
+      return apiResponse(
+        { error: error.code, instructor: error.conflict },
+        409,
+        id,
+      );
+    }
     return apiErrorResponse(error, id);
   }
 }

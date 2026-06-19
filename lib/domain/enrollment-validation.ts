@@ -20,7 +20,10 @@ export type EnrollmentValidationMessages = {
   program: string;
   registrationChannel: string;
   school: string;
+  username: string;
 };
+
+const usernamePattern = /^[a-z0-9](?:[a-z0-9._-]*[a-z0-9])?$/;
 
 type PartyLike = {
   roles: string[];
@@ -37,7 +40,7 @@ type DraftLike = {
   finalPriceCents?: number;
   firstName: string;
   gender?: string;
-  identityDocument: string;
+  identityDocument?: string;
   identityDocumentMasked?: string;
   identityDocumentType?: 'national_id' | 'passport';
   initialPaymentCents: number;
@@ -52,6 +55,7 @@ type DraftLike = {
   residenceAddress: string;
   school?: string;
   selectedInstructorProfileId?: string;
+  studentUsername?: string;
 };
 
 export function parseDateOnly(value?: string) {
@@ -106,9 +110,10 @@ export function validateEnrollmentStep(
 
   if (step === 1) {
     const identityType = draft.identityDocumentType ?? 'national_id';
+    const identityDocument = draft.identityDocument?.trim() ?? '';
     if (
-      !draft.identityDocumentMasked &&
-      !isValidIdentityDocument(identityType, draft.identityDocument)
+      identityDocument &&
+      !isValidIdentityDocument(identityType, identityDocument)
     ) {
       errors.identityDocument = messages.identity;
     }
@@ -118,23 +123,22 @@ export function validateEnrollmentStep(
     if (draft.lastName.trim().length < 2) {
       errors.lastName = messages.lastName;
     }
-    if (!draft.birthCountryCode) {
-      errors.birthCountryCode = messages.birthLocation;
+    const hasBirthLocation = Boolean(
+      draft.birthAdministrativeArea?.trim() || draft.birthLocality?.trim(),
+    );
+    if (hasBirthLocation) {
+      if (!draft.birthCountryCode) {
+        errors.birthCountryCode = messages.birthLocation;
+      }
+      if (!draft.birthAdministrativeArea?.trim()) {
+        errors.birthAdministrativeArea = messages.birthLocation;
+      }
+      if (!draft.birthLocality?.trim()) {
+        errors.birthLocality = messages.birthLocation;
+      }
     }
-    if (!draft.birthAdministrativeArea?.trim()) {
-      errors.birthAdministrativeArea = messages.birthLocation;
-    }
-    if (!draft.birthLocality?.trim()) {
-      errors.birthLocality = messages.birthLocation;
-    }
-    if (!isValidBirthDate(draft.birthDate)) {
+    if (draft.birthDate && !isValidBirthDate(draft.birthDate)) {
       errors.birthDate = messages.birthDate;
-    }
-    if (!draft.gender) {
-      errors.gender = messages.gender;
-    }
-    if (!draft.school?.trim()) {
-      errors.school = messages.school;
     }
   }
 
@@ -144,6 +148,14 @@ export function validateEnrollmentStep(
     }
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(draft.email.trim())) {
       errors.email = messages.email;
+    }
+    const username = draft.studentUsername?.trim().toLocaleLowerCase('en-US') ?? '';
+    if (
+      username.length < 5 ||
+      username.length > 30 ||
+      !usernamePattern.test(username)
+    ) {
+      errors.studentUsername = messages.username;
     }
     if (draft.residenceAddress.trim().length < 8) {
       errors.residenceAddress = messages.address;

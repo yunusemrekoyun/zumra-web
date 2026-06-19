@@ -82,7 +82,7 @@ integration('instructor profile and panel account lifecycle', () => {
           role: 'teacher',
           username: `teacher.${marker.slice(0, 8)}`,
         }),
-      ).rejects.toThrow(/instructor profile/i);
+      ).rejects.toThrow('invalid_invitation_target');
 
       const { hash, token } = createOpaqueToken();
       const [invitation] = await database
@@ -122,6 +122,17 @@ integration('instructor profile and panel account lifecycle', () => {
         role: 'teacher',
         userId: teacherUserId,
       });
+
+      await expect(
+        invitationService.create(principal, {
+          email: instructorEmail,
+          instructorProfileId: instructorId,
+          locale: 'tr',
+          name: 'Panel Instructor',
+          role: 'teacher',
+          username: `teacher.${marker.slice(9, 17)}`,
+        }),
+      ).rejects.toThrow('invitation_email_already_registered');
     } finally {
       if (teacherUserId) {
         await database

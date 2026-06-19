@@ -5,6 +5,8 @@ import { type FormEvent, useEffect, useState } from 'react';
 import { useTranslations } from 'next-intl';
 import {
   ArrowLeft,
+  Archive,
+  ArchiveRestore,
   BookOpenCheck,
   FileCheck2,
   Link2,
@@ -168,7 +170,7 @@ export function InstructorProfileClient({
         },
       );
       const body = await response.json().catch(() => ({}));
-      if (!response.ok) throw new Error('invite_failed');
+      if (!response.ok) throw new Error(String(body.error ?? 'invite_failed'));
       setProfile((current) => ({
         ...current,
         invitation: {
@@ -179,8 +181,43 @@ export function InstructorProfileClient({
       }));
       setAdminPassword('');
       setMessage(t('invitationSent'));
-    } catch {
-      setMessage(t('invitationError'));
+    } catch (error) {
+      setMessage(invitationErrorMessage(error, t));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function changeArchiveState(action: 'archive' | 'restore') {
+    setBusy(true);
+    setMessage('');
+    try {
+      const response = await fetch(
+        `/api/admin/instructors/${profile.id}/${action}`,
+        {
+          credentials: 'same-origin',
+          method: 'POST',
+        },
+      );
+      const body = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(String(body.error ?? 'archive_failed'));
+      const nextStatus = action === 'archive' ? 'archived' : 'active';
+      setProfile((current) => ({
+        ...current,
+        accountStatus:
+          action === 'archive' ? 'suspended' : current.accountStatus,
+        status: nextStatus,
+      }));
+      setDraft((current) => ({ ...current, status: nextStatus }));
+      setMessage(action === 'archive' ? t('archived') : t('restored'));
+      router.refresh();
+    } catch (error) {
+      const code = error instanceof Error ? error.message : '';
+      setMessage(
+        code === 'instructor_identity_conflict'
+          ? t('restoreIdentityConflict')
+          : t('archiveError'),
+      );
     } finally {
       setBusy(false);
     }
@@ -231,7 +268,7 @@ export function InstructorProfileClient({
             </h2>
             <StatusChip
               className="mt-2"
-              tone={profile.status === 'active' ? 'emerald' : 'gray'}
+              tone={statusTone(profile.status)}
             >
               {t(`statuses.${profile.status}`)}
             </StatusChip>
@@ -249,6 +286,29 @@ export function InstructorProfileClient({
                 }}
               />
             </label>
+            <div className="mt-3 flex justify-center">
+              {profile.status === 'archived' ? (
+                <Button
+                  type="button"
+                  variant="secondary"
+                  disabled={busy}
+                  onClick={() => void changeArchiveState('restore')}
+                >
+                  <ArchiveRestore className="h-4 w-4" />
+                  {t('restoreInstructor')}
+                </Button>
+              ) : (
+                <Button
+                  type="button"
+                  variant="secondary"
+                  disabled={busy}
+                  onClick={() => void changeArchiveState('archive')}
+                >
+                  <Archive className="h-4 w-4" />
+                  {t('archiveInstructor')}
+                </Button>
+              )}
+            </div>
             <div className="mt-6 space-y-4 border-t border-black/[0.04] pt-5 text-left">
               <InfoField label={t('fields.email')} value={profile.email} />
               <InfoField label={t('fields.phone')} value={profile.phone} />
@@ -429,6 +489,30 @@ export function InstructorProfileClient({
   );
 }
 
+function invitationErrorMessage(
+  error: unknown,
+  t: ReturnType<typeof useTranslations>,
+) {
+  const code = error instanceof Error ? error.message : '';
+  if (code === 'invitation_email_already_registered') {
+    return t('invitationEmailRegistered');
+  }
+  if (code === 'invitation_already_pending') {
+    return t('invitationAlreadyPending');
+  }
+  if (code === 'forbidden') {
+    return t('invitationForbidden');
+  }
+  if (
+    code === 'invalid_request' ||
+    code === 'invalid_invitation_target' ||
+    code === 'instructor_invitation_unavailable'
+  ) {
+    return t('invitationInvalid');
+  }
+  return t('invitationError');
+}
+
 async function uploadMedia(
   file: File,
   kind: 'document' | 'image',
@@ -456,6 +540,13 @@ function initials(name: string) {
     .join('')
     .slice(0, 2)
     .toUpperCase();
+}
+
+function statusTone(status: InstructorProfileView['status']) {
+  if (status === 'active') return 'emerald' as const;
+  if (status === 'on_leave') return 'amber' as const;
+  if (status === 'archived') return 'red' as const;
+  return 'gray' as const;
 }
 
 function fieldLabels(t: ReturnType<typeof useTranslations>) {

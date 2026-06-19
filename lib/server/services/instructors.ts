@@ -9,6 +9,8 @@ import {
   inArray,
   isNotNull,
   isNull,
+  ne,
+  or,
 } from 'drizzle-orm';
 import type { WorkspacePrincipal } from '@/lib/domain';
 import {
@@ -64,8 +66,28 @@ export type InstructorInput = {
   status: InstructorStatus;
 };
 
+export type InstructorIdentityConflict = {
+  archivedAt?: string;
+  email: string;
+  fullName: string;
+  id: string;
+  phone: string;
+  status: InstructorStatus;
+};
+
+export class InstructorIdentityConflictError extends PublicFlowError {
+  constructor(
+    code: 'archived_instructor_conflict' | 'instructor_identity_conflict',
+    public readonly conflict: InstructorIdentityConflict,
+  ) {
+    super(code, 409);
+    this.name = 'InstructorIdentityConflictError';
+  }
+}
+
 export type InstructorSummary = {
   accountStatus?: string;
+  archivedAt?: string;
   branchCount: number;
   competencies: InstructorCompetency[];
   email: string;
@@ -118,6 +140,7 @@ export async function getInstructorDirectory(
     database
       .select({
         accountStatus: users.accountStatus,
+        archivedAt: instructorProfiles.archivedAt,
         email: instructorProfiles.email,
         firstName: instructorProfiles.firstName,
         id: instructorProfiles.id,
@@ -215,6 +238,7 @@ export async function getInstructorDirectory(
 
   return profiles.map((profile) => ({
     accountStatus: profile.accountStatus ?? undefined,
+    archivedAt: profile.archivedAt?.toISOString(),
     branchCount: branchCountByInstructor.get(profile.id) ?? 0,
     competencies: competenciesByInstructor.get(profile.id) ?? [],
     email: profile.email,
@@ -241,6 +265,7 @@ export async function getInstructorProfile(
   const [profile] = await database
     .select({
       accountStatus: users.accountStatus,
+      archivedAt: instructorProfiles.archivedAt,
       biography: instructorProfiles.biography,
       email: instructorProfiles.email,
       firstName: instructorProfiles.firstName,
@@ -343,6 +368,7 @@ export async function getInstructorProfile(
 
   return {
     accountStatus: profile.accountStatus ?? undefined,
+    archivedAt: profile.archivedAt?.toISOString(),
     biography: profile.biography ?? undefined,
     branchCount: branches.length,
     branches,
@@ -380,10 +406,28 @@ export async function getInstructorProfile(
 
 export async function createInstructorProfile(
   principal: WorkspacePrincipal,
-  input: InstructorInput,
+  input: InstructorInput & { allowArchivedDuplicate?: boolean },
 ) {
   assertAdmin(principal);
   const values = validateInstructorInput(input);
+  const conflict = await findInstructorIdentityConflict(
+    values.profile.email,
+    values.profile.phone,
+  );
+
+  if (conflict && conflict.status !== 'archived') {
+    throw new InstructorIdentityConflictError(
+      'instructor_identity_conflict',
+      conflict,
+    );
+  }
+
+  if (conflict && !input.allowArchivedDuplicate) {
+    throw new InstructorIdentityConflictError(
+      'archived_instructor_conflict',
+      conflict,
+    );
+  }
 
   return database.transaction(async (transaction) => {
     const [profile] = await transaction
@@ -414,6 +458,22 @@ export async function updateInstructorProfile(
 ) {
   assertAdmin(principal);
   const values = validateInstructorInput(input);
+  const conflict = await findInstructorIdentityConflict(
+    values.profile.email,
+    values.profile.phone,
+    instructorId,
+  );
+
+  if (
+    input.status !== 'archived' &&
+    conflict &&
+    conflict.status !== 'archived'
+  ) {
+    throw new InstructorIdentityConflictError(
+      'instructor_identity_conflict',
+      conflict,
+    );
+  }
 
   return database.transaction(async (transaction) => {
     const [existing] = await transaction
@@ -446,6 +506,102 @@ export async function updateInstructorProfile(
 
     return { id: instructorId };
   });
+}
+
+export async function archiveInstructorProfile(
+  principal: WorkspacePrincipal,
+  instructorId: string,
+) {
+  assertAdmin(principal);
+  const now = new Date();
+
+  return database.transaction(async (transaction) => {
+    const [profile] = await transaction
+      .select({
+        id: instructorProfiles.id,
+        status: instructorProfiles.status,
+        userId: instructorProfiles.userId,
+      })
+      .from(instructorProfiles)
+      .where(eq(instructorProfiles.id, instructorId))
+      .limit(1)
+      .for('update');
+
+    if (!profile) throw new PublicFlowError('instructor_not_found', 404);
+
+    await transaction
+      .update(instructorProfiles)
+      .set({
+        archivedAt: profile.status === 'archived' ? undefined : now,
+        status: 'archived',
+        updatedAt: now,
+      })
+      .where(eq(instructorProfiles.id, instructorId));
+
+    if (profile.userId) {
+      await transaction
+        .update(users)
+        .set({ accountStatus: 'suspended', updatedAt: now })
+        .where(eq(users.id, profile.userId));
+    }
+
+    return { id: instructorId };
+  });
+}
+
+export async function restoreInstructorProfile(
+  principal: WorkspacePrincipal,
+  instructorId: string,
+) {
+  assertAdmin(principal);
+
+  const [profile] = await database
+    .select({
+      email: instructorProfiles.email,
+      id: instructorProfiles.id,
+      phone: instructorProfiles.phone,
+      status: instructorProfiles.status,
+      userId: instructorProfiles.userId,
+    })
+    .from(instructorProfiles)
+    .where(eq(instructorProfiles.id, instructorId))
+    .limit(1);
+
+  if (!profile) throw new PublicFlowError('instructor_not_found', 404);
+  if (profile.status !== 'archived') return { id: instructorId };
+
+  const conflict = await findInstructorIdentityConflict(
+    profile.email,
+    profile.phone,
+    instructorId,
+  );
+  if (conflict && conflict.status !== 'archived') {
+    throw new InstructorIdentityConflictError(
+      'instructor_identity_conflict',
+      conflict,
+    );
+  }
+
+  const now = new Date();
+  await database.transaction(async (transaction) => {
+    await transaction
+      .update(instructorProfiles)
+      .set({
+        archivedAt: null,
+        status: 'active',
+        updatedAt: now,
+      })
+      .where(eq(instructorProfiles.id, instructorId));
+
+    if (profile.userId) {
+      await transaction
+        .update(users)
+        .set({ accountStatus: 'active', updatedAt: now })
+        .where(eq(users.id, profile.userId));
+    }
+  });
+
+  return { id: instructorId };
 }
 
 export async function setInstructorPhoto(
@@ -525,6 +681,49 @@ async function assertReadyPrivateMedia(
     )
     .limit(1);
   if (!asset) throw new PublicFlowError('media_not_ready', 409);
+}
+
+async function findInstructorIdentityConflict(
+  email: string,
+  phone: string,
+  excludeId?: string,
+): Promise<InstructorIdentityConflict | undefined> {
+  const conditions = [
+    or(eq(instructorProfiles.email, email), eq(instructorProfiles.phone, phone)),
+  ];
+  if (excludeId) {
+    conditions.push(ne(instructorProfiles.id, excludeId));
+  }
+
+  const rows = await database
+    .select({
+      archivedAt: instructorProfiles.archivedAt,
+      email: instructorProfiles.email,
+      firstName: instructorProfiles.firstName,
+      id: instructorProfiles.id,
+      lastName: instructorProfiles.lastName,
+      phone: instructorProfiles.phone,
+      status: instructorProfiles.status,
+    })
+    .from(instructorProfiles)
+    .where(and(...conditions))
+    .orderBy(desc(instructorProfiles.updatedAt))
+    .limit(10);
+
+  const row =
+    rows.find((item) => item.status !== 'archived') ??
+    rows.find((item) => item.status === 'archived');
+
+  return row
+    ? {
+        archivedAt: row.archivedAt?.toISOString(),
+        email: row.email,
+        fullName: fullName(row.firstName, row.lastName),
+        id: row.id,
+        phone: row.phone,
+        status: row.status,
+      }
+    : undefined;
 }
 
 function validateInstructorInput(input: InstructorInput) {

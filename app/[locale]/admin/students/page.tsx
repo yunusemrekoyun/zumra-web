@@ -1,58 +1,50 @@
-import React from 'react';
-import { Filter, MoreHorizontal } from 'lucide-react';
-import { useLocale, useTranslations } from 'next-intl';
+import { Filter, MoreHorizontal, UsersRound } from 'lucide-react';
+import { getTranslations } from 'next-intl/server';
 import { Link } from '@/i18n/navigation';
-import { Avatar, Button, FilterTabs, IconButton, InfoField, ModulePanel, PageHeader, SearchInput } from '@/components/ui';
-import { getDashboardData, getDomainLanguageKey } from '@/lib/domain';
-import { withWorkspacePage } from '@/lib/server/workspace-page';
+import {
+  Avatar,
+  Button,
+  EmptyState,
+  FilterTabs,
+  IconButton,
+  InfoField,
+  ModulePanel,
+  PageHeader,
+  SearchInput,
+} from '@/components/ui';
+import { requireWorkspaceRole } from '@/lib/server/authorization';
+import { getAdminStudents } from '@/lib/server/services/students';
 
-function StudentsPage() {
-  const locale = useLocale();
-  const t = useTranslations('admin.students');
-  const actions = useTranslations('common.actions');
-  const common = useTranslations('common.status');
-  const domain = useTranslations('domain');
-  const dashboard = getDashboardData('admin');
-  const students = dashboard.students.map((student) => {
-    const languageKey = getDomainLanguageKey(student.language);
-    const teachers = dashboard.users
-      .filter((user) => student.teacherIds.includes(user.id))
-      .map((user) => user.name);
+type StudentsPageProps = {
+  params: Promise<{ locale: string }>;
+};
 
-    return {
-      id: student.id,
-      name: student.fullName,
-      lang: languageKey ? domain(`languages.${languageKey}`) : student.language,
-      level: student.level,
-      instructor: teachers.length ? teachers.join(', ') : t('toAssign'),
-      progress: student.progress,
-      status: common(student.status),
-      statusDotClass: getStudentStatusDotClass(student.status),
-      next: student.nextSessionAt
-        ? new Intl.DateTimeFormat(locale === 'en' ? 'en-US' : 'tr-TR', {
-            day: 'numeric',
-            hour: '2-digit',
-            minute: '2-digit',
-            month: 'short',
-          }).format(new Date(student.nextSessionAt))
-        : '-',
-    };
-  });
+export default async function StudentsPage({ params }: StudentsPageProps) {
+  const { locale } = await params;
+  const principal = await requireWorkspaceRole('admin', locale);
+  const [t, actions, common, domain] = await Promise.all([
+    getTranslations('admin.students'),
+    getTranslations('common.actions'),
+    getTranslations('common.status'),
+    getTranslations('domain'),
+  ]);
+  const students = await getAdminStudents(principal);
+  const dateLocale = locale === 'en' ? 'en-US' : 'tr-TR';
 
   return (
     <div className="admin-page">
       <PageHeader
         title={t('title')}
         description={t('description', { count: students.length })}
-        action={(
+        action={
           <Button className="bg-[#2E286C] hover:bg-[#2E286C]">
-          {t('add')}
+            {t('add')}
           </Button>
-        )}
+        }
       />
 
-      <ModulePanel padded={false} className="lg:rounded-[2.5rem] p-2">
-        <div className="flex flex-col xl:flex-row xl:items-center justify-between gap-4 p-4 lg:px-6 border-b border-black/[0.03]">
+      <ModulePanel padded={false} className="p-2 lg:rounded-[2.5rem]">
+        <div className="flex flex-col justify-between gap-4 border-b border-black/[0.03] p-4 lg:px-6 xl:flex-row xl:items-center">
           <FilterTabs
             activeValue="all"
             items={[
@@ -62,76 +54,140 @@ function StudentsPage() {
               { value: 'graduated', label: t('graduated') },
             ]}
           />
-          <div className="flex items-center gap-3 w-full xl:w-auto">
-            <SearchInput placeholder={t('search')} containerClassName="flex-1 xl:w-64" className="h-9" />
-            <IconButton aria-label={actions('filter')} icon={<Filter className="w-4 h-4" />} size="sm" />
+          <div className="flex w-full items-center gap-3 xl:w-auto">
+            <SearchInput
+              placeholder={t('search')}
+              containerClassName="flex-1 xl:w-64"
+              className="h-9"
+            />
+            <IconButton
+              aria-label={actions('filter')}
+              icon={<Filter className="h-4 w-4" />}
+              size="sm"
+            />
           </div>
         </div>
 
-        <div className="p-4 lg:p-6 grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 lg:gap-6">
-          {students.map((student) => (
-            <Link href={`/admin/students/${student.id}`} key={student.id}>
-              <ModulePanel variant="muted" className="hover:shadow-lg hover:border-[#533089]/20 transition-all cursor-pointer group flex flex-col h-full">
-                <div className="flex justify-between items-start mb-6">
-                  <div className="flex items-center gap-3">
-                    <Avatar name={student.name} size="lg" className="bg-white shadow-sm" />
-                    <div>
-                      <h3 className="font-bold text-[#2E286C] group-hover:text-[#533089] transition-colors">{student.name}</h3>
-                      <div className="flex items-center gap-1.5 mt-0.5">
-                        <span className={`w-1.5 h-1.5 rounded-full ${student.statusDotClass}`} />
-                        <span className="text-xs text-[#2E286C]/50 font-medium">{student.status}</span>
+        {students.length ? (
+          <div className="grid grid-cols-1 gap-4 p-4 md:grid-cols-2 lg:p-6 xl:grid-cols-3 lg:gap-6">
+            {students.map((student) => (
+              <Link href={`/admin/students/${student.studentId}`} key={student.studentId}>
+                <ModulePanel
+                  variant="muted"
+                  className="group flex h-full cursor-pointer flex-col transition-all hover:border-[#533089]/20 hover:shadow-lg"
+                >
+                  <div className="mb-6 flex items-start justify-between">
+                    <div className="flex items-center gap-3">
+                      <Avatar
+                        name={student.fullName}
+                        size="lg"
+                        className="bg-white shadow-sm"
+                      />
+                      <div>
+                        <h3 className="font-bold text-[#2E286C] transition-colors group-hover:text-[#533089]">
+                          {student.fullName}
+                        </h3>
+                        <div className="mt-0.5 flex items-center gap-1.5">
+                          <span
+                            className={`h-1.5 w-1.5 rounded-full ${getStudentStatusDotClass(student.status)}`}
+                          />
+                          <span className="text-xs font-medium text-[#2E286C]/50">
+                            {common(student.status)}
+                          </span>
+                        </div>
                       </div>
                     </div>
+                    <IconButton
+                      aria-label={actions('moreOptions')}
+                      icon={<MoreHorizontal className="h-4 w-4" />}
+                      size="sm"
+                      className="rounded-full text-[#2E286C]/40"
+                    />
                   </div>
-                  <IconButton
-                    aria-label={actions('moreOptions')}
-                    icon={<MoreHorizontal className="w-4 h-4" />}
-                    size="sm"
-                    className="rounded-full text-[#2E286C]/40"
-                  />
-                </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 lg:gap-4 mb-6 relative z-10">
-                  <ModulePanel className="rounded-2xl p-3">
-                    <InfoField
-                      label={t('education')}
-                      value={student.lang}
-                      valueClassName="truncate"
-                    />
-                    <div className="text-xs text-[#2E286C]/60 font-medium truncate">{student.level}</div>
-                  </ModulePanel>
-                  <ModulePanel className="rounded-2xl p-3">
-                    <InfoField
-                      label={t('nextLesson')}
-                      value={student.next}
-                      valueClassName="truncate"
-                    />
-                    <div className="text-xs text-[#2E286C]/60 font-medium truncate">{t('teacher')}: {student.instructor}</div>
-                  </ModulePanel>
-                </div>
+                  <div className="relative z-10 mb-6 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:gap-4">
+                    <ModulePanel className="rounded-2xl p-3">
+                      <InfoField
+                        label={t('education')}
+                        value={formatProgram(student, domain)}
+                        valueClassName="truncate"
+                      />
+                      <div className="truncate text-xs font-medium text-[#2E286C]/60">
+                        {student.currentLevel ?? '-'}
+                      </div>
+                    </ModulePanel>
+                    <ModulePanel className="rounded-2xl p-3">
+                      <InfoField
+                        label={t('nextLesson')}
+                        value={formatNextLesson(student.nextSessionAt, dateLocale)}
+                        valueClassName="truncate"
+                      />
+                      <div className="truncate text-xs font-medium text-[#2E286C]/60">
+                        {t('teacher')}: {student.instructorName ?? t('toAssign')}
+                      </div>
+                    </ModulePanel>
+                  </div>
 
-                <div className="mt-auto pt-2">
-                  <div className="flex justify-between items-center mb-2">
-                    <span className="text-[10px] font-bold uppercase tracking-widest text-[#2E286C]/60">{t('progress')}</span>
-                    <span className="text-xs font-bold text-[#533089]">%{student.progress}</span>
+                  <div className="mt-auto pt-2">
+                    <div className="mb-2 flex items-center justify-between">
+                      <span className="text-[10px] font-bold uppercase tracking-widest text-[#2E286C]/60">
+                        {t('progress')}
+                      </span>
+                      <span className="text-xs font-bold text-[#533089]">
+                        %{student.progress}
+                      </span>
+                    </div>
+                    <div className="h-2.5 w-full overflow-hidden rounded-full bg-black/5">
+                      <div
+                        className="h-full rounded-full bg-gradient-to-r from-[#8C6CE6] to-[#533089]"
+                        style={{ width: `${student.progress}%` }}
+                      />
+                    </div>
                   </div>
-                  <div className="h-2.5 bg-black/5 rounded-full overflow-hidden w-full">
-                    <div
-                      className="h-full bg-gradient-to-r from-[#8C6CE6] to-[#533089] rounded-full"
-                      style={{ width: `${student.progress}%` }}
-                    />
-                  </div>
-                </div>
-              </ModulePanel>
-            </Link>
-          ))}
-        </div>
+                </ModulePanel>
+              </Link>
+            ))}
+          </div>
+        ) : (
+          <EmptyState
+            icon={UsersRound}
+            title={t('emptyTitle')}
+            description={t('emptyDescription')}
+            className="m-4 min-h-[24rem] lg:m-6"
+          />
+        )}
       </ModulePanel>
     </div>
   );
 }
 
-export default withWorkspacePage('admin', StudentsPage);
+function formatProgram(
+  student: Awaited<ReturnType<typeof getAdminStudents>>[number],
+  domain: Awaited<ReturnType<typeof getTranslations>>,
+) {
+  const language = student.language ? formatLanguage(student.language, domain) : '-';
+  return student.programName ? `${language} • ${student.programName}` : language;
+}
+
+function formatLanguage(
+  language: string,
+  domain: Awaited<ReturnType<typeof getTranslations>>,
+) {
+  if (['arabic', 'english', 'french', 'german'].includes(language)) {
+    return domain(`languages.${language}`);
+  }
+  return language;
+}
+
+function formatNextLesson(value: string | undefined, locale: string) {
+  if (!value) return '-';
+  return new Intl.DateTimeFormat(locale, {
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+    month: 'short',
+  }).format(new Date(value));
+}
 
 function getStudentStatusDotClass(status: string) {
   if (status === 'active') {
@@ -142,8 +198,8 @@ function getStudentStatusDotClass(status: string) {
     return 'bg-blue-500';
   }
 
-  if (status === 'candidate') {
-    return 'bg-purple-500';
+  if (status === 'cancelled') {
+    return 'bg-red-500';
   }
 
   return 'bg-amber-500';

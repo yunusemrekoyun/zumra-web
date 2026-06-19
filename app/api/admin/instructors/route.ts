@@ -11,7 +11,10 @@ import {
   requestIp,
 } from '@/lib/server/security/network';
 import { auditService } from '@/lib/server/services/audit';
-import { createInstructorProfile } from '@/lib/server/services/instructors';
+import {
+  createInstructorProfile,
+  InstructorIdentityConflictError,
+} from '@/lib/server/services/instructors';
 import {
   supportedProgramLanguages,
   supportedProgramLevels,
@@ -34,6 +37,7 @@ const instructorSchema = z.object({
   phone: z.string().trim().min(7).max(32).refine(phoneNumberIsValid),
   specialties: z.array(z.string().trim().min(1).max(100)).max(30),
   status: z.enum(['draft', 'active', 'on_leave', 'inactive', 'archived']),
+  allowArchivedDuplicate: z.boolean().optional(),
 });
 
 export const runtime = 'nodejs';
@@ -65,6 +69,13 @@ export async function POST(request: Request) {
     });
     return apiResponse(instructor ?? {}, 201, id);
   } catch (error) {
+    if (error instanceof InstructorIdentityConflictError) {
+      return apiResponse(
+        { error: error.code, instructor: error.conflict },
+        409,
+        id,
+      );
+    }
     return apiErrorResponse(error, id);
   }
 }

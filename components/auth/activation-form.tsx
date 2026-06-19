@@ -6,10 +6,14 @@ import { useRouter } from '@/i18n/navigation';
 
 type ActivationFormProps = {
   labels: {
+    accountExists: string;
     confirmPassword: string;
     error: string;
+    forbidden: string;
+    invalidPassword: string;
     mismatch: string;
     password: string;
+    rateLimited: string;
     submit: string;
     success: string;
   };
@@ -38,9 +42,10 @@ export function ActivationForm({ labels, token }: ActivationFormProps) {
       headers: { 'content-type': 'application/json' },
       method: 'POST',
     });
+    const body = await response.json().catch(() => ({}));
 
     if (!response.ok) {
-      setMessage(labels.error);
+      setMessage(activationErrorMessage(body.error, labels));
       setPending(false);
       return;
     }
@@ -81,4 +86,23 @@ export function ActivationForm({ labels, token }: ActivationFormProps) {
       </Button>
     </form>
   );
+}
+
+function activationErrorMessage(
+  code: unknown,
+  labels: ActivationFormProps['labels'],
+) {
+  if (code === 'invitation_email_already_registered') {
+    return labels.accountExists;
+  }
+  if (code === 'invalid_password') {
+    return labels.invalidPassword;
+  }
+  if (code === 'rate_limited') {
+    return labels.rateLimited;
+  }
+  if (code === 'forbidden') {
+    return labels.forbidden;
+  }
+  return labels.error;
 }

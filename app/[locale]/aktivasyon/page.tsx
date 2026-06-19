@@ -25,10 +25,14 @@ export default async function ActivationPage({
       <ActivationForm
         token={token}
         labels={{
+          accountExists: t('accountExists'),
           confirmPassword: t('confirmPassword'),
           error: t('error'),
+          forbidden: t('forbidden'),
+          invalidPassword: t('invalidPassword'),
           mismatch: t('mismatch'),
           password: t('password'),
+          rateLimited: t('rateLimited'),
           submit: t('submit'),
           success: t('success'),
         }}

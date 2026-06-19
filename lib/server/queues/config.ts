@@ -4,6 +4,7 @@ import type { ConnectionOptions, JobsOptions } from 'bullmq';
 import { getRuntimeEnv } from '@/lib/server/env';
 
 export const queueNames = {
+  meet: 'zumra-meet',
   media: 'zumra-media',
   notifications: 'zumra-notifications',
 } as const;

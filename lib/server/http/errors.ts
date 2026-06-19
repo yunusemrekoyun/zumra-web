@@ -9,7 +9,7 @@ export class ExternalIdentityError extends Error {}
 export class PublicFlowError extends Error {
   constructor(
     public readonly code: string,
-    public readonly status: 400 | 404 | 409 | 410 | 429 = 400,
+    public readonly status: 400 | 403 | 404 | 409 | 410 | 429 = 400,
   ) {
     super(code);
     this.name = 'PublicFlowError';

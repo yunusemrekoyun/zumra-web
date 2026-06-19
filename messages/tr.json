@@ -37,11 +37,12 @@
       "inProgress": "Devam Ediyor",
       "upcoming": "Yaklaşan"
     },
-    "status": {
-      "active": "Aktif",
-      "paused": "Dondurdu",
-      "graduated": "Mezun",
-      "candidate": "Aday",
+      "status": {
+        "active": "Aktif",
+        "paused": "Dondurdu",
+        "graduated": "Mezun",
+        "cancelled": "İptal",
+        "candidate": "Aday",
       "paid": "Ödendi",
       "pending": "Beklemede",
       "failed": "Başarısız",
@@ -359,6 +360,93 @@
     "shell": {
       "searchPlaceholder": "Öğrenci, eğitmen veya mesaj ara..."
     },
+    "calendar": {
+      "title": "Takvim",
+      "description": "Şube dersleri, özel dersler ve ileride eklenecek randevular tek takvimde renklerle ayrılır.",
+      "agendaTitle": "Aylık akış",
+      "monthView": "Ay görünümü",
+      "detailView": "Detay listesi",
+      "hoverHint": "Detayları görmek için takvimde günlerin üzerine gelin.",
+      "previousMonth": "Önceki ay",
+      "nextMonth": "Sonraki ay",
+      "joinLesson": "Derse katıl",
+      "connectGoogle": "Google hesabını bağla",
+      "retryMeeting": "Meet'i tekrar dene",
+      "meetingAttempts": "Meet deneme sayısı: {count}",
+      "meetingLastError": "Son Meet hatası",
+      "reportAbsence": "Gelemiyorum bildir",
+      "absenceReported": "Gelemiyorum bildirildi",
+      "absenceNotePlaceholder": "İstersen kısa bir not ekle",
+      "legendTitle": "Renkler etkinlik türünü gösterir.",
+      "emptyTitle": "Henüz takvim kaydı yok",
+      "emptyDescription": "Şubelerde ders programı oluşturulduğunda tüm oturumlar burada görünecek.",
+      "noEventsInMonth": "Bu ay için takvim kaydı bulunmuyor.",
+      "moreEvents": "+{count} daha",
+      "studentCount": "{count} öğrenci",
+      "meetingStatuses": {
+        "pending": "Meet hazırlanıyor",
+        "creating": "Meet oluşturuluyor",
+        "ready": "Meet hazır",
+        "failed": "Meet oluşturulamadı",
+        "disabled": "Meet kapalı"
+      },
+      "eventKinds": {
+        "group_lesson": "Grup dersi",
+        "private_lesson": "Özel ders",
+        "appointment": "Randevu"
+      },
+      "statuses": {
+        "scheduled": "Planlandı",
+        "cancelled": "İptal",
+        "postponed": "Ertelendi",
+        "completed": "Tamamlandı"
+      }
+    },
+    "settings": {
+      "title": "Ayarlar",
+      "description": "Admin paneli ve geliştirme ortamı için sistem araçları.",
+      "devReset": {
+        "badge": "Geliştirme aracı",
+        "title": "Verileri sıfırla",
+        "description": "Adaylar, öğrenciler, kayıtlar, eğitmenler, şubeler, programlar, davetler, bildirimler, denetim kayıtları ve medya kayıtları temizlenir. Soru bankası, mevcut admin kullanıcısı ve aktif oturum korunur.",
+        "disabled": "Bu reset aracı şu anda kapalıdır.",
+        "warning": "Bu işlem geri alınamaz. Lokal test verilerini temizlemek için kullanın.",
+        "password": "Admin parolası",
+        "passwordPlaceholder": "Parolanızı tekrar girin",
+        "confirmation": "Onay metni",
+        "confirmationHint": "Devam etmek için {phrase} yazın.",
+        "invalidConfirmation": "Onay metni eşleşmiyor.",
+        "submit": "Verileri sıfırla",
+        "resetting": "Sıfırlanıyor",
+        "success": "Veriler sıfırlandı. Admin hesabınız ve bu oturum korundu.",
+        "error": "Reset tamamlanamadı. Parolayı ve oturum yetkisini kontrol edip yeniden deneyin.",
+        "errors": {
+          "forbidden": "Bu işlem için aktif admin oturumu gerekir.",
+          "invalidRequest": "İstek geçersiz. Parola ve onay metnini kontrol edin.",
+          "passwordFailed": "Admin parolası doğrulanamadı.",
+          "resetFailed": "Reset işlemi tamamlanamadı. Terminal logunda teknik hata ayrıntısı olabilir."
+        }
+      },
+      "backgroundJobs": {
+        "badge": "Operasyon",
+        "title": "Arka plan işleri",
+        "description": "Mail ve Meet gibi worker üzerinden çalışan işleri buradan izleyin. Worker kapalıysa davet ve toplantı linkleri kuyrukta kalır.",
+        "workerOnline": "Worker aktif",
+        "workerOffline": "Worker görünmüyor",
+        "pending": "Bekleyen",
+        "failed": "Hatalı",
+        "dead": "Ölü",
+        "lastSeen": "Son sinyal: {date}",
+        "activeJobs": "Aktif iş: {count}",
+        "noHeartbeat": "Henüz worker kalp atışı alınmadı. `npm run worker` çalışıyor mu kontrol edin.",
+        "lastError": "Son mail hatası",
+        "refresh": "Durumu yenile",
+        "retryFailed": "Hatalıları tekrar kuyruğa al",
+        "retrySuccess": "{count} bildirim yeniden kuyruğa alındı.",
+        "retryError": "Bildirimler yeniden kuyruğa alınamadı.",
+        "statusError": "Arka plan iş durumu okunamadı."
+      }
+    },
     "dashboard": {
       "greeting": "Günaydın, Yunus",
       "totalStudents": "Toplam Öğrenci",
@@ -448,6 +536,34 @@
       "teacherLaterNote": "Eğitmen ataması şu anda zorunlu değildir. Öğretmen yönetimi eklendiğinde bu şubeye sonradan bağlanacaktır.",
       "teacherAssignmentPending": "Eğitmen henüz atanmadı",
       "branchFull": "Kapasite dolu",
+      "scheduleTitle": "Ders programı",
+      "scheduleDescription": "Ders süresi sabit 60 dakikadır. Haftalık tekrar seçilirse şube tarih aralığındaki tüm haftalara ders oluşturulur.",
+      "scheduleSaved": "Ders programı kaydedildi ve takvim oturumları oluşturuldu.",
+      "scheduleError": "Ders programı kaydedilemedi. Tarih, saat ve şube eğitmenini kontrol edin.",
+      "scheduleNeedsInstructor": "Ders programı oluşturmak için önce şubeye aktif bir eğitmen atayın.",
+      "scheduleSummary": "{count} ders takvime işlendi.",
+      "scheduleMissing": "Ders programı henüz oluşturulmadı.",
+      "meetSummary": "Meet: {ready}/{total} hazır · {pending} bekleyen · {failed} hatalı",
+      "meetLastError": "Son hata: {error}",
+      "scheduleOpenPlanner": "Planla",
+      "schedulePlannerTitle": "Ders programını planla",
+      "schedulePlannerDescription": "Haftalık tekrar için günü ve saati seçin; manuel planlama için saati belirleyip takvimde günlere tıklayarak dersleri ekleyin.",
+      "scheduleModeWeekly": "Haftalık tekrar",
+      "scheduleModeManual": "Takvimden seç",
+      "weeklySchedulePreview": "Her {weekday} saat {time}",
+      "manualSchedulePreview": "{count} manuel ders seçildi.",
+      "weeklyRepeat": "Haftalık tekrar etsin",
+      "chooseWeekday": "Ders günü",
+      "chooseLessonTime": "Ders saati",
+      "chooseDatesFromCalendar": "Takvimden gün seç",
+      "clickDateToAdd": "Seçili saat {time}. Günlere tıkladıkça ders listeye eklenir.",
+      "selectedTime": "Saat {time}",
+      "customTime": "Özel saat",
+      "selectedLessons": "Eklenen dersler",
+      "addManualLesson": "Manuel ders ekle",
+      "removeManualLesson": "Kaldır",
+      "manualLessonsEmpty": "Haftalık tekrar kapalıyken ders tarihlerini tek tek ekleyin.",
+      "saveSchedule": "Ders programını kaydet",
       "branchFields": {
         "program": "Bağlı program",
         "name": "Şube / sınıf adı",
@@ -476,13 +592,25 @@
         "description": "Açıklama",
         "active": "Kayıtlarda seçilebilir",
         "teacher": "Eğitmen",
-        "hourlyStudentPrice": "Öğrenci saatlik satış fiyatı"
+        "hourlyStudentPrice": "Öğrenci saatlik satış fiyatı",
+        "weekday": "Ders günü",
+        "lessonTime": "Ders saati",
+        "lessonDate": "Ders tarihi"
       },
       "languages": {
         "english": "İngilizce",
         "german": "Almanca",
         "french": "Fransızca",
         "arabic": "Arapça"
+      },
+      "weekdays": {
+        "1": "Pazartesi",
+        "2": "Salı",
+        "3": "Çarşamba",
+        "4": "Perşembe",
+        "5": "Cuma",
+        "6": "Cumartesi",
+        "7": "Pazar"
       }
     },
     "instructors": {
@@ -497,8 +625,20 @@
       "saving": "Kaydediliyor",
       "saved": "Eğitmen profili kaydedildi.",
       "saveError": "İşlem tamamlanamadı. Alanları kontrol edip yeniden deneyin.",
+      "identityConflict": "Bu e-posta veya telefon aktif bir eğitmen kaydında kullanılıyor.",
+      "restoreError": "Silinen eğitmen geri yüklenemedi.",
       "search": "Eğitmen adı, e-posta veya telefon ara...",
       "empty": "Aramanızla eşleşen bir eğitmen bulunamadı.",
+      "tabs": {
+        "active": "Aktif ({count})",
+        "archived": "Silinenler ({count})"
+      },
+      "archivedConflictBadge": "Arşiv eşleşmesi",
+      "archivedConflictTitle": "Bu bilgilerle silinmiş bir eğitmen var",
+      "archivedConflictDescription": "{name} arşivde görünüyor. Eski kaydı geri yükleyebilir veya bilinçli olarak ayrı yeni kayıt oluşturabilirsiniz.",
+      "restoreOld": "Eski kaydı geri yükle",
+      "createSeparate": "Yeni kaydı ayrı oluştur",
+      "cancel": "Vazgeç",
       "back": "Eğitmenlere dön",
       "profileInformation": "Profil bilgileri",
       "branches": "Şubeler",
@@ -512,11 +652,21 @@
       "invitationDescription": "Eğitmene öğretmen paneli hesabı açması için tek kullanımlık aktivasyon daveti gönderin.",
       "invitationSent": "Panel daveti gönderildi.",
       "invitationError": "Davet gönderilemedi. Kullanıcı adı, parola onayı ve mevcut davet durumunu kontrol edin.",
+      "invitationEmailRegistered": "Bu e-posta adresiyle zaten bir panel hesabı var. Eğitmen profilindeki e-posta ya da mevcut hesabı kontrol edin.",
+      "invitationAlreadyPending": "Bu e-posta için hâlihazırda aktif bir davet bekliyor.",
+      "invitationForbidden": "Admin parola doğrulaması veya istek güvenliği nedeniyle davet gönderilemedi.",
+      "invitationInvalid": "Davet bilgileri geçersiz. Kullanıcı adı, eğitmen e-postası ve profil durumunu kontrol edin.",
       "username": "Kullanıcı adı",
       "adminPassword": "Admin parolanız",
       "sendInvitation": "Panel daveti gönder",
       "uploadPhoto": "Fotoğraf yükle",
       "photoSaved": "Eğitmen fotoğrafı güncellendi.",
+      "archiveInstructor": "Eğitmeni sil",
+      "restoreInstructor": "Geri yükle",
+      "archived": "Eğitmen silinenler arasına taşındı.",
+      "restored": "Eğitmen tekrar aktif edildi.",
+      "archiveError": "Eğitmen arşiv durumu güncellenemedi.",
+      "restoreIdentityConflict": "Bu eğitmenin e-posta veya telefonu aktif başka bir kayıtta kullanıldığı için geri yüklenemedi.",
       "documents": "Belgeler ve sertifikalar",
       "documentLabel": "Belge başlığı",
       "uploadDocument": "Belgeyi yükle",
@@ -557,7 +707,7 @@
     },
     "students": {
       "title": "Öğrenciler",
-      "description": "Toplam {count} öğrenci mock sistemde yönetiliyor.",
+      "description": "Toplam {count} öğrenci sistemde yönetiliyor.",
       "add": "Öğrenci Ekle",
       "all": "Tümü",
       "active": "Aktif",
@@ -568,7 +718,9 @@
       "nextLesson": "Sonraki Ders",
       "teacher": "Eğt",
       "progress": "İlerleme",
-      "toAssign": "Atanacak"
+      "toAssign": "Atanacak",
+      "emptyTitle": "Henüz öğrenci yok",
+      "emptyDescription": "Aday kaydı tamamlanıp öğrenciye dönüştüğünde burada görünecek."
     },
     "studentDetail": {
       "studentId": "Öğrenci ID",
@@ -582,6 +734,15 @@
       "instructor": "Eğitmen",
       "enrollmentDate": "Kayıt Tarihi",
       "enrollmentDateValue": "12 Ocak 2026",
+      "account": "Panel hesabı",
+      "accountLinked": "Aktif",
+      "accountPending": "Davet bekliyor",
+      "accountNotInvited": "Davet yok",
+      "usernamePending": "Kullanıcı adı bekleniyor",
+      "contact": "İletişim",
+      "nextLesson": "Sonraki ders",
+      "openCalendar": "Takvimi aç",
+      "liveDataNote": "Bu bölüm artık gerçek öğrenci kaydına bağlı. Ders notları, ödevler ve gelişim metrikleri ders takip modülü tamamlandığında burada canlı akışa dönüşecek.",
       "completedLessons": "Tamamlanan Ders",
       "attendance": "%100 Devamlılık",
       "developmentScore": "Gelişim Puanı",
@@ -684,7 +845,7 @@
       "complete": "Kaydı Tamamla",
       "saved": "Taslak güvenli biçimde kaydedildi.",
       "saveError": "Bu adım kaydedilemedi. Zorunlu alanları kontrol edin.",
-      "completed": "Öğrenci kaydı tamamlandı.",
+      "completed": "Öğrenci kaydı tamamlandı ve panel daveti gönderildi.",
       "incomplete": "Kayıt tamamlanamadı. Eksik veya tutarsız alanları kontrol edin.",
       "incompleteFields": "Kayıt tamamlanamadı. Kaydedilmemiş veya tutarsız alanlar: {fields}. İlk eksik adıma yönlendirildiniz.",
       "confirmationError": "Admin parolası doğrulanamadı veya güvenli oturum yenilenemedi. Parolanızı kontrol edip yeniden deneyin.",
@@ -752,6 +913,7 @@
         "secondaryPhone": "İkinci telefon",
         "phone": "İrtibat telefonu",
         "email": "E-posta",
+        "studentUsername": "Öğrenci panel kullanıcı adı",
         "address": "İkamet adresi",
         "relationship": "Yakınlık",
         "relationshipOther": "Yakınlığı açıklayın",
@@ -759,6 +921,7 @@
         "courseMode": "Eğitim modeli",
         "program": "Satın alınan program",
         "branch": "Şube / sınıf",
+        "branchSchedule": "Şube ders programı",
         "branchDates": "Eğitim tarihleri",
         "capacity": "Şube doluluğu",
         "capacityOverrideNote": "Kapasite aşımı notu",
@@ -849,6 +1012,10 @@
       },
       "programModuleNote": "Grup programlarında şube seçimi zorunludur. Ayrıntılı haftalık ders takvimi sonraki takvim modülünde bağlanacaktır.",
       "noOpenBranch": "Bu program için kayıta açık bir şube bulunmuyor. Önce Programlar ekranından şube oluşturun veya açın.",
+      "branchScheduleInherited": "Ders programı seçilen şubeden otomatik alınır. Öğrenciye iletmek için çıktı alabilir veya tarayıcıdan PDF kaydedebilirsiniz.",
+      "branchScheduleMissing": "Bu şube için ders programı henüz oluşturulmamış.",
+      "printSchedule": "PDF / yazdır",
+      "moreLessons": "+{count} ders daha",
       "branchCapacityWarning": "Seçilen şubenin maksimum kapasitesi dolu. Kayıt ancak yetkili kapasite aşımı onayıyla devam edebilir.",
       "capacityOverrideApproval": "Öğrenciyi kapasite fazlası olarak bu şubeye eklemeyi onaylıyorum.",
       "teacherAssignmentPending": "Eğitmen daha sonra atanacak",
@@ -891,6 +1058,8 @@
         "birthLocation": "Doğum ülkesi, bölgesi ve şehri zorunludur.",
         "branch": "Grup programı için bir şube seçin.",
         "email": "Geçerli bir e-posta adresi girin.",
+        "emailPending": "Bu e-posta için bekleyen bir davet var.",
+        "emailTaken": "Bu e-posta ile kayıtlı bir kullanıcı var.",
         "firstName": "Ad en az 2 karakter olmalıdır.",
         "gender": "Cinsiyet seçimi zorunludur.",
         "guardian": "18 yaş altındaki öğrenci için veli ekleyin.",
@@ -905,7 +1074,10 @@
         "registrationChannel": "Kaydın tamamlandığı kanalı seçin.",
         "relationshipOther": "Yakınlık derecesini açıklayın.",
         "school": "Okul bilgisi zorunludur.",
-        "sourceDetail": "Diğer kaynak için kısa bir açıklama yazın."
+        "sourceDetail": "Diğer kaynak için kısa bir açıklama yazın.",
+        "username": "Kullanıcı adı 5-30 karakter olmalı; harf, rakam, nokta, tire veya alt çizgi kullanın.",
+        "usernamePending": "Bu kullanıcı adı için bekleyen bir davet var.",
+        "usernameTaken": "Bu kullanıcı adı zaten kayıtlı."
       },
       "validation": {
         "stepHasErrors": "İlerlemeden önce işaretlenen alanları düzeltin.",
@@ -921,6 +1093,7 @@
         "school": "okul",
         "phone": "öğrenci telefonu",
         "email": "e-posta",
+        "student_username": "öğrenci panel kullanıcı adı",
         "address": "ikamet adresi",
         "course_mode": "eğitim modeli",
         "program_id": "program",
@@ -1001,6 +1174,7 @@
   "student": {
     "nav": {
       "lessons": "Derslerim",
+      "calendar": "Takvim",
       "progress": "İlerleme",
       "messages": "Mesajlar",
       "profile": "Profil"
@@ -1020,6 +1194,48 @@
       "summary": "Toplam {total} ders • {completed} tamamlandı",
       "upcoming": "Yaklaşan Dersler",
       "past": "Geçmiş Dersler"
+    },
+    "calendar": {
+      "title": "Takvim",
+      "descriptionWithName": "{name} için planlanan dersler.",
+      "missingProfileTitle": "Öğrenci profili bulunamadı",
+      "missingProfileDescription": "Bu öğrenci hesabı henüz bir öğrenci profiline bağlanmamış.",
+      "agendaTitle": "Ders takvimin",
+      "monthView": "Ay görünümü",
+      "detailView": "Detay listesi",
+      "hoverHint": "Ders detaylarını görmek için günlerin üzerine gel.",
+      "previousMonth": "Önceki ay",
+      "nextMonth": "Sonraki ay",
+      "joinLesson": "Derse katıl",
+      "connectGoogle": "Google hesabını bağla",
+      "retryMeeting": "Meet'i tekrar dene",
+      "reportAbsence": "Gelemiyorum bildir",
+      "absenceReported": "Gelemiyorum bildirildi",
+      "absenceNotePlaceholder": "İstersen kısa bir not ekle",
+      "legendTitle": "Ders türleri renklerle ayrılır.",
+      "emptyTitle": "Henüz ders yok",
+      "emptyDescription": "Şubenin ders programı oluşturulduğunda derslerin burada görünecek.",
+      "noEventsInMonth": "Bu ay için planlanmış ders bulunmuyor.",
+      "moreEvents": "+{count} daha",
+      "studentCount": "{count} öğrenci",
+      "meetingStatuses": {
+        "pending": "Meet hazırlanıyor",
+        "creating": "Meet oluşturuluyor",
+        "ready": "Meet hazır",
+        "failed": "Meet oluşturulamadı",
+        "disabled": "Meet kapalı"
+      },
+      "eventKinds": {
+        "group_lesson": "Grup dersi",
+        "private_lesson": "Özel ders",
+        "appointment": "Randevu"
+      },
+      "statuses": {
+        "scheduled": "Planlandı",
+        "cancelled": "İptal",
+        "postponed": "Ertelendi",
+        "completed": "Tamamlandı"
+      }
     },
     "progressPage": {
       "title": "İlerleme",
@@ -1107,7 +1323,108 @@
       "students": "Öğrenciler",
       "upcomingLessons": "Yaklaşan Ders",
       "completedLessons": "Tamamlanan Ders",
-      "activeProgram": "Aktif Program"
+      "activeProgram": "Aktif Program",
+      "descriptionWithName": "{name} için atanmış öğrenciler ve şubeler.",
+      "missingProfileTitle": "Eğitmen profili bulunamadı",
+      "missingProfileDescription": "Bu öğretmen hesabı henüz bir eğitmen profiline bağlanmamış.",
+      "groupStudents": "Grup öğrencisi",
+      "privateStudents": "Özel ders öğrencisi",
+      "assignedBranches": "Atanmış şube",
+      "branchesTitle": "Atanmış şubeler",
+      "branchesDescription": "Ders programı fazında bu şubeler takvime bağlanacak.",
+      "studentsTitle": "Kayıtlı öğrenciler",
+      "studentsDescription": "Şube ve özel ders bağlantılarından gelen öğrenciler.",
+      "branchStudentCount": "{count} öğrenci",
+      "programPending": "Program bilgisi bekliyor",
+      "noBranches": "Henüz atanmış şube bulunmuyor.",
+      "noStudents": "Henüz bu eğitmene bağlı aktif öğrenci bulunmuyor.",
+      "courseModes": {
+        "group": "Grup dersi",
+        "private": "Özel ders"
+      },
+      "enrollmentStatuses": {
+        "active": "Aktif",
+        "paused": "Duraklatıldı"
+      }
+    },
+    "students": {
+      "title": "Öğrenciler",
+      "description": "{name} eğitmenine bağlı aktif ve duraklatılmış öğrenciler.",
+      "missingProfileTitle": "Eğitmen profili bulunamadı",
+      "missingProfileDescription": "Bu öğretmen hesabı henüz bir eğitmen profiline bağlanmamış.",
+      "emptyTitle": "Henüz öğrenci yok",
+      "emptyDescription": "Şube veya özel ders kaydı tamamlandığında öğrenciler burada görünecek.",
+      "programPending": "Program bilgisi bekliyor",
+      "privateLesson": "Özel ders",
+      "levelPending": "Seviye bekliyor",
+      "fields": {
+        "courseMode": "Ders modeli",
+        "branch": "Şube",
+        "level": "Seviye",
+        "enrolledAt": "Kayıt tarihi"
+      },
+      "courseModes": {
+        "group": "Grup dersi",
+        "private": "Özel ders"
+      },
+      "enrollmentStatuses": {
+        "active": "Aktif",
+        "paused": "Duraklatıldı"
+      }
+    },
+    "calendar": {
+      "title": "Takvim",
+      "descriptionWithName": "{name} için planlanan ders oturumları.",
+      "missingProfileTitle": "Eğitmen profili bulunamadı",
+      "missingProfileDescription": "Bu öğretmen hesabı henüz bir eğitmen profiline bağlanmamış.",
+      "emptyTitle": "Henüz ders yok",
+      "emptyDescription": "Şubelere ders programı tanımlandığında oturumlar burada görünecek.",
+      "agendaTitle": "Ders akışı",
+      "monthView": "Ay görünümü",
+      "detailView": "Detay listesi",
+      "hoverHint": "Ders detaylarını görmek için günlerin üzerine gelin.",
+      "previousMonth": "Önceki ay",
+      "nextMonth": "Sonraki ay",
+      "joinLesson": "Derse katıl",
+      "connectGoogle": "Google hesabını bağla",
+      "retryMeeting": "Meet'i tekrar dene",
+      "reportAbsence": "Gelemiyorum bildir",
+      "absenceReported": "Gelemiyorum bildirildi",
+      "absenceNotePlaceholder": "İstersen kısa bir not ekle",
+      "legendTitle": "Ders türleri renklerle ayrılır.",
+      "noEventsInMonth": "Bu ay için planlanmış ders bulunmuyor.",
+      "moreEvents": "+{count} daha",
+      "studentCount": "{count} öğrenci",
+      "meetingStatuses": {
+        "pending": "Meet hazırlanıyor",
+        "creating": "Meet oluşturuluyor",
+        "ready": "Meet hazır",
+        "failed": "Meet oluşturulamadı",
+        "disabled": "Meet kapalı"
+      },
+      "programPending": "Program bilgisi bekliyor",
+      "privateLesson": "Özel ders",
+      "eventKinds": {
+        "group_lesson": "Grup dersi",
+        "private_lesson": "Özel ders",
+        "appointment": "Randevu"
+      },
+      "fields": {
+        "date": "Tarih",
+        "time": "Saat",
+        "type": "Ders türü",
+        "branch": "Şube"
+      },
+      "sources": {
+        "branch": "Grup dersi",
+        "private": "Özel ders"
+      },
+      "statuses": {
+        "scheduled": "Planlandı",
+        "cancelled": "İptal",
+        "postponed": "Ertelendi",
+        "completed": "Tamamlandı"
+      }
     },
     "empty": {
       "students": { "title": "Öğrenciler", "description": "Öğretmene atanmış öğrenciler ve ders ilerleme notları burada görünecek." },
@@ -1164,6 +1481,10 @@
       "submit": "Hesabı etkinleştir",
       "mismatch": "Parolalar eşleşmiyor.",
       "error": "Davet bağlantısı geçersiz veya süresi dolmuş.",
+      "accountExists": "Bu e-posta adresiyle zaten bir hesap var. Lütfen giriş yapın veya yöneticinizden yeni davet isteyin.",
+      "forbidden": "Bu istek güvenlik nedeniyle tamamlanamadı. Lütfen bağlantıyı aynı site üzerinden tekrar açın.",
+      "invalidPassword": "Parolanız 12-128 karakter arasında olmalıdır.",
+      "rateLimited": "Çok fazla deneme yapıldı. Lütfen biraz sonra tekrar deneyin.",
       "success": "Hesabınız etkinleştirildi. Girişe yönlendiriliyorsunuz."
     },
     "device": {

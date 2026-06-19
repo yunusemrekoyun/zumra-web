@@ -1,18 +1,22 @@
 'use client';
 
-import { type FormEvent, useMemo, useState } from 'react';
+import { type FormEvent, useEffect, useMemo, useState } from 'react';
 import { useLocale, useTranslations } from 'next-intl';
+import { DayPicker } from 'react-day-picker';
+import { enUS, tr } from 'react-day-picker/locale';
 import {
   AlertTriangle,
   Archive,
   ArrowRightLeft,
   BookOpen,
   CalendarDays,
+  Clock3,
   CircleDollarSign,
   GraduationCap,
   Layers3,
   Pencil,
   Plus,
+  Repeat2,
   Save,
   Trash2,
   Users,
@@ -44,6 +48,20 @@ const languages: ProgramLanguage[] = [
   'arabic',
 ];
 const levels: ProgramLevel[] = ['A1', 'A2', 'B1', 'B2', 'C1', 'C2'];
+const lessonTimeOptions = [
+  '09:00',
+  '10:00',
+  '11:00',
+  '12:00',
+  '13:00',
+  '14:00',
+  '15:00',
+  '16:00',
+  '17:00',
+  '18:00',
+  '19:00',
+  '20:00',
+];
 
 type ProgramDraft = {
   active: boolean;
@@ -68,6 +86,15 @@ type BranchDraft = {
   programId: string;
   status: ProgramBranchStatus;
   timezone: string;
+};
+
+type ScheduleDraft = {
+  manualDate: string;
+  manualLessons: Array<{ date: string; startTime: string }>;
+  manualStartTime: string;
+  repeatWeekly: boolean;
+  startTime: string;
+  weekday: number;
 };
 
 type TransferDraft = {
@@ -97,12 +124,20 @@ export function ProgramsClient({
   const [programDraft, setProgramDraft] = useState<ProgramDraft>(
     emptyProgram(),
   );
-  const groupPrograms = programs.filter(
-    (program) => program.kind === 'group' && !program.archivedAt,
+  const groupPrograms = useMemo(
+    () =>
+      programs.filter(
+        (program) => program.kind === 'group' && !program.archivedAt,
+      ),
+    [programs],
   );
   const [branchDraft, setBranchDraft] = useState<BranchDraft>(
     emptyBranch(groupPrograms[0]?.id),
   );
+  const [scheduleDraft, setScheduleDraft] = useState<ScheduleDraft>(
+    emptyScheduleDraft(),
+  );
+  const [schedulePlannerOpen, setSchedulePlannerOpen] = useState(false);
   const [instructorProfileId, setInstructorProfileId] = useState(
     initial.instructors[0]?.id ?? '',
   );
@@ -117,6 +152,35 @@ export function ProgramsClient({
   const visibleBranches = branches.filter(
     (branch) => showArchived || !branch.archivedAt,
   );
+  const manualLessonDates = useMemo(
+    () =>
+      scheduleDraft.manualLessons
+        .map((lesson) => parseScheduleDate(lesson.date))
+        .filter((date): date is Date => Boolean(date)),
+    [scheduleDraft.manualLessons],
+  );
+  const scheduleCanSave = Boolean(
+    branchDraft.id &&
+      branchDraft.instructorProfileId &&
+      (scheduleDraft.repeatWeekly
+        ? scheduleDraft.startTime
+        : scheduleDraft.manualLessons.length) &&
+      !busy,
+  );
+
+  useEffect(() => {
+    if (!groupPrograms.length) return;
+
+    setBranchDraft((current) => {
+      const hasValidProgram = groupPrograms.some(
+        (program) => program.id === current.programId,
+      );
+
+      return hasValidProgram
+        ? current
+        : { ...current, programId: groupPrograms[0].id };
+    });
+  }, [groupPrograms]);
 
   const formatter = useMemo(
     () =>
@@ -158,6 +222,8 @@ export function ProgramsClient({
       status: branch.status,
       timezone: branch.timezone,
     });
+    setScheduleDraft(scheduleDraftFromBranch(branch));
+    setSchedulePlannerOpen(false);
     setMessage('');
   }
 
@@ -311,6 +377,8 @@ export function ProgramsClient({
           (item) => item.id === branchDraft.instructorProfileId,
         )?.name,
         instructorProfileId: branchDraft.instructorProfileId || undefined,
+        lessonSchedule: branches.find((branch) => branch.id === body.id)
+          ?.lessonSchedule,
         maximumCapacity: branchDraft.maximumCapacity,
         minimumCapacity: branchDraft.minimumCapacity,
         name: branchDraft.name,
@@ -328,10 +396,70 @@ export function ProgramsClient({
           ? current.map((branch) => (branch.id === body.id ? next : branch))
           : [next, ...current];
       });
-      setBranchDraft(emptyBranch(groupPrograms[0]?.id));
+      setBranchDraft(branchDraftFromView(next));
+      setScheduleDraft(scheduleDraftFromBranch(next));
       setMessage(t('branchSaved'));
     } catch {
       setMessage(t('saveError'));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function saveBranchLessonSchedule(event?: FormEvent) {
+    event?.preventDefault();
+    if (!branchDraft.id) return;
+    setBusy(true);
+    setMessage('');
+
+    try {
+      const response = await fetch(
+        `/api/admin/program-branches/${branchDraft.id}/lesson-schedule`,
+        {
+          body: JSON.stringify(
+            scheduleDraft.repeatWeekly
+              ? {
+                  repeatWeekly: true,
+                  startTime: scheduleDraft.startTime,
+                  weekday: scheduleDraft.weekday,
+                }
+              : {
+                  lessons: scheduleDraft.manualLessons,
+                  repeatWeekly: false,
+                },
+          ),
+          credentials: 'same-origin',
+          headers: { 'content-type': 'application/json' },
+          method: 'POST',
+        },
+      );
+      const body = await response.json().catch(() => ({}));
+      if (!response.ok || !body.schedule) throw new Error(body.error);
+
+      setBranches((current) =>
+        current.map((branch) =>
+          branch.id === branchDraft.id
+            ? {
+                ...branch,
+                canDelete: false,
+                lessonSchedule: body.schedule,
+              }
+            : branch,
+        ),
+      );
+      setScheduleDraft((current) => ({
+        ...current,
+        manualLessons: body.schedule.sessions ?? current.manualLessons,
+      }));
+      setSchedulePlannerOpen(false);
+      setMessage(t('scheduleSaved'));
+    } catch (error) {
+      const code = error instanceof Error ? error.message : '';
+      setMessage(
+        code === 'branch_schedule_instructor_required'
+          ? t('scheduleNeedsInstructor')
+          : t('scheduleError'),
+      );
     } finally {
       setBusy(false);
     }
@@ -367,6 +495,22 @@ export function ProgramsClient({
     } finally {
       setBusy(false);
     }
+  }
+
+  function addManualLessonForDate(date: string) {
+    setScheduleDraft((current) =>
+      addManualLesson(current, date, current.manualStartTime),
+    );
+  }
+
+  function removeManualLesson(date: string, startTime: string) {
+    setScheduleDraft((current) => ({
+      ...current,
+      manualLessons: current.manualLessons.filter(
+        (lesson) =>
+          lesson.date !== date || lesson.startTime !== startTime,
+      ),
+    }));
   }
 
   async function submitBranchArchive() {
@@ -565,9 +709,11 @@ export function ProgramsClient({
             </Button>
           ) : tab === 'branches' ? (
             <Button
-              onClick={() =>
-                setBranchDraft(emptyBranch(groupPrograms[0]?.id))
-              }
+              onClick={() => {
+                setBranchDraft(emptyBranch(groupPrograms[0]?.id));
+                setScheduleDraft(emptyScheduleDraft());
+                setSchedulePlannerOpen(false);
+              }}
               disabled={!groupPrograms.length}
             >
               <Plus className="h-4 w-4" />
@@ -898,6 +1044,27 @@ export function ProgramsClient({
                   <div className="mt-4 rounded-xl bg-[#F8F9FC] px-4 py-3 text-xs font-semibold text-[#2E286C]/50">
                     {branch.instructorName ?? t('teacherAssignmentPending')}
                   </div>
+                  <div className="mt-3 rounded-xl bg-[#533089]/7 px-4 py-3 text-xs font-semibold text-[#533089]">
+                    {branch.lessonSchedule
+                      ? t('scheduleSummary', {
+                          count: branch.lessonSchedule.sessionCount,
+                        })
+                      : t('scheduleMissing')}
+                  </div>
+                  {branch.lessonSchedule && (
+                    <div className="mt-2 rounded-xl bg-[#F8F7FB] px-4 py-3 text-xs font-semibold leading-5 text-[#2E286C]/55">
+                      <div>{branchMeetSummary(branch.lessonSchedule, t)}</div>
+                      {branchMeetLastError(branch.lessonSchedule) && (
+                        <div className="mt-1 break-words text-red-600">
+                          {t('meetLastError', {
+                            error: branchMeetLastError(
+                              branch.lessonSchedule,
+                            ) ?? '',
+                          })}
+                        </div>
+                      )}
+                    </div>
+                  )}
                   <div className="mt-5 flex flex-wrap justify-end gap-2 border-t border-black/[0.05] pt-5">
                     {!branch.archivedAt && (
                       <>
@@ -960,159 +1127,207 @@ export function ProgramsClient({
             </div>
 
             {groupPrograms.length ? (
-              <form className="space-y-4" onSubmit={saveBranch}>
-                <FormField label={t('branchFields.program')}>
-                  <Select
-                    value={branchDraft.programId}
-                    onChange={(programId) =>
-                      setBranchDraft((current) => ({
-                        ...current,
-                        programId,
-                      }))
-                    }
-                    options={groupPrograms.map((program) => [
-                      program.id,
-                      program.name,
-                    ])}
-                  />
-                </FormField>
-                <FormField label={t('branchFields.name')}>
-                  <Input
-                    value={branchDraft.name}
-                    onChange={(event) =>
-                      setBranchDraft((current) => ({
-                        ...current,
-                        name: event.target.value,
-                      }))
-                    }
-                  />
-                </FormField>
-                <div className="grid gap-4 sm:grid-cols-2">
-                  <div className="sm:col-span-2">
-                    <FormField label={t('branchFields.dateRange')}>
-                      <DateRangePicker
-                        startValue={branchDraft.plannedStartDate}
-                        endValue={branchDraft.plannedEndDate}
-                        locale={locale}
-                        placeholders={{
-                          start: t('branchFields.startDate'),
-                          end: t('branchFields.endDate'),
-                        }}
-                        onChange={({ start, end }) =>
+              <>
+                <form className="space-y-4" onSubmit={saveBranch}>
+                  <FormField label={t('branchFields.program')}>
+                    <Select
+                      value={branchDraft.programId}
+                      onChange={(programId) =>
+                        setBranchDraft((current) => ({
+                          ...current,
+                          programId,
+                        }))
+                      }
+                      options={groupPrograms.map(
+                        (program) =>
+                          [program.id, program.name] as const,
+                      )}
+                    />
+                  </FormField>
+                  <FormField label={t('branchFields.name')}>
+                    <Input
+                      value={branchDraft.name}
+                      onChange={(event) =>
+                        setBranchDraft((current) => ({
+                          ...current,
+                          name: event.target.value,
+                        }))
+                      }
+                    />
+                  </FormField>
+                  <div className="grid gap-4 sm:grid-cols-2">
+                    <div className="sm:col-span-2">
+                      <FormField label={t('branchFields.dateRange')}>
+                        <DateRangePicker
+                          startValue={branchDraft.plannedStartDate}
+                          endValue={branchDraft.plannedEndDate}
+                          locale={locale}
+                          placeholders={{
+                            start: t('branchFields.startDate'),
+                            end: t('branchFields.endDate'),
+                          }}
+                          onChange={({ start, end }) =>
+                            setBranchDraft((current) => ({
+                              ...current,
+                              plannedEndDate: end,
+                              plannedStartDate: start,
+                            }))
+                          }
+                        />
+                      </FormField>
+                    </div>
+                    <FormField label={t('branchFields.minimumCapacity')}>
+                      <Input
+                        type="number"
+                        min="1"
+                        value={branchDraft.minimumCapacity}
+                        onChange={(event) =>
                           setBranchDraft((current) => ({
                             ...current,
-                            plannedEndDate: end,
-                            plannedStartDate: start,
+                            minimumCapacity: Math.max(
+                              1,
+                              Number(event.target.value) || 1,
+                            ),
+                          }))
+                        }
+                      />
+                    </FormField>
+                    <FormField label={t('branchFields.maximumCapacity')}>
+                      <Input
+                        type="number"
+                        min={branchDraft.minimumCapacity}
+                        value={branchDraft.maximumCapacity}
+                        onChange={(event) =>
+                          setBranchDraft((current) => ({
+                            ...current,
+                            maximumCapacity: Math.max(
+                              current.minimumCapacity,
+                              Number(event.target.value) ||
+                                current.minimumCapacity,
+                            ),
                           }))
                         }
                       />
                     </FormField>
                   </div>
-                  <FormField label={t('branchFields.minimumCapacity')}>
-                    <Input
-                      type="number"
-                      min="1"
-                      value={branchDraft.minimumCapacity}
+                  <FormField label={t('branchFields.status')}>
+                    <Select
+                      value={branchDraft.status}
+                      onChange={(status) =>
+                        setBranchDraft((current) => ({
+                          ...current,
+                          status: status as ProgramBranchStatus,
+                        }))
+                      }
+                      options={[
+                        'draft',
+                        'enrollment_open',
+                        'enrollment_closed',
+                        'in_progress',
+                        'completed',
+                        'cancelled',
+                      ].map(
+                        (status) =>
+                          [
+                            status,
+                            t(
+                              `branchStatuses.${status as ProgramBranchStatus}`,
+                            ),
+                          ] as const,
+                      )}
+                    />
+                  </FormField>
+                  <FormField label={t('fields.teacher')}>
+                    <Select
+                      value={branchDraft.instructorProfileId}
+                      onChange={(instructorProfileId) =>
+                        setBranchDraft((current) => ({
+                          ...current,
+                          instructorProfileId,
+                        }))
+                      }
+                      options={[
+                        ['', t('teacherAssignmentPending')],
+                        ...initial.instructors.map(
+                          (instructor) =>
+                            [instructor.id, instructor.name] as const,
+                        ),
+                      ]}
+                    />
+                  </FormField>
+                  <FormField label={t('branchFields.notes')}>
+                    <textarea
+                      value={branchDraft.notes}
                       onChange={(event) =>
                         setBranchDraft((current) => ({
                           ...current,
-                          minimumCapacity: Math.max(
-                            1,
-                            Number(event.target.value) || 1,
-                          ),
+                          notes: event.target.value,
                         }))
                       }
+                      className="min-h-24 w-full resize-y rounded-xl border border-transparent bg-[#F8F9FC] px-4 py-3 text-sm text-[#2E286C] outline-none focus:border-[#533089]/30"
                     />
                   </FormField>
-                  <FormField label={t('branchFields.maximumCapacity')}>
-                    <Input
-                      type="number"
-                      min={branchDraft.minimumCapacity}
-                      value={branchDraft.maximumCapacity}
-                      onChange={(event) =>
-                        setBranchDraft((current) => ({
-                          ...current,
-                          maximumCapacity: Math.max(
-                            current.minimumCapacity,
-                            Number(event.target.value) ||
-                              current.minimumCapacity,
-                          ),
-                        }))
-                      }
-                    />
-                  </FormField>
-                </div>
-                <FormField label={t('branchFields.status')}>
-                  <Select
-                    value={branchDraft.status}
-                    onChange={(status) =>
-                      setBranchDraft((current) => ({
-                        ...current,
-                        status: status as ProgramBranchStatus,
-                      }))
+                  <Button
+                    type="submit"
+                    className="w-full"
+                    disabled={
+                      busy ||
+                      !branchDraft.programId ||
+                      !branchDraft.name.trim() ||
+                      !branchDraft.plannedStartDate ||
+                      !branchDraft.plannedEndDate ||
+                      branchDraft.maximumCapacity <
+                        branchDraft.minimumCapacity
                     }
-                    options={[
-                      'draft',
-                      'enrollment_open',
-                      'enrollment_closed',
-                      'in_progress',
-                      'completed',
-                      'cancelled',
-                    ].map((status) => [
-                      status,
-                      t(
-                        `branchStatuses.${status as ProgramBranchStatus}`,
-                      ),
-                    ])}
-                  />
-                </FormField>
-                <FormField label={t('fields.teacher')}>
-                  <Select
-                    value={branchDraft.instructorProfileId}
-                    onChange={(instructorProfileId) =>
-                      setBranchDraft((current) => ({
-                        ...current,
-                        instructorProfileId,
-                      }))
-                    }
-                    options={[
-                      ['', t('teacherAssignmentPending')],
-                      ...initial.instructors.map(
-                        (instructor) =>
-                          [instructor.id, instructor.name] as const,
-                      ),
-                    ]}
-                  />
-                </FormField>
-                <FormField label={t('branchFields.notes')}>
-                  <textarea
-                    value={branchDraft.notes}
-                    onChange={(event) =>
-                      setBranchDraft((current) => ({
-                        ...current,
-                        notes: event.target.value,
-                      }))
-                    }
-                    className="min-h-24 w-full resize-y rounded-xl border border-transparent bg-[#F8F9FC] px-4 py-3 text-sm text-[#2E286C] outline-none focus:border-[#533089]/30"
-                  />
-                </FormField>
-                <Button
-                  type="submit"
-                  className="w-full"
-                  disabled={
-                    busy ||
-                    !branchDraft.programId ||
-                    !branchDraft.name.trim() ||
-                    !branchDraft.plannedStartDate ||
-                    !branchDraft.plannedEndDate ||
-                    branchDraft.maximumCapacity <
-                      branchDraft.minimumCapacity
-                  }
-                >
-                  <Save className="h-4 w-4" />
-                  {busy ? t('saving') : t('saveBranch')}
-                </Button>
-              </form>
+                  >
+                    <Save className="h-4 w-4" />
+                    {busy ? t('saving') : t('saveBranch')}
+                  </Button>
+                </form>
+                {branchDraft.id && (
+                  <div className="mt-6 border-t border-black/[0.05] pt-6">
+                    <button
+                      type="button"
+                      onClick={() => setSchedulePlannerOpen(true)}
+                      className="group w-full rounded-3xl border border-[#533089]/10 bg-gradient-to-br from-[#F8F9FC] to-white p-4 text-left shadow-sm transition-[transform,border-color,box-shadow] duration-200 ease-out hover:-translate-y-0.5 hover:border-[#533089]/25 hover:shadow-lg hover:shadow-[#533089]/8 active:scale-[0.99]"
+                    >
+                      <div className="flex items-start gap-3">
+                        <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-[#533089]/10 text-[#533089] transition-colors group-hover:bg-[#533089] group-hover:text-white">
+                          <Clock3 className="h-5 w-5" />
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-center justify-between gap-3">
+                            <h3 className="font-bold text-[#2E286C]">
+                              {t('scheduleTitle')}
+                            </h3>
+                            <span className="rounded-full bg-white px-3 py-1 text-[10px] font-bold uppercase tracking-wider text-[#533089] shadow-sm">
+                              {t('scheduleOpenPlanner')}
+                            </span>
+                          </div>
+                          <p className="mt-1 text-xs leading-5 text-[#2E286C]/45">
+                            {scheduleDraft.repeatWeekly
+                              ? t('weeklySchedulePreview', {
+                                  time: scheduleDraft.startTime,
+                                  weekday: t(
+                                    `weekdays.${scheduleDraft.weekday}`,
+                                  ),
+                                })
+                              : t('manualSchedulePreview', {
+                                  count: scheduleDraft.manualLessons.length,
+                                })}
+                          </p>
+                        </div>
+                      </div>
+                    </button>
+
+                    {!branchDraft.instructorProfileId && (
+                      <div className="mt-3 rounded-2xl bg-amber-50 p-4 text-xs font-semibold leading-5 text-amber-700">
+                        {t('scheduleNeedsInstructor')}
+                      </div>
+                    )}
+                  </div>
+                )}
+              </>
             ) : (
               <div className="rounded-2xl border border-dashed border-[#533089]/20 p-6 text-center text-sm font-medium text-[#2E286C]/45">
                 {t('branchNeedsProgram')}
@@ -1227,6 +1442,297 @@ export function ProgramsClient({
               )}
             </div>
           </ModulePanel>
+        </div>
+      )}
+
+      {schedulePlannerOpen && branchDraft.id && (
+        <div
+          className="zumra-modal-overlay fixed inset-0 z-[100] flex items-center justify-center overflow-y-auto bg-[#221B4B]/35 p-3 backdrop-blur-[3px]"
+          onMouseDown={(event) => {
+            if (event.target === event.currentTarget) {
+              setSchedulePlannerOpen(false);
+            }
+          }}
+        >
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="branch-schedule-title"
+            className="zumra-modal-panel max-h-[92dvh] w-full max-w-5xl overflow-y-auto rounded-[2rem] bg-white p-4 shadow-2xl sm:p-6"
+          >
+            <div className="flex items-start justify-between gap-4">
+              <div className="flex gap-3">
+                <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-[#533089]/10 text-[#533089]">
+                  <CalendarDays className="h-5 w-5" />
+                </div>
+                <div>
+                  <h2
+                    id="branch-schedule-title"
+                    className="text-lg font-bold text-[#2E286C]"
+                  >
+                    {t('schedulePlannerTitle')}
+                  </h2>
+                  <p className="mt-1 max-w-2xl text-sm leading-5 text-[#2E286C]/50">
+                    {t('schedulePlannerDescription')}
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                aria-label={t('close')}
+                onClick={() => setSchedulePlannerOpen(false)}
+                className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl text-[#2E286C]/45 transition-colors hover:bg-black/[0.04]"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+
+            {!branchDraft.instructorProfileId && (
+              <div className="mt-5 rounded-2xl bg-amber-50 p-4 text-xs font-semibold leading-5 text-amber-700">
+                {t('scheduleNeedsInstructor')}
+              </div>
+            )}
+
+            <div className="mt-5 grid gap-3 rounded-3xl bg-[#F8F9FC] p-1.5 sm:grid-cols-2">
+              {[
+                ['weekly', t('scheduleModeWeekly')],
+                ['manual', t('scheduleModeManual')],
+              ].map(([mode, label]) => {
+                const active =
+                  (mode === 'weekly') === scheduleDraft.repeatWeekly;
+                return (
+                  <button
+                    key={mode}
+                    type="button"
+                    onClick={() =>
+                      setScheduleDraft((current) => ({
+                        ...current,
+                        repeatWeekly: mode === 'weekly',
+                      }))
+                    }
+                    className={`rounded-2xl px-4 py-3 text-sm font-bold transition-[transform,background-color,color,box-shadow] duration-200 ease-out active:scale-[0.98] ${
+                      active
+                        ? 'bg-white text-[#533089] shadow-sm'
+                        : 'text-[#2E286C]/45 hover:text-[#2E286C]'
+                    }`}
+                  >
+                    {label}
+                  </button>
+                );
+              })}
+            </div>
+
+            {scheduleDraft.repeatWeekly ? (
+              <div className="mt-6 grid gap-6 lg:grid-cols-[minmax(0,1fr)_20rem]">
+                <div>
+                  <div className="mb-3 text-xs font-bold uppercase tracking-wider text-[#2E286C]/35">
+                    {t('chooseWeekday')}
+                  </div>
+                  <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+                    {[1, 2, 3, 4, 5, 6, 7].map((weekday) => {
+                      const active = scheduleDraft.weekday === weekday;
+                      return (
+                        <button
+                          key={weekday}
+                          type="button"
+                          onClick={() =>
+                            setScheduleDraft((current) => ({
+                              ...current,
+                              weekday,
+                            }))
+                          }
+                          className={`rounded-2xl border p-4 text-left transition-[transform,border-color,background-color,box-shadow] duration-200 ease-out hover:-translate-y-0.5 active:scale-[0.98] ${
+                            active
+                              ? 'border-[#533089] bg-[#533089] text-white shadow-lg shadow-[#533089]/20'
+                              : 'border-black/[0.06] bg-[#F8F9FC] text-[#2E286C] hover:border-[#533089]/25'
+                          }`}
+                        >
+                          <div className="text-sm font-bold">
+                            {t(`weekdays.${weekday}`)}
+                          </div>
+                          <div
+                            className={`mt-1 text-xs font-semibold ${
+                              active ? 'text-white/70' : 'text-[#2E286C]/40'
+                            }`}
+                          >
+                            {t('weeklyRepeat')}
+                          </div>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                <div className="rounded-3xl border border-black/[0.06] p-4">
+                  <div className="text-xs font-bold uppercase tracking-wider text-[#2E286C]/35">
+                    {t('chooseLessonTime')}
+                  </div>
+                  <TimePickerGrid
+                    activeTime={scheduleDraft.startTime}
+                    onChange={(startTime) =>
+                      setScheduleDraft((current) => ({
+                        ...current,
+                        startTime,
+                      }))
+                    }
+                  />
+                  <FormField label={t('customTime')}>
+                    <Input
+                      type="time"
+                      value={scheduleDraft.startTime}
+                      onChange={(event) =>
+                        setScheduleDraft((current) => ({
+                          ...current,
+                          startTime: event.target.value,
+                        }))
+                      }
+                    />
+                  </FormField>
+                  <div className="mt-4 rounded-2xl bg-[#533089]/7 p-4 text-sm font-bold text-[#533089]">
+                    {t('weeklySchedulePreview', {
+                      time: scheduleDraft.startTime,
+                      weekday: t(`weekdays.${scheduleDraft.weekday}`),
+                    })}
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <div className="mt-6 grid gap-6 lg:grid-cols-[minmax(0,1fr)_22rem]">
+                <div className="rounded-3xl border border-black/[0.06] p-4">
+                  <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
+                    <div>
+                      <div className="text-xs font-bold uppercase tracking-wider text-[#2E286C]/35">
+                        {t('chooseDatesFromCalendar')}
+                      </div>
+                      <p className="mt-1 text-xs font-semibold text-[#2E286C]/40">
+                        {t('clickDateToAdd', {
+                          time: scheduleDraft.manualStartTime,
+                        })}
+                      </p>
+                    </div>
+                    <span className="rounded-full bg-[#533089]/8 px-3 py-1 text-[10px] font-bold uppercase tracking-wider text-[#533089]">
+                      {t('selectedTime', {
+                        time: scheduleDraft.manualStartTime,
+                      })}
+                    </span>
+                  </div>
+                  <DayPicker
+                    mode="single"
+                    selected={parseScheduleDate(scheduleDraft.manualDate)}
+                    onDayClick={(date) => {
+                      const value = serializeScheduleDate(date);
+                      if (!dateIsInsideBranch(value, branchDraft)) return;
+                      setScheduleDraft((current) => ({
+                        ...current,
+                        manualDate: value,
+                      }));
+                      addManualLessonForDate(value);
+                    }}
+                    locale={locale === 'en' ? enUS : tr}
+                    weekStartsOn={1}
+                    showOutsideDays
+                    fixedWeeks
+                    startMonth={parseScheduleDate(
+                      branchDraft.plannedStartDate,
+                    )}
+                    endMonth={parseScheduleDate(branchDraft.plannedEndDate)}
+                    disabled={scheduleCalendarDisabledDays(branchDraft)}
+                    modifiers={{ booked: manualLessonDates }}
+                    modifiersClassNames={{
+                      booked: 'zumra-calendar-booked',
+                    }}
+                    className="zumra-calendar zumra-calendar-large"
+                  />
+                </div>
+
+                <div className="space-y-4">
+                  <div className="rounded-3xl border border-black/[0.06] p-4">
+                    <div className="text-xs font-bold uppercase tracking-wider text-[#2E286C]/35">
+                      {t('chooseLessonTime')}
+                    </div>
+                    <TimePickerGrid
+                      activeTime={scheduleDraft.manualStartTime}
+                      onChange={(manualStartTime) =>
+                        setScheduleDraft((current) => ({
+                          ...current,
+                          manualStartTime,
+                        }))
+                      }
+                    />
+                    <FormField label={t('customTime')}>
+                      <Input
+                        type="time"
+                        value={scheduleDraft.manualStartTime}
+                        onChange={(event) =>
+                          setScheduleDraft((current) => ({
+                            ...current,
+                            manualStartTime: event.target.value,
+                          }))
+                        }
+                      />
+                    </FormField>
+                  </div>
+
+                  <div className="rounded-3xl border border-black/[0.06] p-4">
+                    <div className="flex items-center justify-between gap-3">
+                      <div className="text-xs font-bold uppercase tracking-wider text-[#2E286C]/35">
+                        {t('selectedLessons')}
+                      </div>
+                      <span className="rounded-full bg-[#533089]/8 px-3 py-1 text-[10px] font-bold text-[#533089]">
+                        {scheduleDraft.manualLessons.length}
+                      </span>
+                    </div>
+                    <div className="mt-3 max-h-64 space-y-2 overflow-y-auto pr-1">
+                      {scheduleDraft.manualLessons.map((lesson) => (
+                        <div
+                          key={`${lesson.date}:${lesson.startTime}`}
+                          className="flex items-center justify-between gap-3 rounded-2xl bg-[#F8F9FC] px-4 py-3 text-xs font-semibold text-[#2E286C]"
+                        >
+                          <span>
+                            {formatDate(lesson.date, locale)} ·{' '}
+                            {lesson.startTime}
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() =>
+                              removeManualLesson(
+                                lesson.date,
+                                lesson.startTime,
+                              )
+                            }
+                            className="rounded-lg px-2 py-1 text-[#B42318] transition-colors hover:bg-[#B42318]/8"
+                          >
+                            {t('removeManualLesson')}
+                          </button>
+                        </div>
+                      ))}
+                      {!scheduleDraft.manualLessons.length && (
+                        <p className="rounded-2xl bg-[#F8F9FC] p-4 text-xs font-semibold leading-5 text-[#2E286C]/45">
+                          {t('manualLessonsEmpty')}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            <div className="mt-7 flex flex-wrap justify-end gap-3 border-t border-black/[0.06] pt-5">
+              <Button
+                variant="secondary"
+                onClick={() => setSchedulePlannerOpen(false)}
+              >
+                {t('cancel')}
+              </Button>
+              <Button
+                disabled={!scheduleCanSave}
+                onClick={() => saveBranchLessonSchedule()}
+              >
+                <Repeat2 className="h-4 w-4" />
+                {busy ? t('saving') : t('saveSchedule')}
+              </Button>
+            </div>
+          </div>
         </div>
       )}
 
@@ -1483,6 +1989,36 @@ function Select({
   );
 }
 
+function TimePickerGrid({
+  activeTime,
+  onChange,
+}: {
+  activeTime: string;
+  onChange: (time: string) => void;
+}) {
+  return (
+    <div className="my-3 grid grid-cols-3 gap-2">
+      {lessonTimeOptions.map((time) => {
+        const active = activeTime === time;
+        return (
+          <button
+            key={time}
+            type="button"
+            onClick={() => onChange(time)}
+            className={`min-h-10 rounded-xl text-xs font-bold transition-[transform,background-color,color,border-color] duration-150 ease-out active:scale-[0.97] ${
+              active
+                ? 'bg-[#533089] text-white'
+                : 'border border-black/[0.06] bg-[#F8F9FC] text-[#2E286C]/60 hover:border-[#533089]/25 hover:text-[#533089]'
+            }`}
+          >
+            {time}
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
 function MoneyInput({
   cents,
   onChange,
@@ -1534,6 +2070,142 @@ function emptyBranch(programId = ''): BranchDraft {
     status: 'enrollment_open',
     timezone: 'Europe/Istanbul',
   };
+}
+
+function branchMeetSummary(
+  schedule: NonNullable<ProgramBranchView['lessonSchedule']>,
+  t: ReturnType<typeof useTranslations>,
+) {
+  const ready = schedule.sessions.filter(
+    (session) => session.meetingStatus === 'ready',
+  ).length;
+  const failed = schedule.sessions.filter(
+    (session) => session.meetingStatus === 'failed',
+  ).length;
+  const pending = schedule.sessions.filter(
+    (session) =>
+      session.meetingStatus === 'pending' ||
+      session.meetingStatus === 'creating' ||
+      session.meetingStatus === 'disabled' ||
+      !session.meetingStatus,
+  ).length;
+
+  return t('meetSummary', {
+    failed,
+    pending,
+    ready,
+    total: schedule.sessions.length,
+  });
+}
+
+function branchMeetLastError(
+  schedule: NonNullable<ProgramBranchView['lessonSchedule']>,
+) {
+  return schedule.sessions
+    .map((session) => session.meetingLastError)
+    .find((error): error is string => Boolean(error))
+    ?.slice(0, 180);
+}
+
+function branchDraftFromView(branch: ProgramBranchView): BranchDraft {
+  return {
+    id: branch.id,
+    instructorProfileId: branch.instructorProfileId ?? '',
+    maximumCapacity: branch.maximumCapacity,
+    minimumCapacity: branch.minimumCapacity,
+    name: branch.name,
+    notes: branch.notes ?? '',
+    plannedEndDate: branch.plannedEndDate,
+    plannedStartDate: branch.plannedStartDate,
+    programId: branch.programId,
+    status: branch.status,
+    timezone: branch.timezone,
+  };
+}
+
+function emptyScheduleDraft(branch?: ProgramBranchView): ScheduleDraft {
+  return {
+    manualDate: branch?.plannedStartDate ?? '',
+    manualLessons: [],
+    manualStartTime: '10:00',
+    repeatWeekly: true,
+    startTime: '10:00',
+    weekday: 1,
+  };
+}
+
+function scheduleDraftFromBranch(branch: ProgramBranchView): ScheduleDraft {
+  const schedule = branch.lessonSchedule;
+  if (!schedule) return emptyScheduleDraft(branch);
+
+  return {
+    manualDate: branch.plannedStartDate,
+    manualLessons: schedule.repeatWeekly
+      ? []
+      : schedule.sessions.map((session) => ({
+          date: session.date,
+          startTime: session.startTime,
+        })),
+    manualStartTime: schedule.sessions[0]?.startTime ?? '10:00',
+    repeatWeekly: schedule.repeatWeekly,
+    startTime: schedule.startTime ?? schedule.sessions[0]?.startTime ?? '10:00',
+    weekday: schedule.weekday ?? 1,
+  };
+}
+
+function addManualLesson(
+  draft: ScheduleDraft,
+  date = draft.manualDate,
+  startTime = draft.manualStartTime,
+): ScheduleDraft {
+  const next = {
+    date,
+    startTime,
+  };
+  if (!next.date || !next.startTime) return draft;
+
+  const exists = draft.manualLessons.some(
+    (lesson) =>
+      lesson.date === next.date && lesson.startTime === next.startTime,
+  );
+
+  return {
+    ...draft,
+    manualLessons: exists
+      ? draft.manualLessons
+      : [...draft.manualLessons, next].sort((a, b) =>
+          `${a.date}:${a.startTime}`.localeCompare(
+            `${b.date}:${b.startTime}`,
+          ),
+        ),
+  };
+}
+
+function parseScheduleDate(value?: string) {
+  if (!value) return undefined;
+  const parsed = new Date(`${value}T12:00:00`);
+  return Number.isNaN(parsed.getTime()) ? undefined : parsed;
+}
+
+function serializeScheduleDate(value: Date) {
+  const year = value.getFullYear();
+  const month = String(value.getMonth() + 1).padStart(2, '0');
+  const day = String(value.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
+function dateIsInsideBranch(value: string, branch: BranchDraft) {
+  if (!branch.plannedStartDate || !branch.plannedEndDate) return false;
+  return value >= branch.plannedStartDate && value <= branch.plannedEndDate;
+}
+
+function scheduleCalendarDisabledDays(branch: BranchDraft) {
+  const disabled: Array<{ after: Date } | { before: Date }> = [];
+  const start = parseScheduleDate(branch.plannedStartDate);
+  const end = parseScheduleDate(branch.plannedEndDate);
+  if (start) disabled.push({ before: start });
+  if (end) disabled.push({ after: end });
+  return disabled;
 }
 
 function formatDate(value: string, locale: string) {

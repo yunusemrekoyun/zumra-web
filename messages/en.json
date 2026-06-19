@@ -37,11 +37,12 @@
       "inProgress": "In Progress",
       "upcoming": "Upcoming"
     },
-    "status": {
-      "active": "Active",
-      "paused": "Paused",
-      "graduated": "Graduated",
-      "candidate": "Candidate",
+      "status": {
+        "active": "Active",
+        "paused": "Paused",
+        "graduated": "Graduated",
+        "cancelled": "Cancelled",
+        "candidate": "Candidate",
       "paid": "Paid",
       "pending": "Pending",
       "failed": "Failed",
@@ -359,6 +360,93 @@
     "shell": {
       "searchPlaceholder": "Search students, instructors or messages..."
     },
+    "calendar": {
+      "title": "Calendar",
+      "description": "Branch lessons, private lessons and future appointments are separated by color in one calendar.",
+      "agendaTitle": "Monthly flow",
+      "monthView": "Month view",
+      "detailView": "Detail list",
+      "hoverHint": "Hover over days on the calendar to see details.",
+      "previousMonth": "Previous month",
+      "nextMonth": "Next month",
+      "joinLesson": "Join lesson",
+      "connectGoogle": "Connect Google account",
+      "retryMeeting": "Retry Meet creation",
+      "meetingAttempts": "Meet attempts: {count}",
+      "meetingLastError": "Latest Meet error",
+      "reportAbsence": "Report absence",
+      "absenceReported": "Absence reported",
+      "absenceNotePlaceholder": "Add a short note if you want",
+      "legendTitle": "Colors identify the event type.",
+      "emptyTitle": "No calendar items yet",
+      "emptyDescription": "Sessions will appear here once lesson schedules are created for branches.",
+      "noEventsInMonth": "No calendar items are planned for this month.",
+      "moreEvents": "+{count} more",
+      "studentCount": "{count} students",
+      "meetingStatuses": {
+        "pending": "Meet is pending",
+        "creating": "Meet is being created",
+        "ready": "Meet is ready",
+        "failed": "Meet could not be created",
+        "disabled": "Meet is disabled"
+      },
+      "eventKinds": {
+        "group_lesson": "Group lesson",
+        "private_lesson": "Private lesson",
+        "appointment": "Appointment"
+      },
+      "statuses": {
+        "scheduled": "Scheduled",
+        "cancelled": "Cancelled",
+        "postponed": "Postponed",
+        "completed": "Completed"
+      }
+    },
+    "settings": {
+      "title": "Settings",
+      "description": "System tools for the admin panel and development environment.",
+      "devReset": {
+        "badge": "Development tool",
+        "title": "Reset data",
+        "description": "Clears candidates, students, enrollments, instructors, branches, programs, invitations, notifications, audit logs and media records. The assessment question bank, current admin user and active session are preserved.",
+        "disabled": "This reset tool is currently disabled.",
+        "warning": "This cannot be undone. Use it to clear local test data.",
+        "password": "Admin password",
+        "passwordPlaceholder": "Re-enter your password",
+        "confirmation": "Confirmation text",
+        "confirmationHint": "Type {phrase} to continue.",
+        "invalidConfirmation": "The confirmation text does not match.",
+        "submit": "Reset data",
+        "resetting": "Resetting",
+        "success": "Data was reset. Your admin account and this session were preserved.",
+        "error": "The reset could not be completed. Check your password and session authorization, then try again.",
+        "errors": {
+          "forbidden": "This action requires an active admin session.",
+          "invalidRequest": "The request is invalid. Check the password and confirmation text.",
+          "passwordFailed": "The admin password could not be verified.",
+          "resetFailed": "The reset could not be completed. The terminal log may contain the technical error."
+        }
+      },
+      "backgroundJobs": {
+        "badge": "Operations",
+        "title": "Background jobs",
+        "description": "Monitor worker-driven jobs such as mail and Meet here. If the worker is offline, invitations and meeting links stay queued.",
+        "workerOnline": "Worker online",
+        "workerOffline": "Worker not seen",
+        "pending": "Pending",
+        "failed": "Failed",
+        "dead": "Dead",
+        "lastSeen": "Last signal: {date}",
+        "activeJobs": "Active jobs: {count}",
+        "noHeartbeat": "No worker heartbeat has been received yet. Check whether `npm run worker` is running.",
+        "lastError": "Latest mail error",
+        "refresh": "Refresh status",
+        "retryFailed": "Requeue failed jobs",
+        "retrySuccess": "{count} notifications were requeued.",
+        "retryError": "Notifications could not be requeued.",
+        "statusError": "Background job status could not be read."
+      }
+    },
     "dashboard": {
       "greeting": "Good morning, Yunus",
       "totalStudents": "Total Students",
@@ -448,6 +536,34 @@
       "teacherLaterNote": "An instructor is not required yet. The teacher management module will connect an instructor to this branch later.",
       "teacherAssignmentPending": "Instructor not assigned yet",
       "branchFull": "At capacity",
+      "scheduleTitle": "Lesson schedule",
+      "scheduleDescription": "Lesson duration is fixed at 60 minutes. Weekly repeat creates lessons across the branch date range.",
+      "scheduleSaved": "Lesson schedule saved and calendar sessions were created.",
+      "scheduleError": "The lesson schedule could not be saved. Check the date, time and branch instructor.",
+      "scheduleNeedsInstructor": "Assign an active instructor to the branch before creating a lesson schedule.",
+      "scheduleSummary": "{count} lessons added to the calendar.",
+      "scheduleMissing": "No lesson schedule has been created yet.",
+      "meetSummary": "Meet: {ready}/{total} ready · {pending} pending · {failed} failed",
+      "meetLastError": "Last error: {error}",
+      "scheduleOpenPlanner": "Plan",
+      "schedulePlannerTitle": "Plan lesson schedule",
+      "schedulePlannerDescription": "For weekly repeat, choose the weekday and time. For manual planning, set the time and click days on the calendar to add lessons.",
+      "scheduleModeWeekly": "Weekly repeat",
+      "scheduleModeManual": "Pick from calendar",
+      "weeklySchedulePreview": "Every {weekday} at {time}",
+      "manualSchedulePreview": "{count} manual lessons selected.",
+      "weeklyRepeat": "Repeat weekly",
+      "chooseWeekday": "Lesson day",
+      "chooseLessonTime": "Lesson time",
+      "chooseDatesFromCalendar": "Pick days from calendar",
+      "clickDateToAdd": "Selected time is {time}. Click calendar days to add lessons.",
+      "selectedTime": "Time {time}",
+      "customTime": "Custom time",
+      "selectedLessons": "Added lessons",
+      "addManualLesson": "Add manual lesson",
+      "removeManualLesson": "Remove",
+      "manualLessonsEmpty": "When weekly repeat is off, add lesson dates one by one.",
+      "saveSchedule": "Save lesson schedule",
       "branchFields": {
         "program": "Parent program",
         "name": "Branch / class name",
@@ -476,13 +592,25 @@
         "description": "Description",
         "active": "Available during enrollment",
         "teacher": "Instructor",
-        "hourlyStudentPrice": "Hourly student sales price"
+        "hourlyStudentPrice": "Hourly student sales price",
+        "weekday": "Lesson day",
+        "lessonTime": "Lesson time",
+        "lessonDate": "Lesson date"
       },
       "languages": {
         "english": "English",
         "german": "German",
         "french": "French",
         "arabic": "Arabic"
+      },
+      "weekdays": {
+        "1": "Monday",
+        "2": "Tuesday",
+        "3": "Wednesday",
+        "4": "Thursday",
+        "5": "Friday",
+        "6": "Saturday",
+        "7": "Sunday"
       }
     },
     "instructors": {
@@ -497,8 +625,20 @@
       "saving": "Saving",
       "saved": "Instructor profile saved.",
       "saveError": "The action could not be completed. Check the fields and try again.",
+      "identityConflict": "This email or phone is already used by an active instructor record.",
+      "restoreError": "The archived instructor could not be restored.",
       "search": "Search instructor name, email or phone...",
       "empty": "No instructor matches your search.",
+      "tabs": {
+        "active": "Active ({count})",
+        "archived": "Deleted ({count})"
+      },
+      "archivedConflictBadge": "Archive match",
+      "archivedConflictTitle": "A deleted instructor uses these details",
+      "archivedConflictDescription": "{name} is in the archive. You can restore the old record or intentionally create a separate new one.",
+      "restoreOld": "Restore old record",
+      "createSeparate": "Create separate record",
+      "cancel": "Cancel",
       "back": "Back to instructors",
       "profileInformation": "Profile information",
       "branches": "Branches",
@@ -512,11 +652,21 @@
       "invitationDescription": "Send a single-use activation invitation for teacher panel access.",
       "invitationSent": "Panel invitation sent.",
       "invitationError": "The invitation could not be sent. Check the username, password confirmation and existing invitation.",
+      "invitationEmailRegistered": "A panel account already exists for this email address. Check the instructor email or existing account.",
+      "invitationAlreadyPending": "There is already an active invitation pending for this email address.",
+      "invitationForbidden": "The invitation could not be sent because of admin password confirmation or request security.",
+      "invitationInvalid": "The invitation details are invalid. Check the username, instructor email and profile status.",
       "username": "Username",
       "adminPassword": "Your admin password",
       "sendInvitation": "Send panel invitation",
       "uploadPhoto": "Upload photo",
       "photoSaved": "Instructor photo updated.",
+      "archiveInstructor": "Delete instructor",
+      "restoreInstructor": "Restore",
+      "archived": "Instructor moved to deleted instructors.",
+      "restored": "Instructor restored as active.",
+      "archiveError": "The instructor archive state could not be updated.",
+      "restoreIdentityConflict": "This instructor could not be restored because the email or phone is used by another active record.",
       "documents": "Documents and certificates",
       "documentLabel": "Document title",
       "uploadDocument": "Upload document",
@@ -557,7 +707,7 @@
     },
     "students": {
       "title": "Students",
-      "description": "{count} students are managed in the mock system.",
+      "description": "{count} students are managed in the system.",
       "add": "Add Student",
       "all": "All",
       "active": "Active",
@@ -568,7 +718,9 @@
       "nextLesson": "Next Lesson",
       "teacher": "Teacher",
       "progress": "Progress",
-      "toAssign": "To assign"
+      "toAssign": "To assign",
+      "emptyTitle": "No students yet",
+      "emptyDescription": "Students will appear here after a candidate enrollment is completed."
     },
     "studentDetail": {
       "studentId": "Student ID",
@@ -582,6 +734,15 @@
       "instructor": "Instructor",
       "enrollmentDate": "Enrollment Date",
       "enrollmentDateValue": "January 12, 2026",
+      "account": "Panel account",
+      "accountLinked": "Active",
+      "accountPending": "Invitation pending",
+      "accountNotInvited": "Not invited",
+      "usernamePending": "Username pending",
+      "contact": "Contact",
+      "nextLesson": "Next lesson",
+      "openCalendar": "Open calendar",
+      "liveDataNote": "This section is now connected to the real student record. Lesson notes, homework and progress metrics will become a live timeline once the lesson tracking module is completed.",
       "completedLessons": "Completed Lessons",
       "attendance": "100% Attendance",
       "developmentScore": "Development Score",
@@ -684,7 +845,7 @@
       "complete": "Complete Enrollment",
       "saved": "The draft was saved securely.",
       "saveError": "This step could not be saved. Check the required fields.",
-      "completed": "Student enrollment completed.",
+      "completed": "Student enrollment completed and the panel invitation was sent.",
       "incomplete": "Enrollment could not be completed. Check missing or inconsistent fields.",
       "incompleteFields": "Enrollment could not be completed. Missing or inconsistent saved fields: {fields}. You were taken to the first incomplete step.",
       "confirmationError": "The admin password could not be verified or the secure session could not be refreshed. Check your password and try again.",
@@ -752,6 +913,7 @@
         "secondaryPhone": "Secondary phone",
         "phone": "Contact phone",
         "email": "Email",
+        "studentUsername": "Student panel username",
         "address": "Residence address",
         "relationship": "Relationship",
         "relationshipOther": "Describe the relationship",
@@ -759,6 +921,7 @@
         "courseMode": "Course model",
         "program": "Purchased program",
         "branch": "Branch / class",
+        "branchSchedule": "Branch lesson schedule",
         "branchDates": "Education dates",
         "capacity": "Branch occupancy",
         "capacityOverrideNote": "Capacity override note",
@@ -849,6 +1012,10 @@
       },
       "programModuleNote": "A branch is required for group programs. The detailed weekly schedule will be connected by the later calendar module.",
       "noOpenBranch": "This program has no branch open for enrollment. Create or open one from the Programs page first.",
+      "branchScheduleInherited": "The lesson schedule is inherited from the selected branch. You can print it or save it as PDF from the browser to share with the student.",
+      "branchScheduleMissing": "This branch does not have a lesson schedule yet.",
+      "printSchedule": "PDF / print",
+      "moreLessons": "+{count} more lessons",
       "branchCapacityWarning": "The selected branch has reached maximum capacity. Enrollment can continue only with an explicit capacity override.",
       "capacityOverrideApproval": "I approve adding this student to the branch above its capacity.",
       "teacherAssignmentPending": "Instructor will be assigned later",
@@ -891,6 +1058,8 @@
         "birthLocation": "Country, region and city of birth are required.",
         "branch": "Select a branch for the group program.",
         "email": "Enter a valid email address.",
+        "emailPending": "There is a pending invitation for this email.",
+        "emailTaken": "A user is already registered with this email.",
         "firstName": "First name must contain at least 2 characters.",
         "gender": "Gender selection is required.",
         "guardian": "Add a guardian for a student under 18.",
@@ -905,7 +1074,10 @@
         "registrationChannel": "Select the channel where enrollment was completed.",
         "relationshipOther": "Describe the relationship.",
         "school": "School information is required.",
-        "sourceDetail": "Provide a short description for the other source."
+        "sourceDetail": "Provide a short description for the other source.",
+        "username": "Username must be 5-30 characters and use letters, numbers, dots, dashes or underscores.",
+        "usernamePending": "There is a pending invitation for this username.",
+        "usernameTaken": "This username is already registered."
       },
       "validation": {
         "stepHasErrors": "Correct the highlighted fields before continuing.",
@@ -921,6 +1093,7 @@
         "school": "school",
         "phone": "student phone",
         "email": "email",
+        "student_username": "student panel username",
         "address": "residence address",
         "course_mode": "course model",
         "program_id": "program",
@@ -1001,6 +1174,7 @@
   "student": {
     "nav": {
       "lessons": "My Lessons",
+      "calendar": "Calendar",
       "progress": "Progress",
       "messages": "Messages",
       "profile": "Profile"
@@ -1020,6 +1194,48 @@
       "summary": "{total} lessons total • {completed} completed",
       "upcoming": "Upcoming Lessons",
       "past": "Past Lessons"
+    },
+    "calendar": {
+      "title": "Calendar",
+      "descriptionWithName": "Scheduled lessons for {name}.",
+      "missingProfileTitle": "Student profile not found",
+      "missingProfileDescription": "This student account is not linked to a student profile yet.",
+      "agendaTitle": "Your lesson calendar",
+      "monthView": "Month view",
+      "detailView": "Detail list",
+      "hoverHint": "Hover over days to see lesson details.",
+      "previousMonth": "Previous month",
+      "nextMonth": "Next month",
+      "joinLesson": "Join lesson",
+      "connectGoogle": "Connect Google account",
+      "retryMeeting": "Retry Meet creation",
+      "reportAbsence": "Report absence",
+      "absenceReported": "Absence reported",
+      "absenceNotePlaceholder": "Add a short note if you want",
+      "legendTitle": "Lesson types are separated by color.",
+      "emptyTitle": "No lessons yet",
+      "emptyDescription": "Your lessons will appear here once the branch schedule is created.",
+      "noEventsInMonth": "No lessons are planned for this month.",
+      "moreEvents": "+{count} more",
+      "studentCount": "{count} students",
+      "meetingStatuses": {
+        "pending": "Meet is pending",
+        "creating": "Meet is being created",
+        "ready": "Meet is ready",
+        "failed": "Meet could not be created",
+        "disabled": "Meet is disabled"
+      },
+      "eventKinds": {
+        "group_lesson": "Group lesson",
+        "private_lesson": "Private lesson",
+        "appointment": "Appointment"
+      },
+      "statuses": {
+        "scheduled": "Scheduled",
+        "cancelled": "Cancelled",
+        "postponed": "Postponed",
+        "completed": "Completed"
+      }
     },
     "progressPage": {
       "title": "Progress",
@@ -1107,7 +1323,108 @@
       "students": "Students",
       "upcomingLessons": "Upcoming Lessons",
       "completedLessons": "Completed Lessons",
-      "activeProgram": "Active Program"
+      "activeProgram": "Active Program",
+      "descriptionWithName": "Assigned students and branches for {name}.",
+      "missingProfileTitle": "Instructor profile not found",
+      "missingProfileDescription": "This teacher account is not linked to an instructor profile yet.",
+      "groupStudents": "Group students",
+      "privateStudents": "Private students",
+      "assignedBranches": "Assigned branches",
+      "branchesTitle": "Assigned branches",
+      "branchesDescription": "These branches will connect to the calendar in the scheduling phase.",
+      "studentsTitle": "Enrolled students",
+      "studentsDescription": "Students coming from branch and private lesson links.",
+      "branchStudentCount": "{count} students",
+      "programPending": "Program details pending",
+      "noBranches": "No branch has been assigned yet.",
+      "noStudents": "No active student is linked to this instructor yet.",
+      "courseModes": {
+        "group": "Group lesson",
+        "private": "Private lesson"
+      },
+      "enrollmentStatuses": {
+        "active": "Active",
+        "paused": "Paused"
+      }
+    },
+    "students": {
+      "title": "Students",
+      "description": "Active and paused students linked to {name}.",
+      "missingProfileTitle": "Instructor profile not found",
+      "missingProfileDescription": "This teacher account is not linked to an instructor profile yet.",
+      "emptyTitle": "No students yet",
+      "emptyDescription": "Students will appear here once a branch or private lesson enrollment is completed.",
+      "programPending": "Program details pending",
+      "privateLesson": "Private lesson",
+      "levelPending": "Level pending",
+      "fields": {
+        "courseMode": "Course model",
+        "branch": "Branch",
+        "level": "Level",
+        "enrolledAt": "Enrolled at"
+      },
+      "courseModes": {
+        "group": "Group lesson",
+        "private": "Private lesson"
+      },
+      "enrollmentStatuses": {
+        "active": "Active",
+        "paused": "Paused"
+      }
+    },
+    "calendar": {
+      "title": "Calendar",
+      "descriptionWithName": "Scheduled lesson sessions for {name}.",
+      "missingProfileTitle": "Instructor profile not found",
+      "missingProfileDescription": "This teacher account is not linked to an instructor profile yet.",
+      "emptyTitle": "No lessons yet",
+      "emptyDescription": "Sessions will appear here once a lesson schedule is defined for a branch.",
+      "agendaTitle": "Lesson flow",
+      "monthView": "Month view",
+      "detailView": "Detail list",
+      "hoverHint": "Hover over days to see lesson details.",
+      "previousMonth": "Previous month",
+      "nextMonth": "Next month",
+      "joinLesson": "Join lesson",
+      "connectGoogle": "Connect Google account",
+      "retryMeeting": "Retry Meet creation",
+      "reportAbsence": "Report absence",
+      "absenceReported": "Absence reported",
+      "absenceNotePlaceholder": "Add a short note if you want",
+      "legendTitle": "Lesson types are separated by color.",
+      "noEventsInMonth": "No lessons are planned for this month.",
+      "moreEvents": "+{count} more",
+      "studentCount": "{count} students",
+      "meetingStatuses": {
+        "pending": "Meet is pending",
+        "creating": "Meet is being created",
+        "ready": "Meet is ready",
+        "failed": "Meet could not be created",
+        "disabled": "Meet is disabled"
+      },
+      "programPending": "Program details pending",
+      "privateLesson": "Private lesson",
+      "eventKinds": {
+        "group_lesson": "Group lesson",
+        "private_lesson": "Private lesson",
+        "appointment": "Appointment"
+      },
+      "fields": {
+        "date": "Date",
+        "time": "Time",
+        "type": "Lesson type",
+        "branch": "Branch"
+      },
+      "sources": {
+        "branch": "Group lesson",
+        "private": "Private lesson"
+      },
+      "statuses": {
+        "scheduled": "Scheduled",
+        "cancelled": "Cancelled",
+        "postponed": "Postponed",
+        "completed": "Completed"
+      }
     },
     "empty": {
       "students": { "title": "Students", "description": "Students assigned to the teacher and lesson progress notes will appear here." },
@@ -1164,6 +1481,10 @@
       "submit": "Activate account",
       "mismatch": "Passwords do not match.",
       "error": "The invitation link is invalid or has expired.",
+      "accountExists": "An account already exists for this email address. Please sign in or ask your administrator for a new invitation.",
+      "forbidden": "This request could not be completed for security reasons. Please reopen the link from the same site.",
+      "invalidPassword": "Your password must be between 12 and 128 characters.",
+      "rateLimited": "Too many attempts. Please try again shortly.",
       "success": "Your account is active. Redirecting to sign in."
     },
     "device": {

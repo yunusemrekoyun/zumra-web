@@ -125,6 +125,7 @@ temp/
 credentials*.json
 service-account*.json
 client_secret*.json
+zumra-akademi-*.json
 *rclone.conf
 
 # ===========================

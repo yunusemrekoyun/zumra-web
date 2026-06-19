@@ -11,12 +11,16 @@ import type {
 import { database } from '@/lib/server/db/client';
 import {
   accounts,
+  contacts,
   instructorAccountInvitations,
   instructorProfiles,
+  studentAccountInvitations,
+  studentProfiles,
   userInvitations,
   users,
 } from '@/lib/server/db/schema';
 import { getAuthEnv } from '@/lib/server/env';
+import { PublicFlowError } from '@/lib/server/http/errors';
 import { createOpaqueToken, hashToken } from '@/lib/server/security/tokens';
 import { assertValidUsername } from '@/lib/server/security/username';
 import { notificationService } from './notifications';
@@ -40,14 +44,69 @@ export const invitationService: InvitationService = {
       (input.role === 'teacher' && !input.instructorProfileId) ||
       (input.role !== 'teacher' && input.instructorProfileId)
     ) {
-      throw new Error('Teacher accounts require an instructor profile.');
+      throw new PublicFlowError('invalid_invitation_target', 400);
     }
-    const username = assertValidUsername(input.username);
+    const username = normalizeInvitationUsername(input.username);
     const email = input.email.trim().toLocaleLowerCase('en-US');
     const { hash, token } = createOpaqueToken();
     const expiresAt = new Date(Date.now() + INVITATION_TTL_MS);
 
     const created = await database.transaction(async (transaction) => {
+      const [duplicateUser] = await transaction
+        .select({ id: users.id })
+        .from(users)
+        .where(eq(users.email, email))
+        .limit(1);
+
+      if (duplicateUser) {
+        throw new PublicFlowError(
+          'invitation_email_already_registered',
+          409,
+        );
+      }
+
+      const [duplicateUsername] = await transaction
+        .select({ id: users.id })
+        .from(users)
+        .where(eq(users.username, username))
+        .limit(1);
+
+      if (duplicateUsername) {
+        throw new PublicFlowError('username_already_registered', 409);
+      }
+
+      const [pendingEmailInvitation] = await transaction
+        .select({ id: userInvitations.id })
+        .from(userInvitations)
+        .where(
+          and(
+            eq(userInvitations.email, email),
+            eq(userInvitations.status, 'pending'),
+            gt(userInvitations.expiresAt, new Date()),
+          ),
+        )
+        .limit(1);
+
+      if (pendingEmailInvitation) {
+        throw new PublicFlowError('invitation_already_pending', 409);
+      }
+
+      const [pendingUsernameInvitation] = await transaction
+        .select({ id: userInvitations.id })
+        .from(userInvitations)
+        .where(
+          and(
+            eq(userInvitations.username, username),
+            eq(userInvitations.status, 'pending'),
+            gt(userInvitations.expiresAt, new Date()),
+          ),
+        )
+        .limit(1);
+
+      if (pendingUsernameInvitation) {
+        throw new PublicFlowError('invitation_username_already_pending', 409);
+      }
+
       if (input.instructorProfileId) {
         const [profile] = await transaction
           .select({
@@ -65,7 +124,10 @@ export const invitationService: InvitationService = {
           profile.email !== email ||
           input.role !== 'teacher'
         ) {
-          throw new Error('Instructor invitation cannot be created.');
+          throw new PublicFlowError(
+            'instructor_invitation_unavailable',
+            409,
+          );
         }
 
         const [pendingInvitation] = await transaction
@@ -87,7 +149,7 @@ export const invitationService: InvitationService = {
           )
           .limit(1);
         if (pendingInvitation) {
-          throw new Error('Instructor invitation is already pending.');
+          throw new PublicFlowError('invitation_already_pending', 409);
         }
       }
 
@@ -155,7 +217,7 @@ export const invitationService: InvitationService = {
 
   async activate(token, password) {
     if (password.length < 12 || password.length > 128) {
-      throw new Error('Password must be between 12 and 128 characters.');
+      throw new PublicFlowError('invalid_password', 400);
     }
 
     return database.transaction(async (transaction) => {
@@ -173,7 +235,7 @@ export const invitationService: InvitationService = {
         .for('update');
 
       if (!invitation) {
-        throw new Error('Invitation is invalid or expired.');
+        throw new PublicFlowError('invalid_or_expired_invitation', 400);
       }
 
       const [duplicate] = await transaction
@@ -183,7 +245,20 @@ export const invitationService: InvitationService = {
         .limit(1);
 
       if (duplicate) {
-        throw new Error('Invitation cannot be activated.');
+        throw new PublicFlowError(
+          'invitation_email_already_registered',
+          409,
+        );
+      }
+
+      const [duplicateUsername] = await transaction
+        .select({ id: users.id })
+        .from(users)
+        .where(eq(users.username, invitation.username))
+        .limit(1);
+
+      if (duplicateUsername) {
+        throw new PublicFlowError('username_already_registered', 409);
       }
 
       const [linkedInstructor] =
@@ -202,7 +277,37 @@ export const invitationService: InvitationService = {
               .limit(1)
           : [];
       if (invitation.role === 'teacher' && !linkedInstructor) {
-        throw new Error('Instructor invitation cannot be activated.');
+        throw new PublicFlowError('instructor_invitation_invalid', 409);
+      }
+
+      const [linkedStudent] =
+        invitation.role === 'student'
+          ? await transaction
+              .select({
+                contactId: studentProfiles.contactId,
+                email: contacts.email,
+                studentId: studentAccountInvitations.studentId,
+                userId: studentProfiles.userId,
+              })
+              .from(studentAccountInvitations)
+              .innerJoin(
+                studentProfiles,
+                eq(studentProfiles.id, studentAccountInvitations.studentId),
+              )
+              .innerJoin(contacts, eq(contacts.id, studentProfiles.contactId))
+              .where(
+                eq(studentAccountInvitations.invitationId, invitation.id),
+              )
+              .limit(1)
+              .for('update')
+          : [];
+      if (
+        invitation.role === 'student' &&
+        (!linkedStudent ||
+          linkedStudent.userId ||
+          linkedStudent.email !== invitation.email)
+      ) {
+        throw new PublicFlowError('student_invitation_invalid', 409);
       }
 
       const userId = randomUUID();
@@ -244,8 +349,29 @@ export const invitationService: InvitationService = {
           )
           .returning({ id: instructorProfiles.id });
         if (!linkedProfile) {
-          throw new Error('Instructor invitation cannot be activated.');
+          throw new PublicFlowError('instructor_invitation_invalid', 409);
         }
+      }
+
+      if (linkedStudent) {
+        const [linkedProfile] = await transaction
+          .update(studentProfiles)
+          .set({ updatedAt: now, userId })
+          .where(
+            and(
+              eq(studentProfiles.id, linkedStudent.studentId),
+              isNull(studentProfiles.userId),
+            ),
+          )
+          .returning({ id: studentProfiles.id });
+        if (!linkedProfile) {
+          throw new PublicFlowError('student_invitation_invalid', 409);
+        }
+
+        await transaction
+          .update(contacts)
+          .set({ emailVerifiedAt: now, updatedAt: now })
+          .where(eq(contacts.id, linkedStudent.contactId));
       }
 
       await transaction
@@ -278,3 +404,11 @@ export const invitationService: InvitationService = {
       );
   },
 };
+
+function normalizeInvitationUsername(value: string) {
+  try {
+    return assertValidUsername(value);
+  } catch {
+    throw new PublicFlowError('invalid_username', 400);
+  }
+}

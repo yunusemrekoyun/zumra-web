@@ -13,6 +13,7 @@ import {
   ArrowRight,
   Check,
   FileUp,
+  Printer,
   Plus,
   Save,
   Trash2,
@@ -193,9 +194,13 @@ export function EnrollmentWizard({
       );
       const body = await response.json().catch(() => ({}));
       if (!response.ok) {
-        if (body.fieldErrors) {
-          setFieldErrors(body.fieldErrors);
-          focusField(Object.keys(body.fieldErrors)[0]);
+        const mappedErrors =
+          body.fieldErrors ?? enrollmentApiFieldErrors(String(body.error ?? ''), t);
+        if (Object.keys(mappedErrors).length) {
+          setFieldErrors(mappedErrors);
+          setMessage(t('validation.stepHasErrors'));
+          focusField(Object.keys(mappedErrors)[0]);
+          throw new Error(`field_errors:${body.error ?? 'save_failed'}`);
         }
         throw new Error(body.error ?? 'save_failed');
       }
@@ -209,8 +214,11 @@ export function EnrollmentWizard({
         setHighestReachedStep((current) => Math.max(current, nextStep));
         setStep(nextStep);
       }
-    } catch {
-      setMessage(t('saveError'));
+    } catch (error) {
+      const code = error instanceof Error ? error.message : '';
+      if (!code.startsWith('field_errors:')) {
+        setMessage(t('saveError'));
+      }
     } finally {
       setBusy(false);
     }
@@ -225,7 +233,7 @@ export function EnrollmentWizard({
       const response = await fetch(
         `/api/admin/enrollment-drafts/${draft.id}/complete`,
         {
-          body: JSON.stringify({ password: confirmationPassword }),
+          body: JSON.stringify({ locale, password: confirmationPassword }),
           credentials: 'same-origin',
           headers: { 'content-type': 'application/json' },
           method: 'POST',
@@ -233,6 +241,20 @@ export function EnrollmentWizard({
       );
       const body = await response.json().catch(() => ({}));
       if (!response.ok) {
+        const mappedErrors = enrollmentApiFieldErrors(
+          String(body.error ?? ''),
+          t,
+        );
+        if (Object.keys(mappedErrors).length) {
+          setFieldErrors(mappedErrors);
+          setMessage(t('validation.stepHasErrors'));
+          const targetStep =
+            mappedErrors.studentUsername || mappedErrors.email ? 2 : step;
+          setStep(targetStep);
+          setHighestReachedStep((current) => Math.max(current, targetStep));
+          focusField(Object.keys(mappedErrors)[0]);
+          throw new Error(`field_errors:${body.error ?? 'complete_failed'}`);
+        }
         throw new Error(body.error ?? 'complete_failed');
       }
       setMessage(t('completed'));
@@ -262,7 +284,7 @@ export function EnrollmentWizard({
               .join(', '),
           }),
         );
-      } else {
+      } else if (!code.startsWith('field_errors:')) {
         setMessage(
           code === 'forbidden'
             ? t('confirmationError')
@@ -515,7 +537,12 @@ export function EnrollmentWizard({
               />
             )}
             {step === 8 && (
-              <ScheduleStep draft={draft} setDraft={setDraft} t={t} />
+              <ScheduleStep
+                catalog={catalog}
+                draft={draft}
+                setDraft={setDraft}
+                t={t}
+              />
             )}
             {step === 9 && (
               <ReviewStep
@@ -614,7 +641,6 @@ function IdentityStep({
       <SelectField
         id="identityDocumentType"
         label={t('fields.identityType')}
-        required
         value={identityType}
         onChange={(value) =>
           setDraft((current) => ({
@@ -640,7 +666,6 @@ function IdentityStep({
             ? t('fields.nationalIdNumber')
             : t('fields.passportNumber')
         }
-        required={!draft.identityDocumentMasked}
       >
         <IdentityDocumentInput
           error={Boolean(errors.identityDocument)}
@@ -682,7 +707,6 @@ function IdentityStep({
         error={errors.birthCountryCode}
         htmlFor="birthCountryCode"
         label={t('fields.birthCountry')}
-        required
       >
         <CountrySelect
           error={Boolean(errors.birthCountryCode)}
@@ -720,7 +744,6 @@ function IdentityStep({
             error={errors.birthAdministrativeArea}
             id="birthAdministrativeArea"
             label={t('fields.birthProvince')}
-            required
             value={draft.birthAdministrativeArea ?? ''}
             onChange={(birthAdministrativeArea) =>
               setDraft((current) => ({
@@ -738,7 +761,6 @@ function IdentityStep({
             error={errors.birthLocality}
             id="birthLocality"
             label={t('fields.birthDistrict')}
-            required
             value={draft.birthLocality ?? ''}
             onChange={(birthLocality) =>
               setDraft((current) => ({ ...current, birthLocality }))
@@ -755,7 +777,6 @@ function IdentityStep({
             error={errors.birthAdministrativeArea}
             id="birthAdministrativeArea"
             label={t('fields.birthRegion')}
-            required
             value={draft.birthAdministrativeArea ?? ''}
             onChange={(birthAdministrativeArea) =>
               setDraft((current) => ({
@@ -768,7 +789,6 @@ function IdentityStep({
             error={errors.birthLocality}
             id="birthLocality"
             label={t('fields.birthCity')}
-            required
             value={draft.birthLocality ?? ''}
             onChange={(birthLocality) =>
               setDraft((current) => ({ ...current, birthLocality }))
@@ -780,7 +800,6 @@ function IdentityStep({
         error={errors.birthDate}
         htmlFor="birthDate"
         label={t('fields.birthDate')}
-        required
       >
         <DatePicker
           disabledAfter={new Date()}
@@ -798,7 +817,6 @@ function IdentityStep({
         error={errors.gender}
         id="gender"
         label={t('fields.gender')}
-        required
         value={draft.gender ?? ''}
         onChange={(value) =>
           setDraft((current) => ({
@@ -819,7 +837,6 @@ function IdentityStep({
         error={errors.school}
         id="school"
         label={t('fields.school')}
-        required
         value={draft.school ?? ''}
         onChange={(value) =>
           setDraft((current) => ({ ...current, school: value }))
@@ -906,6 +923,16 @@ function ContactStep({
           value={draft.email}
           onChange={(value) =>
             setDraft((current) => ({ ...current, email: value }))
+          }
+        />
+        <Field
+          error={errors.studentUsername}
+          id="studentUsername"
+          label={t('fields.studentUsername')}
+          required
+          value={draft.studentUsername ?? ''}
+          onChange={(value) =>
+            setDraft((current) => ({ ...current, studentUsername: value }))
           }
         />
         <div className="sm:col-span-2">
@@ -1849,14 +1876,96 @@ function FinanceStep({
 }
 
 function ScheduleStep({
+  catalog,
   draft,
   setDraft,
   t,
 }: {
+  catalog: ProgramManagementData;
   draft: DraftState;
   setDraft: SetDraft;
   t: WizardT;
 }) {
+  const locale = useLocale();
+  const selectedBranch = catalog.branches.find(
+    (branch) => branch.id === draft.branchId,
+  );
+  const branchSchedule = selectedBranch?.lessonSchedule;
+
+  if (draft.courseMode === 'group') {
+    return (
+      <div className="space-y-5">
+        <div className="rounded-2xl border border-[#533089]/10 bg-[#F8F7FB] p-5">
+          <div className="flex flex-wrap items-start justify-between gap-4">
+            <div>
+              <div className="text-xs font-bold uppercase tracking-wider text-[#2E286C]/35">
+                {t('fields.branchSchedule')}
+              </div>
+              <h3 className="mt-2 text-lg font-bold text-[#2E286C]">
+                {selectedBranch?.name ?? draft.branchName ?? t('fields.branch')}
+              </h3>
+              <p className="mt-2 text-sm font-medium leading-6 text-[#2E286C]/55">
+                {t('branchScheduleInherited')}
+              </p>
+            </div>
+            {branchSchedule?.sessions.length ? (
+              <Button
+                type="button"
+                variant="secondary"
+                onClick={() =>
+                  window.open(
+                    buildSchedulePrintUrl(draft.id, selectedBranch?.id),
+                    '_blank',
+                    'noopener,noreferrer',
+                  )
+                }
+              >
+                <Printer className="h-4 w-4" />
+                {t('printSchedule')}
+              </Button>
+            ) : null}
+          </div>
+
+          {branchSchedule?.sessions.length ? (
+            <div className="mt-5 grid gap-2 sm:grid-cols-2">
+              {branchSchedule.sessions.slice(0, 12).map((session) => (
+                <div
+                  key={session.id}
+                  className="rounded-xl bg-white px-4 py-3 text-sm font-semibold text-[#2E286C]"
+                >
+                  {formatDate(session.date, locale)} · {session.startTime}
+                </div>
+              ))}
+              {branchSchedule.sessions.length > 12 && (
+                <div className="rounded-xl bg-white px-4 py-3 text-sm font-semibold text-[#533089]">
+                  {t('moreLessons', {
+                    count: branchSchedule.sessions.length - 12,
+                  })}
+                </div>
+              )}
+            </div>
+          ) : (
+            <div className="mt-5 rounded-xl bg-amber-50 p-4 text-sm font-semibold text-amber-800">
+              {t('branchScheduleMissing')}
+            </div>
+          )}
+        </div>
+        <TextAreaField
+          label={t('fields.scheduleNotes')}
+          value={draft.scheduleNotes ?? ''}
+          onChange={(value) =>
+            setDraft((current) => ({
+              ...current,
+              scheduleMode: 'inherited',
+              scheduleNotes: value,
+            }))
+          }
+          placeholder={t('fields.schedulePlaceholder')}
+        />
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-5">
       <SelectField
@@ -1884,6 +1993,13 @@ function ScheduleStep({
       />
     </div>
   );
+}
+
+function buildSchedulePrintUrl(draftId: string, branchId?: string) {
+  const url = new URL('/api/admin/enrollment-drafts/schedule-print', window.location.origin);
+  url.searchParams.set('draftId', draftId);
+  if (branchId) url.searchParams.set('branchId', branchId);
+  return url.toString();
 }
 
 function ReviewStep({
@@ -2206,7 +2322,7 @@ function buildPatch(
         birthDate: draft.birthDate ?? '',
         birthLocality: draft.birthLocality ?? '',
         firstName: draft.firstName,
-        gender: draft.gender ?? 'prefer_not_to_say',
+        gender: draft.gender || undefined,
         identityDocument: draft.identityDocument,
         identityDocumentType: draft.identityDocumentType ?? 'national_id',
         lastName: draft.lastName,
@@ -2236,6 +2352,7 @@ function buildPatch(
         residenceAddress: draft.residenceAddress,
         secondaryPhone: draft.secondaryPhone,
         studentIsContractParty: draft.studentIsContractParty,
+        username: draft.studentUsername ?? '',
       },
       step: 2,
     };
@@ -2309,15 +2426,17 @@ function canAutosaveStep(
 ) {
   if (step === 1) {
     return Boolean(
-      draft.birthAdministrativeArea &&
-        draft.birthCountryCode &&
-        draft.birthDate &&
-        draft.birthLocality &&
-        draft.firstName &&
-        draft.gender &&
-        (draft.identityDocument || draft.identityDocumentMasked) &&
-        draft.lastName &&
-        draft.school,
+      draft.firstName.trim().length >= 2 &&
+        draft.lastName.trim().length >= 2 &&
+        !Object.keys(
+          validateEnrollmentStep(
+            1,
+            draft,
+            parties,
+            isMinor,
+            emptyValidationMessages(),
+          ),
+        ).length,
     );
   }
 
@@ -2356,6 +2475,7 @@ function canAutosaveStep(
               program: '',
               registrationChannel: '',
               school: '',
+              username: '',
             },
           ),
         ).length &&
@@ -2419,6 +2539,57 @@ function validationMessages(t: WizardT) {
     program: t('fieldErrors.program'),
     registrationChannel: t('fieldErrors.registrationChannel'),
     school: t('fieldErrors.school'),
+    username: t('fieldErrors.username'),
+  };
+}
+
+function enrollmentApiFieldErrors(code: string, t: WizardT) {
+  const errors: EnrollmentFieldErrors = {};
+
+  if (
+    code === 'username_already_registered' ||
+    code === 'invitation_username_already_pending'
+  ) {
+    errors.studentUsername =
+      code === 'username_already_registered'
+        ? t('fieldErrors.usernameTaken')
+        : t('fieldErrors.usernamePending');
+    return errors;
+  }
+
+  if (
+    code === 'invitation_email_already_registered' ||
+    code === 'invitation_already_pending'
+  ) {
+    errors.email =
+      code === 'invitation_email_already_registered'
+        ? t('fieldErrors.emailTaken')
+        : t('fieldErrors.emailPending');
+    return errors;
+  }
+
+  return errors;
+}
+
+function emptyValidationMessages() {
+  return {
+    address: '',
+    birthDate: '',
+    birthLocation: '',
+    branch: '',
+    email: '',
+    firstName: '',
+    gender: '',
+    guardian: '',
+    identity: '',
+    initialPayment: '',
+    lastName: '',
+    phone: '',
+    privateLesson: '',
+    program: '',
+    registrationChannel: '',
+    school: '',
+    username: '',
   };
 }
 
@@ -2551,7 +2722,14 @@ function enrollmentIssueStep(issue: string) {
   }
 
   if (
-    ['phone', 'email', 'address', 'contract_party', 'guardian'].includes(issue)
+    [
+      'phone',
+      'email',
+      'student_username',
+      'address',
+      'contract_party',
+      'guardian',
+    ].includes(issue)
   ) {
     return 2;
   }
@@ -2604,6 +2782,7 @@ function enrollmentIssueField(issue: string) {
     program_id: 'programReferenceId',
     registration_channel: 'registrationChannel',
     school: 'school',
+    student_username: 'studentUsername',
   };
   return fields[issue] ?? issue;
 }
