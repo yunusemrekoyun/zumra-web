@@ -33,7 +33,7 @@ function assertAdmin(actor: WorkspacePrincipal) {
     actor.accountStatus !== 'active' ||
     actor.sessionSecurityLevel !== 'mfa'
   ) {
-    throw new Error('An active admin MFA session is required.');
+    throw new PublicFlowError('admin_session_required', 403);
   }
 }
 
@@ -411,4 +411,118 @@ function normalizeInvitationUsername(value: string) {
   } catch {
     throw new PublicFlowError('invalid_username', 400);
   }
+}
+
+async function findPendingInstructorInvitation(instructorProfileId: string) {
+  const [row] = await database
+    .select({
+      email: userInvitations.email,
+      id: userInvitations.id,
+      name: userInvitations.name,
+      username: userInvitations.username,
+    })
+    .from(instructorAccountInvitations)
+    .innerJoin(
+      userInvitations,
+      eq(userInvitations.id, instructorAccountInvitations.invitationId),
+    )
+    .where(
+      and(
+        eq(instructorAccountInvitations.instructorId, instructorProfileId),
+        eq(userInvitations.status, 'pending'),
+        gt(userInvitations.expiresAt, new Date()),
+      ),
+    )
+    .limit(1);
+
+  return row;
+}
+
+type InstructorInvitationSummary = {
+  expiresAt: string;
+  id: string;
+  status: 'pending' | 'revoked';
+  username: string;
+};
+
+/**
+ * Re-sends the activation email for an instructor's pending invitation:
+ * regenerates the one-time token, extends the expiry, and enqueues a fresh
+ * mail (a new idempotency key so the worker actually dispatches it again).
+ */
+export async function resendInstructorInvitation(
+  actor: WorkspacePrincipal,
+  input: { instructorProfileId: string; locale: 'tr' | 'en' },
+): Promise<InstructorInvitationSummary> {
+  assertAdmin(actor);
+
+  const pending = await findPendingInstructorInvitation(input.instructorProfileId);
+  if (!pending) {
+    throw new PublicFlowError('invitation_not_pending', 409);
+  }
+
+  const { hash, token } = createOpaqueToken();
+  const expiresAt = new Date(Date.now() + INVITATION_TTL_MS);
+
+  await database
+    .update(userInvitations)
+    .set({ expiresAt, tokenHash: hash, updatedAt: new Date() })
+    .where(
+      and(
+        eq(userInvitations.id, pending.id),
+        eq(userInvitations.status, 'pending'),
+      ),
+    );
+
+  const activationUrl = new URL(
+    `/${input.locale}/aktivasyon`,
+    getAuthEnv().APP_URL,
+  );
+  activationUrl.searchParams.set('token', token);
+
+  await notificationService.enqueue({
+    channel: 'email',
+    idempotencyKey: `invitation:${pending.id}:${expiresAt.getTime()}`,
+    locale: input.locale,
+    payload: {
+      expiresAt: expiresAt.toISOString(),
+      name: pending.name,
+      username: pending.username,
+    },
+    recipient: pending.email,
+    sensitivePayload: { activationUrl: activationUrl.toString() },
+    templateKey: 'account-invitation',
+  });
+
+  return {
+    expiresAt: expiresAt.toISOString(),
+    id: pending.id,
+    status: 'pending',
+    username: pending.username,
+  };
+}
+
+/** Revokes an instructor's pending invitation so a fresh one can be issued. */
+export async function cancelInstructorInvitation(
+  actor: WorkspacePrincipal,
+  instructorProfileId: string,
+): Promise<{ id: string; status: 'revoked' }> {
+  assertAdmin(actor);
+
+  const pending = await findPendingInstructorInvitation(instructorProfileId);
+  if (!pending) {
+    throw new PublicFlowError('invitation_not_pending', 409);
+  }
+
+  await database
+    .update(userInvitations)
+    .set({ revokedAt: new Date(), status: 'revoked', updatedAt: new Date() })
+    .where(
+      and(
+        eq(userInvitations.id, pending.id),
+        eq(userInvitations.status, 'pending'),
+      ),
+    );
+
+  return { id: pending.id, status: 'revoked' };
 }

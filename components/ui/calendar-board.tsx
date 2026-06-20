@@ -5,6 +5,7 @@ import {
   ChevronLeft,
   ChevronRight,
   Clock3,
+  ClipboardCheck,
   Send,
   Users,
   Video,
@@ -15,6 +16,7 @@ import type {
   CalendarEventStatus,
   CalendarEventView,
 } from '@/lib/server/services/lesson-schedules';
+import { EndLessonButton } from './end-lesson-button';
 import { ModulePanel } from './module-panel';
 import { StatusChip } from './status-chip';
 
@@ -44,6 +46,10 @@ type CalendarBoardLabels = {
   retryMeeting: string;
   status: Record<CalendarEventStatus, string>;
   studentCount: (count: number) => string;
+  takeAttendance?: string;
+  joinOpensAt?: (time: string) => string;
+  endLesson?: string;
+  endLessonConfirm?: string;
 };
 
 type CalendarBoardProps = {
@@ -514,16 +520,36 @@ function CalendarEventActions({
   const returnTo = returnPath ?? buildCalendarReturnTo(locale, currentMonth);
   const showMeetingAction =
     event.meetingStatus === 'ready' &&
-    (event.joinUrl || event.requiresGoogleLink);
+    (event.joinUrl || event.requiresGoogleLink || event.joinOpensAt);
   const showAbsenceAction = Boolean(event.absenceReportUrl);
   const showRetryAction = Boolean(event.meetingRetryUrl);
+  const showAttendanceAction = Boolean(
+    event.canTakeAttendance && labels.takeAttendance,
+  );
+  const showEndLesson = Boolean(event.canEndLesson && labels.endLesson);
 
-  if (!showMeetingAction && !showAbsenceAction && !showRetryAction) {
+  if (
+    !showMeetingAction &&
+    !showAbsenceAction &&
+    !showRetryAction &&
+    !showAttendanceAction &&
+    !showEndLesson
+  ) {
     return null;
   }
 
   return (
     <div className="mt-4 space-y-3 border-t border-black/[0.04] pt-4">
+      {showAttendanceAction ? (
+        <Link
+          className="inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-[#533089] px-4 py-3 text-xs font-bold text-white shadow-sm transition-[background,transform] duration-150 hover:bg-[#43236f] active:scale-[0.99]"
+          href={`/${locale}/ogretmen/dersler/${event.id}/yoklama`}
+        >
+          <ClipboardCheck className="h-4 w-4" />
+          {labels.takeAttendance}
+        </Link>
+      ) : null}
+
       {showMeetingAction ? (
         event.requiresGoogleLink ? (
           <Link
@@ -543,7 +569,20 @@ function CalendarEventActions({
             <Video className="h-4 w-4" />
             {labels.joinLesson}
           </Link>
+        ) : event.joinOpensAt && labels.joinOpensAt ? (
+          <div className="inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-[#F8F9FC] px-4 py-3 text-xs font-bold text-[#2E286C]/45">
+            <Clock3 className="h-4 w-4" />
+            {labels.joinOpensAt(formatJoinTime(event.joinOpensAt, locale))}
+          </div>
         ) : null
+      ) : null}
+
+      {showEndLesson && labels.endLesson ? (
+        <EndLessonButton
+          confirmText={labels.endLessonConfirm ?? labels.endLesson}
+          label={labels.endLesson}
+          lessonSessionId={event.id}
+        />
       ) : null}
 
       {event.meetingRetryUrl ? (
@@ -603,6 +642,14 @@ function buildCalendarReturnTo(locale: string, currentMonth?: string) {
     ? `?month=${encodeURIComponent(currentMonth)}`
     : '';
   return `/${locale}/ogrenci/takvim${query}`;
+}
+
+function formatJoinTime(iso: string, locale: string) {
+  return new Intl.DateTimeFormat(locale === 'en' ? 'en-US' : 'tr-TR', {
+    hour: '2-digit',
+    minute: '2-digit',
+    timeZone: 'Europe/Istanbul',
+  }).format(new Date(iso));
 }
 
 function getDisplayMonth(events: CalendarEventView[], requestedMonthKey?: string) {

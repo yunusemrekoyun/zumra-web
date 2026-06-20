@@ -11,12 +11,25 @@ import {
 } from '@/lib/server/security/network';
 import { auditService } from '@/lib/server/services/audit';
 import { getInstructorProfile } from '@/lib/server/services/instructors';
-import { invitationService } from '@/lib/server/services/invitations';
+import {
+  cancelInstructorInvitation,
+  invitationService,
+  resendInstructorInvitation,
+} from '@/lib/server/services/invitations';
 
 const inputSchema = z.object({
   locale: z.enum(['tr', 'en']).default('tr'),
   password: z.string().min(12).max(128),
   username: z.string().min(5).max(30),
+});
+
+const resendSchema = z.object({
+  locale: z.enum(['tr', 'en']).default('tr'),
+  password: z.string().min(12).max(128),
+});
+
+const cancelSchema = z.object({
+  password: z.string().min(12).max(128),
 });
 
 export const runtime = 'nodejs';
@@ -63,6 +76,79 @@ export async function POST(
       targetType: 'instructor_profile',
     });
     return apiResponse(invitation, 201, id);
+  } catch (error) {
+    return apiErrorResponse(error, id);
+  }
+}
+
+export async function PUT(
+  request: Request,
+  context: { params: Promise<{ instructorId: string }> },
+) {
+  const id = requestId(request);
+  if (!isTrustedRequestOrigin(request.headers)) {
+    return apiResponse({ error: 'forbidden' }, 403, id);
+  }
+
+  try {
+    const { instructorId } = await context.params;
+    const parsed = resendSchema.safeParse(
+      await request.json().catch(() => null),
+    );
+    if (!z.string().uuid().safeParse(instructorId).success || !parsed.success) {
+      return apiResponse({ error: 'invalid_request' }, 400, id);
+    }
+
+    const principal = await requireCriticalAdmin(parsed.data.password);
+    const invitation = await resendInstructorInvitation(principal, {
+      instructorProfileId: instructorId,
+      locale: parsed.data.locale,
+    });
+    await auditService.record({
+      action: 'instructor.invitation_resent',
+      actorUserId: principal.id,
+      ip: requestIp(request.headers),
+      requestId: id,
+      result: 'success',
+      targetId: instructorId,
+      targetType: 'instructor_profile',
+    });
+    return apiResponse(invitation, 200, id);
+  } catch (error) {
+    return apiErrorResponse(error, id);
+  }
+}
+
+export async function DELETE(
+  request: Request,
+  context: { params: Promise<{ instructorId: string }> },
+) {
+  const id = requestId(request);
+  if (!isTrustedRequestOrigin(request.headers)) {
+    return apiResponse({ error: 'forbidden' }, 403, id);
+  }
+
+  try {
+    const { instructorId } = await context.params;
+    const parsed = cancelSchema.safeParse(
+      await request.json().catch(() => null),
+    );
+    if (!z.string().uuid().safeParse(instructorId).success || !parsed.success) {
+      return apiResponse({ error: 'invalid_request' }, 400, id);
+    }
+
+    const principal = await requireCriticalAdmin(parsed.data.password);
+    const result = await cancelInstructorInvitation(principal, instructorId);
+    await auditService.record({
+      action: 'instructor.invitation_revoked',
+      actorUserId: principal.id,
+      ip: requestIp(request.headers),
+      requestId: id,
+      result: 'success',
+      targetId: instructorId,
+      targetType: 'instructor_profile',
+    });
+    return apiResponse(result, 200, id);
   } catch (error) {
     return apiErrorResponse(error, id);
   }

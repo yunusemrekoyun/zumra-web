@@ -75,6 +75,10 @@ export default async function TeacherCalendarPage({
             scheduled: t('statuses.scheduled'),
           },
           studentCount: (count) => t('studentCount', { count }),
+          takeAttendance: t('takeAttendance'),
+          joinOpensAt: (time) => t('joinOpensAt', { time }),
+          endLesson: t('endLesson'),
+          endLessonConfirm: t('endLessonConfirm'),
         }}
       />
     </div>

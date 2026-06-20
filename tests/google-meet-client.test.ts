@@ -67,7 +67,6 @@ describe('google meet client', () => {
         expect(JSON.parse(String(init?.body))).toEqual({
           config: {
             accessType: 'OPEN',
-            attendanceReportGenerationType: 'DO_NOT_GENERATE',
             entryPointAccess: 'ALL',
           },
         });

@@ -91,29 +91,43 @@ const DELETE_ALL_STATEMENTS: DeleteStatement[] = [
   { key: 'auditLogs', sql: 'delete from audit_logs' },
 ];
 
-const PRESERVE_ADMIN_STATEMENTS: DeleteStatement[] = [
+type PreserveStatement = DeleteStatement & {
+  paramSource: 'sessionId' | 'userId';
+};
+
+// Each statement uses a single positional parameter ($1) bound to the value
+// from `paramSource`. Mixing $1/$2 across statements while passing the same
+// value array makes Postgres unable to infer the unused parameter's type
+// (error 42P18), which aborts the whole reset transaction.
+const PRESERVE_ADMIN_STATEMENTS: PreserveStatement[] = [
   {
     key: 'trustedDevices',
+    paramSource: 'userId',
     sql: 'delete from trusted_devices where user_id <> $1',
   },
   {
     key: 'externalIdentities',
+    paramSource: 'userId',
     sql: 'delete from external_identities where user_id <> $1',
   },
   {
     key: 'sessions',
-    sql: 'delete from sessions where id <> $2',
+    paramSource: 'sessionId',
+    sql: 'delete from sessions where id <> $1',
   },
   {
     key: 'accounts',
+    paramSource: 'userId',
     sql: 'delete from accounts where user_id <> $1',
   },
   {
     key: 'twoFactors',
+    paramSource: 'userId',
     sql: 'delete from two_factors where user_id <> $1',
   },
   {
     key: 'users',
+    paramSource: 'userId',
     sql: 'delete from users where id <> $1',
   },
 ];
@@ -132,9 +146,12 @@ export async function resetDevelopmentWorkspaceData(
     }
 
     for (const statement of PRESERVE_ADMIN_STATEMENTS) {
+      const value =
+        statement.paramSource === 'sessionId'
+          ? principal.sessionId
+          : principal.id;
       deletedCounts[statement.key] = await executeDelete(client, statement.sql, [
-        principal.id,
-        principal.sessionId,
+        value,
       ]);
     }
 

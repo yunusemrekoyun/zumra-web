@@ -37,6 +37,12 @@
       "inProgress": "Devam Ediyor",
       "upcoming": "Yaklaşan"
     },
+    "attendance": {
+      "present": "Katıldı",
+      "late": "Geç katıldı",
+      "absent": "Gelmedi",
+      "excused": "İzinli"
+    },
       "status": {
         "active": "Aktif",
         "paused": "Dondurdu",
@@ -400,11 +406,27 @@
         "cancelled": "İptal",
         "postponed": "Ertelendi",
         "completed": "Tamamlandı"
-      }
+      },
+      "joinOpensAt": "{time}'de açılır",
+      "endLesson": "Dersi sonlandır",
+      "endLessonConfirm": "Dersi sonlandırmak istediğinize emin misiniz? Katılım linki kapanacak."
     },
     "settings": {
       "title": "Ayarlar",
       "description": "Admin paneli ve geliştirme ortamı için sistem araçları.",
+      "runtimeSettings": {
+        "badge": "Ders ayarları",
+        "title": "Ders & katılım ayarları",
+        "description": "Derse katılım penceresi ve otomatik kapanma sürelerini buradan ayarlayın.",
+        "joinLeadMinutes": "Katılım kaç dakika önce açılsın",
+        "joinLeadMinutesHint": "Öğrenci ve öğretmen, ders saatinden bu kadar dakika önce katılabilir.",
+        "lessonAutoCloseHours": "Otomatik kapanma (saat)",
+        "lessonAutoCloseHoursHint": "Ders saatinden bu kadar saat sonra ders otomatik kapanır.",
+        "save": "Kaydet",
+        "saving": "Kaydediliyor...",
+        "success": "Ayarlar kaydedildi.",
+        "error": "Ayarlar kaydedilemedi. Tekrar deneyin."
+      },
       "devReset": {
         "badge": "Geliştirme aracı",
         "title": "Verileri sıfırla",
@@ -659,6 +681,17 @@
       "username": "Kullanıcı adı",
       "adminPassword": "Admin parolanız",
       "sendInvitation": "Panel daveti gönder",
+      "resendInvitation": "Daveti yeniden gönder",
+      "cancelInvitation": "Daveti iptal et",
+      "invitationManageHint": "Aktivasyon e-postasını yeniden gönderebilir veya daveti iptal edebilirsiniz. Onaylamak için admin parolanızı girin.",
+      "invitationResent": "Davet yeniden gönderildi. Aktivasyon e-postası tekrar iletildi.",
+      "invitationCancelled": "Davet iptal edildi. Artık yeni bir davet gönderebilirsiniz.",
+      "invitationUsernameTaken": "Bu kullanıcı adı zaten kayıtlı. Farklı bir kullanıcı adı deneyin.",
+      "invitationUsernamePending": "Bu kullanıcı adı başka bir bekleyen davette kullanılıyor. Farklı bir kullanıcı adı deneyin.",
+      "invitationNotPending": "Bekleyen bir davet bulunamadı. Sayfayı yenileyip tekrar deneyin.",
+      "invitationAdminSession": "Bu işlem için MFA doğrulamalı aktif bir admin oturumu gerekir.",
+      "invitationUsernameInvalid": "Kullanıcı adı geçersiz. 5-30 karakter; harf, rakam, nokta ve tire kullanılabilir.",
+      "invitationAccountUnavailable": "Bu eğitmenin zaten bir panel hesabı var ya da davet için uygun değil.",
       "uploadPhoto": "Fotoğraf yükle",
       "photoSaved": "Eğitmen fotoğrafı güncellendi.",
       "archiveInstructor": "Eğitmeni sil",
@@ -1235,7 +1268,8 @@
         "cancelled": "İptal",
         "postponed": "Ertelendi",
         "completed": "Tamamlandı"
-      }
+      },
+      "joinOpensAt": "{time}'de açılır"
     },
     "progressPage": {
       "title": "İlerleme",
@@ -1424,7 +1458,36 @@
         "cancelled": "İptal",
         "postponed": "Ertelendi",
         "completed": "Tamamlandı"
-      }
+      },
+      "takeAttendance": "Yoklama al",
+      "joinOpensAt": "{time}'de açılır",
+      "endLesson": "Dersi sonlandır",
+      "endLessonConfirm": "Dersi sonlandırmak istediğinize emin misiniz? Katılım linki kapanacak."
+    },
+    "attendance": {
+      "title": "Yoklama",
+      "description": "Bu ders için katılımı gözden geçirip onaylayın.",
+      "suggested": "Öneri",
+      "joinedAt": "Giriş",
+      "leftAt": "Çıkış",
+      "duration": "Süre",
+      "notJoined": "Katılmadı",
+      "durationMinutes": "{minutes} dk",
+      "durationSeconds": "{seconds} sn",
+      "statuses": {
+        "present": "Katıldı",
+        "late": "Geç katıldı",
+        "absent": "Gelmedi",
+        "excused": "İzinli",
+        "needs_review": "İncelenecek"
+      },
+      "noteHint": "Bu öğrencinin katılımıyla ilgili not (opsiyonel)...",
+      "save": "Yoklamayı kaydet",
+      "saving": "Kaydediliyor...",
+      "saved": "Yoklama kaydedildi.",
+      "error": "Yoklama kaydedilemedi. Tekrar deneyin.",
+      "noStudents": "Bu derse atanmış öğrenci yok.",
+      "unmatchedTitle": "Eşleşmeyen katılımcılar"
     },
     "empty": {
       "students": { "title": "Öğrenciler", "description": "Öğretmene atanmış öğrenciler ve ders ilerleme notları burada görünecek." },

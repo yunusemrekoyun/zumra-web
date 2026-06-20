@@ -11,7 +11,7 @@ import { updateLessonSessionOperationalStatus } from '@/lib/server/services/less
 const inputSchema = z.object({
   note: z.string().max(1000).optional(),
   startsAt: z.string().datetime().optional(),
-  status: z.enum(['cancelled', 'postponed', 'scheduled']),
+  status: z.enum(['cancelled', 'completed', 'postponed', 'scheduled']),
 });
 
 export const runtime = 'nodejs';

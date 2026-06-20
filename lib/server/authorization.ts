@@ -104,16 +104,6 @@ export async function requireFreshSession() {
 export async function requireCriticalAdmin(password: string) {
   const principal = await requireAdminSession();
 
-  const limit = await consumeRateLimit(
-    `critical-admin:${principal.id}`,
-    5,
-    15 * 60 * 1000,
-  );
-
-  if (!limit.allowed) {
-    throw new AuthorizationDeniedError('Critical action rate limit exceeded.');
-  }
-
   const [credential] = await database
     .select({ password: accounts.password })
     .from(accounts)
@@ -125,10 +115,26 @@ export async function requireCriticalAdmin(password: string) {
     )
     .limit(1);
 
-  if (
-    !credential?.password ||
-    !(await verifyPassword({ hash: credential.password, password }))
-  ) {
+  const storedHash = credential?.password;
+  const passwordValid =
+    Boolean(storedHash) &&
+    (await verifyPassword({ hash: storedHash as string, password }));
+
+  if (!passwordValid) {
+    // Only failed confirmations consume the rate limit, so legitimate repeated
+    // critical actions are never locked out while brute-force stays bounded.
+    const limit = await consumeRateLimit(
+      `critical-admin:${principal.id}`,
+      5,
+      15 * 60 * 1000,
+    );
+
+    if (!limit.allowed) {
+      throw new AuthorizationDeniedError(
+        'Critical action rate limit exceeded.',
+      );
+    }
+
     throw new AuthorizationDeniedError('Password confirmation failed.');
   }
 

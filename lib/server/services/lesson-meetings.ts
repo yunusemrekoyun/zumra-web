@@ -6,6 +6,7 @@ import {
   eq,
   inArray,
   isNull,
+  lt,
   lte,
   or,
   sql,
@@ -33,6 +34,7 @@ import {
   PublicFlowError,
 } from '@/lib/server/http/errors';
 import { notificationService } from '@/lib/server/services/notifications';
+import { getSetting } from '@/lib/server/services/settings';
 import {
   enqueueMeetAttendanceSync,
   enqueueMeetCreation,
@@ -59,7 +61,11 @@ type AttendanceStatus =
   | 'needs_review'
   | 'present';
 
-type LessonSessionOperationalStatus = 'cancelled' | 'postponed' | 'scheduled';
+type LessonSessionOperationalStatus =
+  | 'cancelled'
+  | 'completed'
+  | 'postponed'
+  | 'scheduled';
 
 type ExpectedStudent = {
   email: string;
@@ -514,6 +520,15 @@ export async function getLessonMeetingJoinUrl(
     throw new PublicFlowError('lesson_session_cancelled', 409);
   }
 
+  if (context.status === 'completed') {
+    throw new PublicFlowError('lesson_session_closed', 409);
+  }
+
+  const joinLeadMinutes = await getSetting('joinLeadMinutes');
+  if (Date.now() < context.startsAt.getTime() - joinLeadMinutes * 60_000) {
+    throw new PublicFlowError('lesson_not_open_yet', 409);
+  }
+
   await assertCanJoinLesson(principal, context);
 
   if (principal.role === 'student') {
@@ -629,17 +644,21 @@ export async function updateLessonSessionOperationalStatus(
     throw new PublicFlowError('lesson_session_not_found', 404);
   }
 
-  await notifyLessonSessionStatusChange({
-    context: {
-      ...context,
-      endsAt: updated.endsAt,
-      startsAt: updated.startsAt,
+  // A normal "completed" close is not a disruption, so it does not fan out
+  // status-change emails the way cancel/postpone do.
+  if (updated.status !== 'completed') {
+    await notifyLessonSessionStatusChange({
+      context: {
+        ...context,
+        endsAt: updated.endsAt,
+        startsAt: updated.startsAt,
+        status: updated.status,
+      },
+      lessonSessionId,
+      note: cleanText(input.note, 1000),
       status: updated.status,
-    },
-    lessonSessionId,
-    note: cleanText(input.note, 1000),
-    status: updated.status,
-  });
+    });
+  }
 
   return {
     endsAt: updated.endsAt.toISOString(),
@@ -647,6 +666,26 @@ export async function updateLessonSessionOperationalStatus(
     startsAt: updated.startsAt.toISOString(),
     status: updated.status,
   };
+}
+
+// Safety net: closes lessons the teacher forgot to end. Runs from the worker
+// sweep. Only flips lesson status to 'completed' (join then blocked) and does
+// NOT disable the meeting, so the attendance sync still captures participation.
+export async function autoCloseStaleLessons(): Promise<number> {
+  const autoCloseHours = await getSetting('lessonAutoCloseHours');
+  const cutoff = new Date(Date.now() - autoCloseHours * 60 * 60 * 1000);
+  const closed = await database
+    .update(lessonSessions)
+    .set({ status: 'completed', updatedAt: new Date() })
+    .where(
+      and(
+        inArray(lessonSessions.status, ['scheduled', 'postponed']),
+        lt(lessonSessions.startsAt, cutoff),
+      ),
+    )
+    .returning({ id: lessonSessions.id });
+
+  return closed.length;
 }
 
 export async function getLessonAttendanceDraft(

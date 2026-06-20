@@ -23,6 +23,7 @@ import {
 import {
   createMeetWorker,
   requeuePendingMeetOperations,
+  startLessonAutoCloseSweep,
   startMeetReconciliation,
 } from './meet-worker';
 import {
@@ -52,6 +53,7 @@ async function main() {
   const stopMediaSourceCleanup = startMediaSourceCleanup();
   const stopMediaReconciliation = startMediaReconciliation();
   const stopMeetReconciliation = startMeetReconciliation();
+  const stopLessonAutoCloseSweep = startLessonAutoCloseSweep();
   const stopNotificationReconciliation = startNotificationReconciliation();
 
   await verifyMailTransport()
@@ -124,6 +126,7 @@ async function main() {
     stopMediaSourceCleanup();
     stopMediaReconciliation();
     stopMeetReconciliation();
+    stopLessonAutoCloseSweep();
     stopNotificationReconciliation();
     await Promise.all([
       mediaWorker.close(),

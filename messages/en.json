@@ -37,6 +37,12 @@
       "inProgress": "In Progress",
       "upcoming": "Upcoming"
     },
+    "attendance": {
+      "present": "Present",
+      "late": "Late",
+      "absent": "Absent",
+      "excused": "Excused"
+    },
       "status": {
         "active": "Active",
         "paused": "Paused",
@@ -400,11 +406,27 @@
         "cancelled": "Cancelled",
         "postponed": "Postponed",
         "completed": "Completed"
-      }
+      },
+      "joinOpensAt": "Opens at {time}",
+      "endLesson": "End lesson",
+      "endLessonConfirm": "Are you sure you want to end this lesson? The join link will close."
     },
     "settings": {
       "title": "Settings",
       "description": "System tools for the admin panel and development environment.",
+      "runtimeSettings": {
+        "badge": "Lesson settings",
+        "title": "Lesson & join settings",
+        "description": "Configure the join window and auto-close times here.",
+        "joinLeadMinutes": "Join opens (minutes before)",
+        "joinLeadMinutesHint": "Students and teachers can join this many minutes before the lesson.",
+        "lessonAutoCloseHours": "Auto-close (hours)",
+        "lessonAutoCloseHoursHint": "The lesson auto-closes this many hours after its start time.",
+        "save": "Save",
+        "saving": "Saving...",
+        "success": "Settings saved.",
+        "error": "Could not save settings. Try again."
+      },
       "devReset": {
         "badge": "Development tool",
         "title": "Reset data",
@@ -659,6 +681,17 @@
       "username": "Username",
       "adminPassword": "Your admin password",
       "sendInvitation": "Send panel invitation",
+      "resendInvitation": "Resend invitation",
+      "cancelInvitation": "Cancel invitation",
+      "invitationManageHint": "You can resend the activation email or cancel the invitation. Enter your admin password to confirm.",
+      "invitationResent": "Invitation resent. The activation email was delivered again.",
+      "invitationCancelled": "Invitation cancelled. You can now send a new one.",
+      "invitationUsernameTaken": "This username is already registered. Try a different one.",
+      "invitationUsernamePending": "This username is used by another pending invitation. Try a different one.",
+      "invitationNotPending": "No pending invitation found. Refresh the page and try again.",
+      "invitationAdminSession": "This action requires an active admin session with MFA verification.",
+      "invitationUsernameInvalid": "Invalid username. Use 5-30 characters: letters, numbers, dots, and hyphens.",
+      "invitationAccountUnavailable": "This instructor already has a panel account or is not eligible for an invitation.",
       "uploadPhoto": "Upload photo",
       "photoSaved": "Instructor photo updated.",
       "archiveInstructor": "Delete instructor",
@@ -1235,7 +1268,8 @@
         "cancelled": "Cancelled",
         "postponed": "Postponed",
         "completed": "Completed"
-      }
+      },
+      "joinOpensAt": "Opens at {time}"
     },
     "progressPage": {
       "title": "Progress",
@@ -1424,7 +1458,36 @@
         "cancelled": "Cancelled",
         "postponed": "Postponed",
         "completed": "Completed"
-      }
+      },
+      "takeAttendance": "Take attendance",
+      "joinOpensAt": "Opens at {time}",
+      "endLesson": "End lesson",
+      "endLessonConfirm": "Are you sure you want to end this lesson? The join link will close."
+    },
+    "attendance": {
+      "title": "Attendance",
+      "description": "Review and confirm attendance for this lesson.",
+      "suggested": "Suggested",
+      "joinedAt": "Joined",
+      "leftAt": "Left",
+      "duration": "Duration",
+      "notJoined": "Did not join",
+      "durationMinutes": "{minutes} min",
+      "durationSeconds": "{seconds} sec",
+      "statuses": {
+        "present": "Present",
+        "late": "Late",
+        "absent": "Absent",
+        "excused": "Excused",
+        "needs_review": "Needs review"
+      },
+      "noteHint": "Note about this student's attendance (optional)...",
+      "save": "Save attendance",
+      "saving": "Saving...",
+      "saved": "Attendance saved.",
+      "error": "Could not save attendance. Try again.",
+      "noStudents": "No students are assigned to this lesson.",
+      "unmatchedTitle": "Unmatched participants"
     },
     "empty": {
       "students": { "title": "Students", "description": "Students assigned to the teacher and lesson progress notes will appear here." },
