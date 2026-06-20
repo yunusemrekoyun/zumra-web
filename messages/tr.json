@@ -8,6 +8,18 @@
     "description": "Aradığınız sayfa mevcut değil.",
     "help": "Adresi kontrol edin veya ana sayfaya dönün."
   },
+  "joinError": {
+    "title": "Derse bağlanılamadı",
+    "closeHint": "Bu sekmeyi kapatabilirsiniz.",
+    "reasons": {
+      "lesson_not_open_yet": "Ders henüz başlamadı. Katılım, ders saatinden kısa süre önce açılır.",
+      "lesson_session_closed": "Bu ders sona erdi.",
+      "lesson_session_cancelled": "Bu ders iptal edildi.",
+      "lesson_meeting_not_ready": "Toplantı henüz hazır değil. Birazdan tekrar deneyin.",
+      "google_account_required": "Önce profilinizden Google hesabınızı bağlamanız gerekiyor.",
+      "generic": "Derse şu anda bağlanılamıyor."
+    }
+  },
   "common": {
     "brand": {
       "name": "Zümra",

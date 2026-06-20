@@ -36,6 +36,9 @@ export async function enqueueMeetCreation(lessonSessionId: string) {
     data: { lessonSessionId },
     jobId: `meet-create-${lessonSessionId}`,
     name: 'create-lesson-meet',
+    // The reconciliation loop owns retries (exponential backoff + attempt cap),
+    // so the BullMQ job itself should attempt once and not double-retry.
+    options: { attempts: 1 },
   });
 }
 

@@ -1,3 +1,4 @@
+import { cookies } from 'next/headers';
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import { requireSession } from '@/lib/server/authorization';
@@ -6,9 +7,15 @@ import {
   apiResponse,
   requestId,
 } from '@/lib/server/http/api-errors';
+import { PublicFlowError } from '@/lib/server/http/errors';
 import { getLessonMeetingJoinUrl } from '@/lib/server/services/lesson-meetings';
 
 export const runtime = 'nodejs';
+
+async function resolveLocale(): Promise<string> {
+  const cookieLocale = (await cookies()).get('NEXT_LOCALE')?.value;
+  return cookieLocale === 'en' ? 'en' : 'tr';
+}
 
 export async function GET(
   request: Request,
@@ -29,6 +36,17 @@ export async function GET(
       status: 302,
     });
   } catch (error) {
+    // A student clicks Join in a new tab; on a gating error show a friendly
+    // localized page instead of raw JSON.
+    if (error instanceof PublicFlowError) {
+      const locale = await resolveLocale();
+      const redirectTo = new URL(`/${locale}/ders-baglanti`, request.url);
+      redirectTo.searchParams.set('reason', error.code);
+      return NextResponse.redirect(redirectTo, {
+        headers: { 'X-Request-ID': id },
+        status: 302,
+      });
+    }
     return apiErrorResponse(error, id);
   }
 }

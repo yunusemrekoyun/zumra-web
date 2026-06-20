@@ -8,6 +8,18 @@
     "description": "The page you requested does not exist.",
     "help": "Check the address or return to the home page."
   },
+  "joinError": {
+    "title": "Couldn't join the lesson",
+    "closeHint": "You can close this tab.",
+    "reasons": {
+      "lesson_not_open_yet": "The lesson hasn't started yet. Joining opens shortly before the lesson time.",
+      "lesson_session_closed": "This lesson has ended.",
+      "lesson_session_cancelled": "This lesson was cancelled.",
+      "lesson_meeting_not_ready": "The meeting isn't ready yet. Try again shortly.",
+      "google_account_required": "Link your Google account from your profile first.",
+      "generic": "You can't join the lesson right now."
+    }
+  },
   "common": {
     "brand": {
       "name": "Zümra",

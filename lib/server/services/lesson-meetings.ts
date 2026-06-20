@@ -41,11 +41,13 @@ import {
 } from '@/lib/server/queues/meet';
 import {
   createGoogleMeetSpace,
+  endGoogleMeetConference,
   GoogleMeetClientError,
   isGoogleMeetEnabled,
   listGoogleMeetConferenceRecords,
   listGoogleMeetParticipants,
   listGoogleMeetParticipantSessions,
+  lockGoogleMeetSpace,
   type GoogleMeetParticipant,
   type GoogleMeetParticipantSession,
 } from './google-meet-client';
@@ -53,6 +55,33 @@ import {
 const ATTENDANCE_SYNC_DELAY_MS = 15 * 60 * 1000;
 const PRESENT_THRESHOLD_SECONDS = 35 * 60;
 const LATE_THRESHOLD_MS = 10 * 60 * 1000;
+
+// Meet-creation retry policy. A transient failure is retried with exponential
+// backoff up to MEET_MAX_ATTEMPTS; a permanent failure (or hitting the cap)
+// becomes 'dead' so the reconciliation loop stops hammering Google.
+const MEET_MAX_ATTEMPTS = 6;
+const MEET_RETRY_BASE_MS = 30 * 1000;
+const MEET_RETRY_CAP_MS = 60 * 60 * 1000;
+
+function isTransientMeetError(error: unknown): boolean {
+  if (error instanceof GoogleMeetClientError) {
+    const status = error.status;
+    // No status = network/timeout. 429 + 5xx are retryable; 4xx (401/403/404)
+    // mean a config/permission problem that retrying will not fix.
+    if (status === undefined) return true;
+    return status === 429 || (status >= 500 && status < 600);
+  }
+  return true;
+}
+
+function computeMeetRetryAt(attempts: number): Date {
+  const backoff = Math.min(
+    MEET_RETRY_BASE_MS * 2 ** Math.max(0, attempts - 1),
+    MEET_RETRY_CAP_MS,
+  );
+  const jitter = Math.floor(backoff * 0.2 * Math.random());
+  return new Date(Date.now() + backoff + jitter);
+}
 
 type AttendanceStatus =
   | 'absent'
@@ -141,7 +170,19 @@ export async function requeuePendingLessonMeetOperations() {
     .select({ lessonSessionId: lessonSessionMeetings.lessonSessionId })
     .from(lessonSessionMeetings)
     .where(
-      inArray(lessonSessionMeetings.status, ['pending', 'failed', 'disabled']),
+      or(
+        // New work, or 'disabled' rows to (re)create once Meet is enabled.
+        inArray(lessonSessionMeetings.status, ['pending', 'disabled']),
+        // Retry failures only within the attempt cap and past their backoff.
+        and(
+          eq(lessonSessionMeetings.status, 'failed'),
+          lt(lessonSessionMeetings.attempts, MEET_MAX_ATTEMPTS),
+          or(
+            isNull(lessonSessionMeetings.nextRetryAt),
+            lte(lessonSessionMeetings.nextRetryAt, new Date()),
+          ),
+        ),
+      ),
     )
     .limit(500);
 
@@ -248,6 +289,7 @@ export async function createLessonMeetingForSession(lessonSessionId: string) {
         lastSyncedAt: new Date(),
         meetingCode: space.meetingCode,
         meetingUri: space.meetingUri,
+        nextRetryAt: null,
         organizerEmail: env.GOOGLE_MEET_IMPERSONATED_USER,
         spaceName: space.name,
         status: 'ready',
@@ -267,19 +309,25 @@ export async function createLessonMeetingForSession(lessonSessionId: string) {
       }),
     );
 
+    const [current] = await database
+      .select({ attempts: lessonSessionMeetings.attempts })
+      .from(lessonSessionMeetings)
+      .where(eq(lessonSessionMeetings.lessonSessionId, lessonSessionId))
+      .limit(1);
+    const attempts = current?.attempts ?? 0;
+    const permanent =
+      !isTransientMeetError(error) || attempts >= MEET_MAX_ATTEMPTS;
+
     await database
       .update(lessonSessionMeetings)
       .set({
         lastError:
           error instanceof Error ? error.message.slice(0, 500) : 'unknown',
-        status: 'failed',
+        nextRetryAt: permanent ? null : computeMeetRetryAt(attempts),
+        status: permanent ? 'dead' : 'failed',
         updatedAt: new Date(),
       })
       .where(eq(lessonSessionMeetings.lessonSessionId, lessonSessionId));
-
-    if (error instanceof GoogleMeetClientError) {
-      throw error;
-    }
 
     throw error;
   } finally {
@@ -586,7 +634,9 @@ export async function retryLessonMeetingCreation(
     .onConflictDoUpdate({
       target: lessonSessionMeetings.lessonSessionId,
       set: {
+        attempts: 0,
         lastError: null,
+        nextRetryAt: null,
         nextSyncAt: new Date(
           context.endsAt.getTime() + ATTENDANCE_SYNC_DELAY_MS,
         ),
@@ -660,6 +710,12 @@ export async function updateLessonSessionOperationalStatus(
     });
   }
 
+  // Cancelling or completing a lesson closes its Meet access so the raw link
+  // can no longer be reused.
+  if (updated.status === 'cancelled' || updated.status === 'completed') {
+    await closeLessonMeetingAccess([lessonSessionId]);
+  }
+
   return {
     endsAt: updated.endsAt.toISOString(),
     id: updated.id,
@@ -668,9 +724,52 @@ export async function updateLessonSessionOperationalStatus(
   };
 }
 
+function logMeetCloseError(op: string, spaceName: string, error: unknown) {
+  console.error(
+    JSON.stringify({
+      event: 'meet.close_failed',
+      message: error instanceof Error ? error.message.slice(0, 300) : 'unknown',
+      op,
+      spaceName,
+      timestamp: new Date().toISOString(),
+    }),
+  );
+}
+
+// Closes Meet access for ended/cancelled lessons: locks each space to
+// RESTRICTED (so the raw link stops auto-admitting) and ends any live
+// conference. Best-effort — failures never block the lesson-status change, and
+// conferenceRecords survive so post-hoc attendance sync still works.
+export async function closeLessonMeetingAccess(
+  lessonSessionIds: string[],
+): Promise<void> {
+  if (!isGoogleMeetEnabled() || !lessonSessionIds.length) return;
+
+  const meetings = await database
+    .select({ spaceName: lessonSessionMeetings.spaceName })
+    .from(lessonSessionMeetings)
+    .where(
+      and(
+        inArray(lessonSessionMeetings.lessonSessionId, lessonSessionIds),
+        eq(lessonSessionMeetings.status, 'ready'),
+      ),
+    );
+
+  for (const meeting of meetings) {
+    if (!meeting.spaceName) continue;
+    const spaceName = meeting.spaceName;
+    await lockGoogleMeetSpace(spaceName).catch((error) =>
+      logMeetCloseError('lock', spaceName, error),
+    );
+    await endGoogleMeetConference(spaceName).catch((error) =>
+      logMeetCloseError('end', spaceName, error),
+    );
+  }
+}
+
 // Safety net: closes lessons the teacher forgot to end. Runs from the worker
-// sweep. Only flips lesson status to 'completed' (join then blocked) and does
-// NOT disable the meeting, so the attendance sync still captures participation.
+// sweep. Flips lesson status to 'completed' (join then blocked) and closes the
+// Meet access; does NOT delete conferenceRecords, so attendance still syncs.
 export async function autoCloseStaleLessons(): Promise<number> {
   const autoCloseHours = await getSetting('lessonAutoCloseHours');
   const cutoff = new Date(Date.now() - autoCloseHours * 60 * 60 * 1000);
@@ -684,6 +783,8 @@ export async function autoCloseStaleLessons(): Promise<number> {
       ),
     )
     .returning({ id: lessonSessions.id });
+
+  await closeLessonMeetingAccess(closed.map((row) => row.id));
 
   return closed.length;
 }

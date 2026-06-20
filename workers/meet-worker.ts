@@ -1,4 +1,5 @@
 import { type Job, Worker } from 'bullmq';
+import { tryAcquireAdvisoryLock } from '@/lib/server/db/advisory-lock';
 import { getRuntimeEnv } from '@/lib/server/env';
 import {
   getBullConnection,
@@ -14,6 +15,18 @@ import {
 import { beginJob, endJob } from './activity';
 
 const RECONCILIATION_INTERVAL_MS = 60 * 1000;
+
+// Runs a periodic sweep behind a non-blocking advisory lock so that when
+// multiple worker instances are running, only one executes the sweep per tick.
+async function withSweepLock(key: string, run: () => Promise<unknown>) {
+  const release = await tryAcquireAdvisoryLock(key);
+  if (!release) return;
+  try {
+    await run();
+  } finally {
+    await release();
+  }
+}
 
 export function createMeetWorker(workerId: string) {
   const env = getRuntimeEnv();
@@ -41,7 +54,10 @@ export async function requeuePendingMeetOperations() {
 
 export function startMeetReconciliation() {
   const run = () => {
-    void requeuePendingMeetOperations().catch((error) => {
+    void withSweepLock(
+      'sweep:meet-reconciliation',
+      requeuePendingMeetOperations,
+    ).catch((error) => {
       console.error(
         JSON.stringify({
           event: 'meet.reconciliation_failed',
@@ -58,15 +74,17 @@ export function startMeetReconciliation() {
 
 export function startLessonAutoCloseSweep() {
   const run = () => {
-    void autoCloseStaleLessons().catch((error) => {
-      console.error(
-        JSON.stringify({
-          event: 'lesson.auto_close_failed',
-          message: error instanceof Error ? error.message : 'unknown',
-          timestamp: new Date().toISOString(),
-        }),
-      );
-    });
+    void withSweepLock('sweep:lesson-auto-close', autoCloseStaleLessons).catch(
+      (error) => {
+        console.error(
+          JSON.stringify({
+            event: 'lesson.auto_close_failed',
+            message: error instanceof Error ? error.message : 'unknown',
+            timestamp: new Date().toISOString(),
+          }),
+        );
+      },
+    );
   };
 
   const interval = setInterval(run, RECONCILIATION_INTERVAL_MS);

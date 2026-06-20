@@ -104,6 +104,31 @@ export async function createGoogleMeetSpace(): Promise<GoogleMeetSpace> {
   }, meetSpaceSchema);
 }
 
+// Ends the current conference in a space, ejecting all live participants.
+// Throws (FAILED_PRECONDITION) when there is no active conference — callers
+// treat that as a benign no-op.
+export async function endGoogleMeetConference(spaceName: string): Promise<void> {
+  await googleMeetFetch(
+    `/${spaceName}:endActiveConference`,
+    { body: JSON.stringify({}), method: 'POST' },
+    z.unknown(),
+  );
+}
+
+// Locks a space down to RESTRICTED so the raw meet.google.com link no longer
+// auto-admits anyone (non-invitees must knock). Used to close access after a
+// lesson is cancelled/completed/auto-closed.
+export async function lockGoogleMeetSpace(spaceName: string): Promise<void> {
+  await googleMeetFetch(
+    `/${spaceName}?${new URLSearchParams({ updateMask: 'config.accessType' })}`,
+    {
+      body: JSON.stringify({ config: { accessType: 'RESTRICTED' } }),
+      method: 'PATCH',
+    },
+    z.unknown(),
+  );
+}
+
 export async function listGoogleMeetConferenceRecords(input: {
   endedAfter?: Date;
   spaceName: string;
