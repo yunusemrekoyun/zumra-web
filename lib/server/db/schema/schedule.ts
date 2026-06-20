@@ -44,6 +44,7 @@ export const lessonMeetingStatusEnum = pgEnum('lesson_meeting_status', [
   'ready',
   'failed',
   'disabled',
+  'dead',
 ]);
 
 export const lessonAttendanceStatusEnum = pgEnum('lesson_attendance_status', [
@@ -201,6 +202,7 @@ export const lessonSessionMeetings = pgTable(
     lastError: text('last_error'),
     lastSyncedAt: timestamp('last_synced_at', { withTimezone: true }),
     nextSyncAt: timestamp('next_sync_at', { withTimezone: true }),
+    nextRetryAt: timestamp('next_retry_at', { withTimezone: true }),
     createdAt: timestamp('created_at', { withTimezone: true })
       .notNull()
       .defaultNow(),
@@ -214,6 +216,7 @@ export const lessonSessionMeetings = pgTable(
     ),
     index('lesson_session_meetings_status_idx').on(table.status),
     index('lesson_session_meetings_next_sync_idx').on(table.nextSyncAt),
+    index('lesson_session_meetings_next_retry_idx').on(table.nextRetryAt),
     check(
       'lesson_session_meetings_ready_check',
       sql`${table.status} <> 'ready'

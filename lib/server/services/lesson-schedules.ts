@@ -150,7 +150,14 @@ type LessonCalendarRow = {
   instructorLastName: string | null;
   meetingAttempts: number | null;
   meetingLastError: string | null;
-  meetingStatus: 'creating' | 'disabled' | 'failed' | 'pending' | 'ready' | null;
+  meetingStatus:
+    | 'creating'
+    | 'dead'
+    | 'disabled'
+    | 'failed'
+    | 'pending'
+    | 'ready'
+    | null;
   programName: string | null;
   source: 'branch' | 'private';
   startsAt: Date;
@@ -319,7 +326,10 @@ export async function getBranchLessonScheduleMap(branchIds: string[]) {
       id: session.id,
       meetingAttempts: session.meetingAttempts ?? undefined,
       meetingLastError: session.meetingLastError ?? undefined,
-      meetingStatus: session.meetingStatus ?? undefined,
+      meetingStatus:
+        session.meetingStatus === 'dead'
+          ? 'failed'
+          : (session.meetingStatus ?? undefined),
       startsAt: session.startsAt.toISOString(),
       startTime: local.time,
       status: session.status,
@@ -712,11 +722,15 @@ function mapCalendarRow(
     meetingProvider: row.meetingStatus ? 'google_meet' : undefined,
     meetingRetryUrl:
       row.meetingStatus === 'failed' ||
+      row.meetingStatus === 'dead' ||
       row.meetingStatus === 'disabled' ||
       row.meetingStatus === 'pending'
         ? `/api/lessons/${row.id}/meeting/retry`
         : undefined,
-    meetingStatus: row.meetingStatus ?? undefined,
+    meetingStatus:
+      row.meetingStatus === 'dead'
+        ? 'failed'
+        : (row.meetingStatus ?? undefined),
     programName: row.programName ?? undefined,
     source: row.source,
     startsAt: row.startsAt.toISOString(),
