@@ -75,6 +75,7 @@ export default async function StudentCalendarPage({
             scheduled: t('statuses.scheduled'),
           },
           studentCount: (count) => t('studentCount', { count }),
+          joinOpensAt: (time) => t('joinOpensAt', { time }),
         }}
       />
     </div>

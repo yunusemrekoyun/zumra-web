@@ -25,12 +25,9 @@ const meetSpaceSchema = z.object({
 const conferenceRecordSchema = z.object({
   endTime: z.string().optional(),
   name: z.string().min(1),
-  space: z
-    .object({
-      meetingCode: z.string().optional(),
-      name: z.string().optional(),
-    })
-    .optional(),
+  // Google Meet v2 returns `space` as the space resource name string
+  // (e.g. "spaces/abc"), not a nested object. We don't read it, so accept any.
+  space: z.unknown().optional(),
   startTime: z.string().optional(),
 });
 
@@ -100,7 +97,6 @@ export async function createGoogleMeetSpace(): Promise<GoogleMeetSpace> {
     body: JSON.stringify({
       config: {
         accessType: 'OPEN',
-        attendanceReportGenerationType: 'DO_NOT_GENERATE',
         entryPointAccess: 'ALL',
       },
     }),
@@ -299,5 +295,7 @@ function base64UrlJson(value: Record<string, unknown>) {
 }
 
 function normalizePrivateKey(value: string) {
-  return value.replace(/\\n/g, '\n');
+  return value
+    .replace(/\\n/g, '\n')
+    .replace(/\\(\r?\n)/g, '$1');
 }

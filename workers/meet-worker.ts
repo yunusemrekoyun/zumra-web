@@ -6,6 +6,7 @@ import {
   reportQueueConnectionError,
 } from '@/lib/server/queues/config';
 import {
+  autoCloseStaleLessons,
   createLessonMeetingForSession,
   requeuePendingLessonMeetOperations,
   syncLessonAttendanceFromMeet,
@@ -44,6 +45,23 @@ export function startMeetReconciliation() {
       console.error(
         JSON.stringify({
           event: 'meet.reconciliation_failed',
+          message: error instanceof Error ? error.message : 'unknown',
+          timestamp: new Date().toISOString(),
+        }),
+      );
+    });
+  };
+
+  const interval = setInterval(run, RECONCILIATION_INTERVAL_MS);
+  return () => clearInterval(interval);
+}
+
+export function startLessonAutoCloseSweep() {
+  const run = () => {
+    void autoCloseStaleLessons().catch((error) => {
+      console.error(
+        JSON.stringify({
+          event: 'lesson.auto_close_failed',
           message: error instanceof Error ? error.message : 'unknown',
           timestamp: new Date().toISOString(),
         }),

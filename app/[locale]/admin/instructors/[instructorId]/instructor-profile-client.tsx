@@ -188,6 +188,63 @@ export function InstructorProfileClient({
     }
   }
 
+  async function resendInvitation() {
+    setBusy(true);
+    setMessage('');
+    try {
+      const response = await fetch(
+        `/api/admin/instructors/${profile.id}/invitation`,
+        {
+          body: JSON.stringify({ locale, password: adminPassword }),
+          credentials: 'same-origin',
+          headers: { 'content-type': 'application/json' },
+          method: 'PUT',
+        },
+      );
+      const body = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(String(body.error ?? 'invite_failed'));
+      setProfile((current) => ({
+        ...current,
+        invitation: {
+          expiresAt: body.expiresAt,
+          status: body.status,
+          username: body.username,
+        },
+      }));
+      setAdminPassword('');
+      setMessage(t('invitationResent'));
+    } catch (error) {
+      setMessage(invitationErrorMessage(error, t));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function cancelInvitation() {
+    setBusy(true);
+    setMessage('');
+    try {
+      const response = await fetch(
+        `/api/admin/instructors/${profile.id}/invitation`,
+        {
+          body: JSON.stringify({ password: adminPassword }),
+          credentials: 'same-origin',
+          headers: { 'content-type': 'application/json' },
+          method: 'DELETE',
+        },
+      );
+      const body = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(String(body.error ?? 'invite_failed'));
+      setProfile((current) => ({ ...current, invitation: undefined }));
+      setAdminPassword('');
+      setMessage(t('invitationCancelled'));
+    } catch (error) {
+      setMessage(invitationErrorMessage(error, t));
+    } finally {
+      setBusy(false);
+    }
+  }
+
   async function changeArchiveState(action: 'archive' | 'restore') {
     setBusy(true);
     setMessage('');
@@ -447,10 +504,40 @@ export function InstructorProfileClient({
                   {t('accountLinkedDescription')}
                 </div>
               ) : profile.invitation?.status === 'pending' ? (
-                <div className="mt-5 rounded-2xl bg-amber-50 p-4 text-sm font-semibold text-amber-700">
-                  {t('invitationPendingDescription', {
-                    username: profile.invitation.username,
-                  })}
+                <div className="mt-5 space-y-3">
+                  <div className="rounded-2xl bg-amber-50 p-4 text-sm font-semibold text-amber-700">
+                    {t('invitationPendingDescription', {
+                      username: profile.invitation.username,
+                    })}
+                  </div>
+                  <p className="text-sm leading-6 text-[#2E286C]/55">
+                    {t('invitationManageHint')}
+                  </p>
+                  <Input
+                    type="password"
+                    value={adminPassword}
+                    onChange={(event) => setAdminPassword(event.target.value)}
+                    placeholder={t('adminPassword')}
+                    minLength={12}
+                  />
+                  <div className="flex flex-wrap gap-3">
+                    <Button
+                      type="button"
+                      disabled={busy || adminPassword.length < 12}
+                      onClick={resendInvitation}
+                    >
+                      <Mail className="h-4 w-4" />
+                      {t('resendInvitation')}
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      disabled={busy || adminPassword.length < 12}
+                      onClick={cancelInvitation}
+                    >
+                      {t('cancelInvitation')}
+                    </Button>
+                  </div>
                 </div>
               ) : (
                 <form className="mt-5 space-y-3" onSubmit={inviteInstructor}>
@@ -500,14 +587,31 @@ function invitationErrorMessage(
   if (code === 'invitation_already_pending') {
     return t('invitationAlreadyPending');
   }
+  if (code === 'username_already_registered') {
+    return t('invitationUsernameTaken');
+  }
+  if (code === 'invitation_username_already_pending') {
+    return t('invitationUsernamePending');
+  }
+  if (code === 'invitation_not_pending') {
+    return t('invitationNotPending');
+  }
+  if (code === 'invalid_username') {
+    return t('invitationUsernameInvalid');
+  }
+  if (code === 'admin_session_required') {
+    return t('invitationAdminSession');
+  }
   if (code === 'forbidden') {
     return t('invitationForbidden');
   }
   if (
-    code === 'invalid_request' ||
-    code === 'invalid_invitation_target' ||
+    code === 'instructor_account_unavailable' ||
     code === 'instructor_invitation_unavailable'
   ) {
+    return t('invitationAccountUnavailable');
+  }
+  if (code === 'invalid_request' || code === 'invalid_invitation_target') {
     return t('invitationInvalid');
   }
   return t('invitationError');

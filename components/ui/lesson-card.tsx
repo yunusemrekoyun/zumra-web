@@ -10,13 +10,23 @@ import { motion, useReducedMotion } from 'motion/react';
 
 type LessonStatus = 'completed' | 'upcoming' | 'in-progress';
 
+type AttendanceBadgeStatus = 'present' | 'late' | 'absent' | 'excused';
+
 type LessonCardProps = {
+  attendanceStatus?: AttendanceBadgeStatus;
   className?: string;
   dateTime: string;
   instructor: string;
   status: LessonStatus;
   title: string;
   topic?: string;
+};
+
+const attendanceBadgeStyles: Record<AttendanceBadgeStatus, string> = {
+  absent: 'border-red-500/20 bg-red-50 text-red-700',
+  excused: 'border-blue-500/20 bg-blue-50 text-blue-700',
+  late: 'border-amber-500/20 bg-amber-50 text-amber-700',
+  present: 'border-emerald-500/20 bg-emerald-50 text-emerald-700',
 };
 
 /* ─── Status config ───────────────────────────────────────────────── */
@@ -44,8 +54,9 @@ const statusConfig: Record<LessonStatus, { bg: string; icon: React.ReactNode; la
 
 /* ─── Component ───────────────────────────────────────────────────── */
 
-export function LessonCard({ className, dateTime, instructor, status, title, topic }: LessonCardProps) {
+export function LessonCard({ attendanceStatus, className, dateTime, instructor, status, title, topic }: LessonCardProps) {
   const t = useTranslations('common.lessonStatus');
+  const attendanceT = useTranslations('common.attendance');
   const config = statusConfig[status];
   const shouldReduceMotion = useReducedMotion();
 
@@ -60,9 +71,21 @@ export function LessonCard({ className, dateTime, instructor, status, title, top
       </div>
       <div className="flex items-center justify-between gap-3 mt-3">
         <div className="text-xs font-medium text-[#2E286C]/50">{instructor} • {dateTime}</div>
-        <span className={cn('text-[10px] font-bold uppercase tracking-wider', config.text)}>
-          {t(config.labelKey)}
-        </span>
+        <div className="flex items-center gap-2">
+          {attendanceStatus && (
+            <span
+              className={cn(
+                'rounded-md border px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider',
+                attendanceBadgeStyles[attendanceStatus],
+              )}
+            >
+              {attendanceT(attendanceStatus)}
+            </span>
+          )}
+          <span className={cn('text-[10px] font-bold uppercase tracking-wider', config.text)}>
+            {t(config.labelKey)}
+          </span>
+        </div>
       </div>
     </>
   );

@@ -17,6 +17,7 @@ import {
   enrollments,
   externalIdentities,
   lessonAbsenceReports,
+  lessonAttendanceRecords,
   lessonSessionMeetings,
   lessonSessions,
   programBranches,
@@ -29,6 +30,7 @@ import {
   PublicFlowError,
 } from '@/lib/server/http/errors';
 import { ensureLessonMeetingsForSessions } from './lesson-meetings';
+import { getSetting } from './settings';
 
 export const LESSON_DURATION_MINUTES = 60;
 
@@ -75,14 +77,24 @@ export type CalendarEventStatus =
   | 'postponed'
   | 'scheduled';
 
+export type StudentAttendanceView = {
+  firstJoinedAt?: string;
+  lastLeftAt?: string;
+  status: 'present' | 'late' | 'absent' | 'excused' | 'needs_review';
+  totalSeconds: number;
+};
+
 export type CalendarEventView = {
   absenceReported?: boolean;
   absenceReportUrl?: string;
   branchName?: string;
+  canEndLesson?: boolean;
+  canTakeAttendance?: boolean;
   date: string;
   endsAt: string;
   id: string;
   instructorName?: string;
+  joinOpensAt?: string;
   joinUrl?: string;
   kind: CalendarEventKind;
   meta: string[];
@@ -97,6 +109,7 @@ export type CalendarEventView = {
   startsAt: string;
   startTime: string;
   status: CalendarEventStatus;
+  studentAttendance?: StudentAttendanceView;
   studentCount?: number;
   studentName?: string;
   subtitle?: string;
@@ -332,13 +345,43 @@ export async function getBranchLessonScheduleMap(branchIds: string[]) {
   return result;
 }
 
+// Gates the join button by time: a lesson is only joinable from
+// (startsAt - joinLeadMinutes) until it is closed (cancelled/completed).
+// Before the window opens we surface joinOpensAt so the UI can show a hint.
+function applyJoinWindow(
+  events: CalendarEventView[],
+  leadMinutes: number,
+  canManage: boolean,
+): CalendarEventView[] {
+  const now = Date.now();
+  return events.map((event) => {
+    const isOpenStatus =
+      event.status === 'scheduled' || event.status === 'postponed';
+    const meetingReady = Boolean(event.joinUrl);
+    const opensAtMs =
+      new Date(event.startsAt).getTime() - leadMinutes * 60_000;
+    const windowOpen = isOpenStatus && now >= opensAtMs;
+
+    return {
+      ...event,
+      canEndLesson: canManage && windowOpen ? true : undefined,
+      joinOpensAt:
+        isOpenStatus && meetingReady && !windowOpen
+          ? new Date(opensAtMs).toISOString()
+          : undefined,
+      joinUrl: windowOpen ? event.joinUrl : undefined,
+    };
+  });
+}
+
 export async function getAdminCalendarData(
   principal: WorkspacePrincipal,
 ): Promise<AdminCalendarData> {
   assertAdmin(principal);
 
+  const leadMinutes = await getSetting('joinLeadMinutes');
   return {
-    events: await loadCalendarEvents(),
+    events: applyJoinWindow(await loadCalendarEvents(), leadMinutes, true),
   };
 }
 
@@ -362,9 +405,18 @@ export async function getTeacherCalendarData(
     return { events: [], sessions: [] };
   }
 
-  const events = await loadCalendarEvents(
+  const rawEvents = await loadCalendarEvents(
     eq(lessonSessions.instructorProfileId, profile.id),
   );
+  const leadMinutes = await getSetting('joinLeadMinutes');
+  const now = Date.now();
+  const withAttendance = rawEvents.map((event) => ({
+    ...event,
+    canTakeAttendance:
+      event.status !== 'cancelled' &&
+      new Date(event.endsAt).getTime() < now,
+  }));
+  const events = applyJoinWindow(withAttendance, leadMinutes, true);
 
   return {
     events,
@@ -490,18 +542,49 @@ export async function getStudentCalendarData(
   const absenceLessonIds = new Set(
     absenceRows.map((row) => row.lessonSessionId),
   );
-  const events = dedupeEvents(
+  const attendanceRows = await database
+    .select({
+      firstJoinedAt: lessonAttendanceRecords.firstJoinedAt,
+      lastLeftAt: lessonAttendanceRecords.lastLeftAt,
+      lessonSessionId: lessonAttendanceRecords.lessonSessionId,
+      status: lessonAttendanceRecords.status,
+      totalSeconds: lessonAttendanceRecords.totalSeconds,
+    })
+    .from(lessonAttendanceRecords)
+    .where(
+      and(
+        eq(lessonAttendanceRecords.studentProfileId, profile.id),
+        isNotNull(lessonAttendanceRecords.confirmedAt),
+      ),
+    );
+  const attendanceBySession = new Map(
+    attendanceRows.map((row) => [row.lessonSessionId, row]),
+  );
+  const joinLeadMinutes = await getSetting('joinLeadMinutes');
+  const mappedEvents = dedupeEvents(
     [...branchRows, ...privateRows].map((row) => mapCalendarRow(row)),
-  ).map((event) => ({
-    ...event,
-    absenceReported: absenceLessonIds.has(event.id),
-    absenceReportUrl:
-      event.status === 'scheduled'
-        ? `/api/lessons/${event.id}/absence-report`
+  ).map((event) => {
+    const attendance = attendanceBySession.get(event.id);
+    return {
+      ...event,
+      absenceReported: absenceLessonIds.has(event.id),
+      absenceReportUrl:
+        event.status === 'scheduled'
+          ? `/api/lessons/${event.id}/absence-report`
+          : undefined,
+      meetingRetryUrl: undefined,
+      requiresGoogleLink: event.meetingStatus === 'ready' && !googleLinked,
+      studentAttendance: attendance
+        ? {
+            firstJoinedAt: attendance.firstJoinedAt?.toISOString(),
+            lastLeftAt: attendance.lastLeftAt?.toISOString(),
+            status: attendance.status as StudentAttendanceView['status'],
+            totalSeconds: attendance.totalSeconds,
+          }
         : undefined,
-    meetingRetryUrl: undefined,
-    requiresGoogleLink: event.meetingStatus === 'ready' && !googleLinked,
-  }));
+    };
+  });
+  const events = applyJoinWindow(mappedEvents, joinLeadMinutes, false);
 
   return {
     events,

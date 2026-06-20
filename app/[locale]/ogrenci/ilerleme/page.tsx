@@ -1,67 +1,109 @@
-import { useTranslations } from 'next-intl';
-import { notFound } from 'next/navigation';
-import { Card, SectionHeader, ProgressRing, StreakBadge, StatusChip, CountUp, StaggerContainer, StaggerItem } from '@/components/ui';
+import { getTranslations } from 'next-intl/server';
 import { Award, BookOpen, Headphones, Mic, PenLine } from 'lucide-react';
-import { getStudentProgressData } from '@/lib/domain';
-import { withWorkspacePage } from '@/lib/server/workspace-page';
+import {
+  Card,
+  EmptyState,
+  ProgressRing,
+  SectionHeader,
+  StaggerContainer,
+  StaggerItem,
+  StatusChip,
+} from '@/components/ui';
+import { requireWorkspaceRole } from '@/lib/server/authorization';
+import { getStudentWorkspaceData } from '@/lib/server/services/student-workspace';
 
 /* ─── Component ───────────────────────────────────────────────────── */
 
-function IlerlemePage() {
-  const t = useTranslations('student.progressPage');
-  const status = useTranslations('common.status');
-  const progress = getStudentProgressData('student');
-  const badgeLabels = t.raw('badgeLabels') as string[];
+const SKILLS = [
+  { icon: 'speaking', key: 'speaking' },
+  { icon: 'listening', key: 'listening' },
+  { icon: 'reading', key: 'reading' },
+  { icon: 'writing', key: 'writing' },
+] as const;
 
-  if (!progress) {
-    notFound();
+type IlerlemePageProps = {
+  params: Promise<{ locale: string }>;
+};
+
+export default async function IlerlemePage({ params }: IlerlemePageProps) {
+  const { locale } = await params;
+  const principal = await requireWorkspaceRole('student', locale);
+  const data = await getStudentWorkspaceData(principal);
+  const [t, common, calendar] = await Promise.all([
+    getTranslations('student.progressPage'),
+    getTranslations('common.actions'),
+    getTranslations('student.calendar'),
+  ]);
+
+  if (!data.student) {
+    return (
+      <EmptyState
+        description={calendar('missingProfileDescription')}
+        icon={BookOpen}
+        title={calendar('missingProfileTitle')}
+      />
+    );
   }
+
+  const total = data.lessons.totalCount;
+  const completed = data.lessons.completedCount;
+  const overall = total > 0 ? Math.round((completed / total) * 100) : 0;
+  const badgeLabels = t.raw('badgeLabels') as string[];
 
   return (
     <StaggerContainer className="admin-page">
       <StaggerItem>
-        <h1 className="text-2xl lg:text-3xl font-rosmatika font-medium text-[#2E286C] mb-2">{t('title')}</h1>
-        <p className="text-sm font-medium text-[#2E286C]/50 mb-6">{t('description')}</p>
+        <h1 className="text-2xl lg:text-3xl font-rosmatika font-medium text-[#2E286C] mb-2">
+          {t('title')}
+        </h1>
+        <p className="text-sm font-medium text-[#2E286C]/50 mb-6">
+          {t('description')}
+        </p>
       </StaggerItem>
 
       {/* Main progress */}
       <StaggerItem>
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 lg:gap-6">
-          <Card padded className="flex flex-col items-center justify-center text-center lg:col-span-1">
+          <Card
+            padded
+            className="flex flex-col items-center justify-center text-center lg:col-span-1"
+          >
             <div className="relative mb-4">
-              <ProgressRing value={progress.overall} size={140} strokeWidth={12} tone="brand" />
+              <ProgressRing
+                value={overall}
+                size={140}
+                strokeWidth={12}
+                tone="brand"
+              />
             </div>
             <h3 className="font-bold text-[#2E286C] text-lg">{t('overall')}</h3>
             <p className="text-sm text-[#2E286C]/50 font-medium mt-1">
-              {t('completedCount', { done: progress.completedLessons, total: progress.totalLessons })}
+              {t('completedCount', { done: completed, total })}
             </p>
-            <div className="mt-4">
-              <StreakBadge count={progress.streak} size="sm" />
-            </div>
+            {data.student.currentLevel && (
+              <div className="mt-4">
+                <StatusChip tone="purple">{data.student.currentLevel}</StatusChip>
+              </div>
+            )}
           </Card>
 
-          {/* Skill breakdown */}
+          {/* Skill breakdown — placeholder, real data not available yet */}
           <Card padded className="lg:col-span-2">
-            <SectionHeader title={t('skillAnalysis')} />
+            <SectionHeader
+              title={t('skillAnalysis')}
+              action={<StatusChip>{common('soon')}</StatusChip>}
+            />
             <div className="space-y-5">
-              {progress.skills.map((skill) => (
-                <div key={skill.key} className="flex items-center gap-4">
+              {SKILLS.map((skill) => (
+                <div key={skill.key} className="flex items-center gap-4 opacity-50">
                   <div className="w-9 h-9 rounded-xl bg-[#533089]/5 flex items-center justify-center shrink-0">
                     <SkillIcon name={skill.icon} />
                   </div>
                   <div className="flex-1 min-w-0">
-                    <div className="flex items-center justify-between mb-1.5">
-                      <span className="text-sm font-bold text-[#2E286C]">{t(`skills.${skill.key}`)}</span>
-                      <span className="text-xs font-bold text-[#2E286C]/40">
-                        %<CountUp to={skill.value} />
-                      </span>
-                    </div>
-                    <div className="h-2 bg-[#F8F9FC] rounded-full overflow-hidden border border-black/[0.02]">
-                      <div
-                        className="h-full bg-gradient-to-r from-[#8C6CE6] to-[#533089] rounded-full transition-all duration-700"
-                        style={{ width: `${skill.value}%` }}
-                      />
-                    </div>
+                    <span className="text-sm font-bold text-[#2E286C]">
+                      {t(`skills.${skill.key}`)}
+                    </span>
+                    <div className="mt-1.5 h-2 bg-[#F8F9FC] rounded-full overflow-hidden border border-black/[0.02]" />
                   </div>
                 </div>
               ))}
@@ -70,31 +112,25 @@ function IlerlemePage() {
         </div>
       </StaggerItem>
 
-      {/* Badges */}
+      {/* Badges — placeholder, real data not available yet */}
       <StaggerItem>
         <Card padded>
-          <SectionHeader title={t('badges')} />
+          <SectionHeader
+            title={t('badges')}
+            action={<StatusChip>{common('soon')}</StatusChip>}
+          />
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
-            {progress.badges.map((badge, i) => (
+            {badgeLabels.map((label, i) => (
               <div
                 key={i}
-                className={`flex flex-col items-center gap-2 p-4 rounded-2xl border transition-all ${
-                  badge.earned
-                    ? 'bg-white border-[#533089]/10 shadow-sm'
-                    : 'bg-[#F8F9FC] border-black/[0.02] opacity-50'
-                }`}
+                className="flex flex-col items-center gap-2 p-4 rounded-2xl border bg-[#F8F9FC] border-black/[0.02] opacity-50"
               >
-                <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${
-                  badge.earned
-                    ? 'bg-gradient-to-br from-[#8C6CE6] to-[#533089] text-white shadow-md shadow-[#533089]/20'
-                    : 'bg-gray-200 text-gray-400'
-                }`}>
+                <div className="w-10 h-10 rounded-xl flex items-center justify-center bg-gray-200 text-gray-400">
                   <Award className="w-5 h-5" />
                 </div>
-                <span className="text-[11px] font-bold text-center text-[#2E286C]/70">{badgeLabels[i]}</span>
-                {badge.earned && (
-                  <StatusChip tone="emerald">{status('earned')}</StatusChip>
-                )}
+                <span className="text-[11px] font-bold text-center text-[#2E286C]/70">
+                  {label}
+                </span>
               </div>
             ))}
           </div>
@@ -103,8 +139,6 @@ function IlerlemePage() {
     </StaggerContainer>
   );
 }
-
-export default withWorkspacePage('student', IlerlemePage);
 
 function SkillIcon({ name }: { name: string }) {
   const className = 'w-4 h-4 text-[#533089]';

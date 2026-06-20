@@ -71,7 +71,7 @@ export default async function StudentsPage({ params }: StudentsPageProps) {
         {students.length ? (
           <div className="grid grid-cols-1 gap-4 p-4 md:grid-cols-2 lg:p-6 xl:grid-cols-3 lg:gap-6">
             {students.map((student) => (
-              <Link href={`/admin/students/${student.studentId}`} key={student.studentId}>
+              <Link href={`/admin/students/${student.studentId}`} key={student.enrollmentId}>
                 <ModulePanel
                   variant="muted"
                   className="group flex h-full cursor-pointer flex-col transition-all hover:border-[#533089]/20 hover:shadow-lg"
