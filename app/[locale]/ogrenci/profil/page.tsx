@@ -15,8 +15,13 @@ import {
   GraduationCap,
   HelpCircle,
   LogOut,
+  Mail,
+  Phone,
+  Presentation,
   Settings,
+  Users,
 } from 'lucide-react';
+import type { LucideIcon } from 'lucide-react';
 import { Link } from '@/i18n/navigation';
 import { LogoutButton } from '@/components/auth/logout-button';
 import { GoogleAccountCard } from '@/components/auth/google-account-card';
@@ -71,6 +76,9 @@ export default async function StudentProfilePage({
   const enrolledAt = data.enrollment
     ? formatEnrollmentDate(data.enrollment.enrolledAt, locale)
     : '—';
+  const courseModeLabel = data.enrollment
+    ? t(`courseModes.${data.enrollment.courseMode}`)
+    : '—';
   const statusKey = KNOWN_STATUS.has(data.student.status)
     ? data.student.status
     : 'active';
@@ -97,28 +105,35 @@ export default async function StudentProfilePage({
           <div className="w-full h-px bg-black/[0.03] my-6" />
 
           <div className="text-left w-full space-y-4">
-            <div className="flex items-center gap-3">
-              <div className="w-9 h-9 rounded-xl bg-[#533089]/5 flex items-center justify-center shrink-0">
-                <BookOpen className="w-4 h-4 text-[#533089]" />
-              </div>
-              <InfoField label={t('program')} value={programLabel} />
-            </div>
-            <div className="flex items-center gap-3">
-              <div className="w-9 h-9 rounded-xl bg-[#533089]/5 flex items-center justify-center shrink-0">
-                <GraduationCap className="w-4 h-4 text-[#533089]" />
-              </div>
-              <InfoField label={t('level')} value={level} />
-            </div>
-            <div className="flex items-center gap-3">
-              <div className="w-9 h-9 rounded-xl bg-[#533089]/5 flex items-center justify-center shrink-0">
-                <Calendar className="w-4 h-4 text-[#533089]" />
-              </div>
-              <InfoField
-                label={t('enrollmentDate')}
-                value={enrolledAt}
-                valueClassName="text-[#2E286C]/70"
+            <InfoRow icon={Mail} label={t('email')} value={data.student.email} />
+            {data.student.phone && (
+              <InfoRow icon={Phone} label={t('phone')} value={data.student.phone} />
+            )}
+            <InfoRow icon={BookOpen} label={t('program')} value={programLabel} />
+            {data.enrollment?.branchName && (
+              <InfoRow
+                icon={Presentation}
+                label={t('branch')}
+                value={data.enrollment.branchName}
               />
-            </div>
+            )}
+            {data.enrollment && (
+              <InfoRow
+                icon={Users}
+                label={t('courseMode')}
+                value={courseModeLabel}
+              />
+            )}
+            <InfoRow
+              icon={GraduationCap}
+              label={t('level')}
+              value={level}
+            />
+            <InfoRow
+              icon={Calendar}
+              label={t('enrollmentDate')}
+              value={enrolledAt}
+            />
           </div>
         </Card>
       </StaggerItem>
@@ -197,6 +212,25 @@ async function GoogleIdentitySection({ locale }: { locale: 'tr' | 'en' }) {
       }}
       locale={locale}
     />
+  );
+}
+
+function InfoRow({
+  icon: Icon,
+  label,
+  value,
+}: {
+  icon: LucideIcon;
+  label: string;
+  value: string;
+}) {
+  return (
+    <div className="flex items-center gap-3">
+      <div className="w-9 h-9 rounded-xl bg-[#533089]/5 flex items-center justify-center shrink-0">
+        <Icon className="w-4 h-4 text-[#533089]" />
+      </div>
+      <InfoField label={label} value={value} />
+    </div>
   );
 }
 

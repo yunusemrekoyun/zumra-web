@@ -1,25 +1,39 @@
+import {
+  Award,
+  CheckCircle2,
+  ClipboardCheck,
+  Flame,
+  Star,
+  TrendingUp,
+  Trophy,
+  Zap,
+} from 'lucide-react';
 import { getTranslations } from 'next-intl/server';
-import { Award, BookOpen, Headphones, Mic, PenLine } from 'lucide-react';
+import type { LucideIcon } from 'lucide-react';
 import {
   Card,
   EmptyState,
+  KpiCard,
+  PageHeader,
   ProgressRing,
   SectionHeader,
-  StaggerContainer,
-  StaggerItem,
   StatusChip,
 } from '@/components/ui';
 import { requireWorkspaceRole } from '@/lib/server/authorization';
-import { getStudentWorkspaceData } from '@/lib/server/services/student-workspace';
+import {
+  getStudentProgress,
+  type StudentProgress,
+} from '@/lib/server/services/student-progress';
+import { cn } from '@/lib/utils';
 
-/* ─── Component ───────────────────────────────────────────────────── */
-
-const SKILLS = [
-  { icon: 'speaking', key: 'speaking' },
-  { icon: 'listening', key: 'listening' },
-  { icon: 'reading', key: 'reading' },
-  { icon: 'writing', key: 'writing' },
-] as const;
+const BADGE_ICONS: Record<string, LucideIcon> = {
+  first_assignment: ClipboardCheck,
+  ten_lessons: CheckCircle2,
+  perfect_score: Star,
+  high_average: Trophy,
+  streak_4: Flame,
+  improving: TrendingUp,
+};
 
 type IlerlemePageProps = {
   params: Promise<{ locale: string }>;
@@ -28,129 +42,199 @@ type IlerlemePageProps = {
 export default async function IlerlemePage({ params }: IlerlemePageProps) {
   const { locale } = await params;
   const principal = await requireWorkspaceRole('student', locale);
-  const data = await getStudentWorkspaceData(principal);
-  const [t, common, calendar] = await Promise.all([
-    getTranslations('student.progressPage'),
-    getTranslations('common.actions'),
-    getTranslations('student.calendar'),
-  ]);
+  const t = await getTranslations('student.progressPage');
+  const progress = await getStudentProgress(principal);
 
-  if (!data.student) {
+  if (!progress.hasData) {
     return (
-      <EmptyState
-        description={calendar('missingProfileDescription')}
-        icon={BookOpen}
-        title={calendar('missingProfileTitle')}
-      />
+      <div className="workspace-page">
+        <PageHeader title={t('title')} description={t('description')} />
+        <EmptyState
+          icon={TrendingUp}
+          title={t('emptyTitle')}
+          description={t('emptyDescription')}
+          className="min-h-[24rem]"
+        />
+      </div>
     );
   }
 
-  const total = data.lessons.totalCount;
-  const completed = data.lessons.completedCount;
-  const overall = total > 0 ? Math.round((completed / total) * 100) : 0;
-  const badgeLabels = t.raw('badgeLabels') as string[];
-
   return (
-    <StaggerContainer className="admin-page">
-      <StaggerItem>
-        <h1 className="text-2xl lg:text-3xl font-rosmatika font-medium text-[#2E286C] mb-2">
-          {t('title')}
-        </h1>
-        <p className="text-sm font-medium text-[#2E286C]/50 mb-6">
-          {t('description')}
-        </p>
-      </StaggerItem>
+    <div className="workspace-page space-y-4">
+      <PageHeader title={t('title')} description={t('description')} />
 
-      {/* Main progress */}
-      <StaggerItem>
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 lg:gap-6">
-          <Card
-            padded
-            className="flex flex-col items-center justify-center text-center lg:col-span-1"
-          >
-            <div className="relative mb-4">
-              <ProgressRing
-                value={overall}
-                size={140}
-                strokeWidth={12}
-                tone="brand"
+      <div className="grid gap-4 lg:grid-cols-3">
+        <Card
+          padded
+          className="flex flex-col items-center justify-center text-center"
+        >
+          <ProgressRing
+            value={progress.developmentScore}
+            size={150}
+            strokeWidth={12}
+            tone="brand"
+          />
+          <h3 className="mt-3 font-bold text-[#2E286C]">
+            {t('developmentScore')}
+          </h3>
+        </Card>
+
+        <div className="grid gap-4 sm:grid-cols-2 lg:col-span-2">
+          <KpiCard
+            label={t('xpLabel')}
+            value={progress.xp}
+            icon={Zap}
+            variant="gradient"
+          />
+          <KpiCard
+            label={t('streakLabel')}
+            value={t('streakValue', { count: progress.streak })}
+            icon={Flame}
+          />
+          <Card padded className="sm:col-span-2">
+            <div className="flex items-center justify-between gap-2">
+              <span className="font-bold text-[#2E286C]">
+                {t('levelProgress')}
+              </span>
+              <StatusChip tone="purple">
+                {progress.level.next
+                  ? t('nextLevelLabel', {
+                      current: progress.level.current,
+                      next: progress.level.next,
+                    })
+                  : t('atMaxLevel')}
+              </StatusChip>
+            </div>
+            <div className="mt-3 h-3 overflow-hidden rounded-full bg-[#F8F9FC]">
+              <div
+                className="h-full rounded-full bg-[#533089]"
+                style={{ width: `${progress.level.masteryPercent}%` }}
               />
             </div>
-            <h3 className="font-bold text-[#2E286C] text-lg">{t('overall')}</h3>
-            <p className="text-sm text-[#2E286C]/50 font-medium mt-1">
-              {t('completedCount', { done: completed, total })}
+            <p className="mt-2 text-xs font-semibold text-[#2E286C]/50">
+              %{progress.level.masteryPercent}
             </p>
-            {data.student.currentLevel && (
-              <div className="mt-4">
-                <StatusChip tone="purple">{data.student.currentLevel}</StatusChip>
-              </div>
+            {progress.level.readyToAdvance && (
+              <p className="mt-2 text-sm font-bold text-[#0B7F58]">
+                {t('readyToAdvance')}
+              </p>
             )}
           </Card>
-
-          {/* Skill breakdown — placeholder, real data not available yet */}
-          <Card padded className="lg:col-span-2">
-            <SectionHeader
-              title={t('skillAnalysis')}
-              action={<StatusChip>{common('soon')}</StatusChip>}
-            />
-            <div className="space-y-5">
-              {SKILLS.map((skill) => (
-                <div key={skill.key} className="flex items-center gap-4 opacity-50">
-                  <div className="w-9 h-9 rounded-xl bg-[#533089]/5 flex items-center justify-center shrink-0">
-                    <SkillIcon name={skill.icon} />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <span className="text-sm font-bold text-[#2E286C]">
-                      {t(`skills.${skill.key}`)}
-                    </span>
-                    <div className="mt-1.5 h-2 bg-[#F8F9FC] rounded-full overflow-hidden border border-black/[0.02]" />
-                  </div>
-                </div>
-              ))}
-            </div>
-          </Card>
         </div>
-      </StaggerItem>
+      </div>
 
-      {/* Badges — placeholder, real data not available yet */}
-      <StaggerItem>
-        <Card padded>
-          <SectionHeader
-            title={t('badges')}
-            action={<StatusChip>{common('soon')}</StatusChip>}
+      <Card padded>
+        <SectionHeader title={t('breakdownTitle')} />
+        <div className="grid gap-5 sm:grid-cols-3">
+          <FactorBar
+            label={t('factorCompletion')}
+            percent={progress.breakdown.completionPercent}
+            detail={t('completionDetail', {
+              submitted: progress.counts.submitted,
+              assigned: progress.counts.assignedHomework,
+            })}
           />
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
-            {badgeLabels.map((label, i) => (
+          <FactorBar
+            label={t('factorGrade')}
+            percent={progress.breakdown.gradePercent}
+            detail={t('gradeDetail', { graded: progress.counts.graded })}
+          />
+          <FactorBar
+            label={t('factorAttendance')}
+            percent={progress.breakdown.attendancePercent}
+            detail={t('attendanceDetail', {
+              attended: progress.counts.attended,
+              lessons: progress.counts.lessons,
+            })}
+          />
+        </div>
+      </Card>
+
+      {progress.gradeTrend.length >= 2 && (
+        <Card padded>
+          <SectionHeader title={t('trendTitle')} />
+          <TrendBars points={progress.gradeTrend} />
+        </Card>
+      )}
+
+      <Card padded>
+        <SectionHeader title={t('badges')} />
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
+          {progress.badges.map((badge) => {
+            const Icon = BADGE_ICONS[badge.key] ?? Award;
+            return (
               <div
-                key={i}
-                className="flex flex-col items-center gap-2 p-4 rounded-2xl border bg-[#F8F9FC] border-black/[0.02] opacity-50"
+                key={badge.key}
+                className={cn(
+                  'flex flex-col items-center gap-2 rounded-2xl border p-4',
+                  badge.earned
+                    ? 'border-[#533089]/20 bg-[#533089]/5'
+                    : 'border-black/[0.02] bg-[#F8F9FC] opacity-50',
+                )}
               >
-                <div className="w-10 h-10 rounded-xl flex items-center justify-center bg-gray-200 text-gray-400">
-                  <Award className="w-5 h-5" />
+                <div
+                  className={cn(
+                    'flex h-10 w-10 items-center justify-center rounded-xl',
+                    badge.earned
+                      ? 'bg-[#533089] text-white'
+                      : 'bg-gray-200 text-gray-400',
+                  )}
+                >
+                  <Icon className="h-5 w-5" />
                 </div>
-                <span className="text-[11px] font-bold text-center text-[#2E286C]/70">
-                  {label}
+                <span className="text-center text-[11px] font-bold text-[#2E286C]/70">
+                  {t(`badgeNames.${badge.key}`)}
                 </span>
               </div>
-            ))}
-          </div>
-        </Card>
-      </StaggerItem>
-    </StaggerContainer>
+            );
+          })}
+        </div>
+      </Card>
+    </div>
   );
 }
 
-function SkillIcon({ name }: { name: string }) {
-  const className = 'w-4 h-4 text-[#533089]';
+function FactorBar({
+  label,
+  percent,
+  detail,
+}: {
+  label: string;
+  percent: number;
+  detail: string;
+}) {
+  return (
+    <div>
+      <div className="flex items-center justify-between gap-2">
+        <span className="text-sm font-bold text-[#2E286C]">{label}</span>
+        <span className="text-sm font-bold text-[#533089]">%{percent}</span>
+      </div>
+      <div className="mt-2 h-2.5 overflow-hidden rounded-full border border-black/[0.02] bg-[#F8F9FC]">
+        <div
+          className="h-full rounded-full bg-[#533089]"
+          style={{ width: `${percent}%` }}
+        />
+      </div>
+      <p className="mt-1.5 text-xs font-medium text-[#2E286C]/40">{detail}</p>
+    </div>
+  );
+}
 
-  switch (name) {
-    case 'listening':
-      return <Headphones className={className} />;
-    case 'reading':
-      return <BookOpen className={className} />;
-    case 'writing':
-      return <PenLine className={className} />;
-    default:
-      return <Mic className={className} />;
-  }
+function TrendBars({
+  points,
+}: {
+  points: StudentProgress['gradeTrend'];
+}) {
+  return (
+    <div className="flex h-32 items-end gap-1.5">
+      {points.map((point, index) => (
+        <div
+          key={index}
+          className="flex-1 rounded-t bg-[#533089]/80"
+          style={{ height: `${Math.max(4, point.percent)}%` }}
+          title={`%${point.percent}`}
+        />
+      ))}
+    </div>
+  );
 }

@@ -188,6 +188,16 @@ export function getAuthEnv(): AuthEnv {
   return cachedAuthEnv;
 }
 
+/**
+ * Whether auth/session cookies must use the Secure attribute (and the
+ * __Host-/__Secure- name prefixes). Tied to the actual transport scheme rather
+ * than NODE_ENV so a production build served over http://localhost (local smoke
+ * test) still works, while real https deployments stay fully secure.
+ */
+export function cookiesAreSecure(): boolean {
+  return getAuthEnv().BETTER_AUTH_URL.startsWith('https://');
+}
+
 export function isGoogleAuthConfigured() {
   const env = getAuthEnv();
   return Boolean(env.GOOGLE_CLIENT_ID && env.GOOGLE_CLIENT_SECRET);

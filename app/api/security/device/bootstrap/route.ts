@@ -6,6 +6,7 @@ import {
   isValidDeviceCookie,
 } from '@/lib/server/security/device-cookie';
 import { isTrustedRequestOrigin } from '@/lib/server/security/network';
+import { cookiesAreSecure } from '@/lib/server/env';
 
 export const runtime = 'nodejs';
 
@@ -27,7 +28,7 @@ export async function POST(request: Request) {
     maxAge: 30 * 24 * 60 * 60,
     path: '/',
     sameSite: 'lax',
-    secure: process.env.NODE_ENV === 'production',
+    secure: cookiesAreSecure(),
   });
 
   return NextResponse.json({ ready: true });

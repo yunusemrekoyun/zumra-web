@@ -8,7 +8,7 @@ import { APIError, createAuthMiddleware } from 'better-auth/api';
 import { admin, twoFactor, username } from 'better-auth/plugins';
 import { database } from '@/lib/server/db/client';
 import * as schema from '@/lib/server/db/schema';
-import { getAuthEnv } from '@/lib/server/env';
+import { cookiesAreSecure, getAuthEnv } from '@/lib/server/env';
 import {
   googleAccountSecurityPolicy,
   googleProviderSecurityPolicy,
@@ -244,12 +244,12 @@ export const auth = betterAuth({
     defaultCookieAttributes: {
       httpOnly: true,
       sameSite: 'lax',
-      secure: env.NODE_ENV === 'production',
+      secure: cookiesAreSecure(),
     },
     ipAddress: {
       ipAddressHeaders: ['x-real-ip'],
     },
-    useSecureCookies: env.NODE_ENV === 'production',
+    useSecureCookies: cookiesAreSecure(),
   },
   databaseHooks: {
     account: {

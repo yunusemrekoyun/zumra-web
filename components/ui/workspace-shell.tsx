@@ -14,6 +14,7 @@ import { Link, usePathname } from '@/i18n/navigation';
 import { LogoutButton } from '@/components/auth/logout-button';
 import { cn } from '@/lib/utils';
 import type { WorkspaceConfig, WorkspaceNavItem } from '@/lib/workspace';
+import type { WorkspaceUserBadgeOverride } from '@/lib/workspace/user-badge';
 import { LanguageSwitcher } from './language-switcher';
 import { DashboardRouteTransition, useDashboardRouteNavigation } from './route-animation-engine';
 import { MobileMoreSheet } from './mobile-more-sheet';
@@ -25,13 +26,16 @@ type WorkspaceShellProps = {
   badges?: Record<string, number>;
   children: React.ReactNode;
   config: WorkspaceConfig;
+  user?: WorkspaceUserBadgeOverride;
 };
 
 export function WorkspaceShell({
   badges,
   children,
   config,
+  user,
 }: WorkspaceShellProps) {
+  const userBadge = { ...config.user, ...user };
   const locale = useLocale();
   const pathname = usePathname();
   const t = useTranslations();
@@ -181,12 +185,12 @@ export function WorkspaceShell({
 
               <div className="flex items-center gap-3 cursor-pointer pl-3 lg:pl-4 border-l border-black/[0.05]">
                 <div className="text-right hidden sm:block">
-                  <div className="text-sm font-bold text-[#2E286C]">{config.user.name}</div>
-                  <div className="text-xs text-[#2E286C]/50 font-medium">{config.user.handle}</div>
+                  <div className="text-sm font-bold text-[#2E286C]">{userBadge.name}</div>
+                  <div className="text-xs text-[#2E286C]/50 font-medium">{userBadge.handle}</div>
                 </div>
                 <div className="w-9 h-9 lg:w-10 lg:h-10 rounded-full bg-[#533089]/10 border-2 border-white shadow-sm overflow-hidden flex items-center justify-center">
                   <span className="text-[#533089] font-bold text-xs lg:text-sm">
-                    {config.user.initials}
+                    {userBadge.initials}
                   </span>
                 </div>
               </div>
