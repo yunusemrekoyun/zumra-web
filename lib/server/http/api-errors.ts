@@ -6,6 +6,7 @@ import {
   AuthenticationRequiredError,
   AuthorizationDeniedError,
   ExternalIdentityError,
+  MediaQuotaExceededError,
   PayloadTooLargeError,
   PublicFlowError,
   UnsafeMediaError,
@@ -38,6 +39,10 @@ export function apiErrorResponse(error: unknown, id: string) {
 
   if (error instanceof PayloadTooLargeError) {
     return response('payload_too_large', 413, id);
+  }
+
+  if (error instanceof MediaQuotaExceededError) {
+    return response('media_quota_exceeded', 413, id);
   }
 
   if (error instanceof UnsupportedMediaTypeError) {

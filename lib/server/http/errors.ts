@@ -36,3 +36,10 @@ export class UnsafeMediaError extends Error {
     this.name = 'UnsafeMediaError';
   }
 }
+
+export class MediaQuotaExceededError extends Error {
+  constructor() {
+    super('Media storage quota exceeded for this user.');
+    this.name = 'MediaQuotaExceededError';
+  }
+}

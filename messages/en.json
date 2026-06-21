@@ -1219,10 +1219,48 @@
   "student": {
     "nav": {
       "lessons": "My Lessons",
+      "assignments": "Assignments",
       "calendar": "Calendar",
       "progress": "Progress",
       "messages": "Messages",
       "profile": "Profile"
+    },
+    "assignments": {
+      "title": "My Assignments",
+      "description": "Track the assignments and materials your teacher shares with you.",
+      "emptyTitle": "No assignments yet",
+      "emptyDescription": "When your teacher shares an assignment or material, it will appear here.",
+      "type": { "assignment": "Assignment", "material": "Material" },
+      "status": {
+        "material": "Material",
+        "not_submitted": "To submit",
+        "submitted": "Submitted",
+        "graded": "Graded",
+        "gradedScore": "Score: {score}/{max}",
+        "late": "Late"
+      },
+      "detail": {
+        "from": "From {name}",
+        "maxScore": "Max score: {max}",
+        "attachments": "Attachments",
+        "gradedTitle": "Your assignment was graded",
+        "feedback": "Feedback",
+        "yourSubmission": "Your submission",
+        "yourAttachments": "Your attachments"
+      },
+      "submit": {
+        "title": "Submit your assignment",
+        "bodyHint": "Write your answer here...",
+        "attachmentsAdd": "Add file",
+        "attachmentsUploading": "Uploading...",
+        "attachmentsError": "Upload failed",
+        "empty": "Please write something or attach a file.",
+        "saved": "Your submission was saved.",
+        "error": "Could not save your submission. Try again.",
+        "saving": "Saving...",
+        "update": "Update submission",
+        "submit": "Submit"
+      }
     },
     "dashboard": {
       "hello": "Hello, {name}!",
@@ -1357,10 +1395,68 @@
   "teacher": {
     "nav": {
       "lessons": "My Lessons",
+      "assignments": "Assignments",
       "students": "Students",
       "calendar": "Calendar",
       "messages": "Messages",
       "profile": "Profile"
+    },
+    "assignments": {
+      "title": "Assignments",
+      "description": "Create assignments and materials, grade submissions.",
+      "new": "New assignment",
+      "emptyTitle": "No assignments yet",
+      "emptyDescription": "Tap New assignment to create your first assignment or material.",
+      "optional": "optional",
+      "type": { "assignment": "Assignment", "material": "Material" },
+      "submittedCount": "{submitted}/{expected} submitted",
+      "gradedCount": "{graded} graded",
+      "attachments": {
+        "title": "Attachments",
+        "add": "Add file",
+        "uploading": "Uploading...",
+        "error": "Upload failed"
+      },
+      "status": {
+        "graded": "Graded",
+        "submitted": "Submitted",
+        "not_submitted": "Not submitted",
+        "late": "Late"
+      },
+      "create": {
+        "title": "New assignment",
+        "description": "Pick a branch or student, share an assignment or material.",
+        "titleLabel": "Title",
+        "titlePlaceholder": "e.g. Present Perfect practice",
+        "descriptionLabel": "Description",
+        "descriptionPlaceholder": "Write the instructions here...",
+        "targetLabel": "To",
+        "targetPlaceholder": "Select a branch or student",
+        "targetBranches": "Branches (group)",
+        "targetStudents": "Students (one-to-one)",
+        "maxScoreLabel": "Max score",
+        "dueLabel": "Due date",
+        "attachmentsLabel": "Attachments",
+        "errorTitle": "Please enter a title.",
+        "errorTarget": "Please select a target.",
+        "error": "Could not create the assignment. Try again.",
+        "saving": "Creating...",
+        "submit": "Create assignment"
+      },
+      "grading": {
+        "description": "{target} • grade submissions",
+        "maxScore": "Max score: {max}",
+        "materialRecipients": "This material was shared with {count} students.",
+        "submittedAt": "Submitted: {date}",
+        "score": "Score",
+        "feedback": "Feedback",
+        "feedbackHint": "Write a short feedback for the student...",
+        "saving": "Saving...",
+        "save": "Grade",
+        "saved": "Saved",
+        "error": "Could not save",
+        "awaitingSubmission": "Not submitted yet."
+      }
     },
     "dashboard": {
       "title": "Teacher Panel",

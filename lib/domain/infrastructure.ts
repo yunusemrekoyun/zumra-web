@@ -132,7 +132,7 @@ export interface MediaService {
 export interface MediaAuthorizationService {
   canRead(
     principal: WorkspacePrincipal | null,
-    asset: Pick<MediaAssetRecord, 'ownerUserId' | 'visibility'>,
+    asset: Pick<MediaAssetRecord, 'id' | 'ownerUserId' | 'visibility'>,
   ): Promise<boolean>;
   canUpload(
     principal: WorkspacePrincipal,

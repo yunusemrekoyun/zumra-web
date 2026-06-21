@@ -324,6 +324,7 @@ describe('security foundation', () => {
 
   it('keeps private media owner/admin access behind verified sessions', async () => {
     const asset = {
+      id: 'asset-1',
       ownerUserId: 'user-1',
       visibility: 'private' as const,
     };

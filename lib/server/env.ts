@@ -24,6 +24,26 @@ const runtimeEnvSchema = z.object({
     .int()
     .positive()
     .default(100 * 1024 * 1024),
+  MEDIA_MAX_IMAGE_BYTES: z.coerce
+    .number()
+    .int()
+    .positive()
+    .default(10 * 1024 * 1024),
+  MEDIA_MAX_DOCUMENT_BYTES: z.coerce
+    .number()
+    .int()
+    .positive()
+    .default(25 * 1024 * 1024),
+  MEDIA_MAX_AUDIO_BYTES: z.coerce
+    .number()
+    .int()
+    .positive()
+    .default(16 * 1024 * 1024),
+  MEDIA_PER_USER_QUOTA_BYTES: z.coerce
+    .number()
+    .int()
+    .min(0)
+    .default(1024 * 1024 * 1024),
   MEDIA_DISK_WARN_PERCENT: z.coerce.number().int().min(1).max(99).default(70),
   MEDIA_DISK_BLOCK_PERCENT: z.coerce.number().int().min(2).max(100).default(85),
   CLAMAV_HOST: z.string().min(1).default('127.0.0.1'),
