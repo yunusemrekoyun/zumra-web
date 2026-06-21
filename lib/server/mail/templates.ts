@@ -49,6 +49,46 @@ export function renderMailTemplate(input: TemplateInput) {
     };
   }
 
+  if (input.templateKey === 'assignment-assigned') {
+    const title = escapeHtml(String(input.payload.assignmentTitle ?? ''));
+    return {
+      html: `<p>${english ? 'Hello' : 'Merhaba'} ${name},</p><p>${
+        english
+          ? 'A new assignment has been shared with you:'
+          : 'Sana yeni bir ödev paylaşıldı:'
+      }</p><p><strong>${title}</strong></p>`,
+      subject: english ? 'New assignment' : 'Yeni ödev',
+      text: title,
+    };
+  }
+
+  if (input.templateKey === 'assignment-submitted') {
+    const title = escapeHtml(String(input.payload.assignmentTitle ?? ''));
+    const studentName = escapeHtml(String(input.payload.studentName ?? ''));
+    return {
+      html: `<p>${
+        english
+          ? 'A student submitted an assignment:'
+          : 'Bir öğrenci ödev teslim etti:'
+      }</p><p><strong>${title}</strong> — ${studentName}</p>`,
+      subject: english ? 'New submission' : 'Yeni teslim',
+      text: `${title} — ${studentName}`,
+    };
+  }
+
+  if (input.templateKey === 'assignment-graded') {
+    const title = escapeHtml(String(input.payload.assignmentTitle ?? ''));
+    const score = escapeHtml(String(input.payload.score ?? ''));
+    const max = escapeHtml(String(input.payload.max ?? ''));
+    return {
+      html: `<p>${english ? 'Hello' : 'Merhaba'} ${name},</p><p>${
+        english ? 'Your assignment was graded:' : 'Ödevin notlandı:'
+      }</p><p><strong>${title}</strong> — ${score}/${max}</p>`,
+      subject: english ? 'Assignment graded' : 'Ödevin notlandı',
+      text: `${title}: ${score}/${max}`,
+    };
+  }
+
   if (input.templateKey === 'lesson-absence-report') {
     const studentName = escapeHtml(String(input.payload.studentName ?? ''));
     const reason = escapeHtml(String(input.payload.reason ?? ''));

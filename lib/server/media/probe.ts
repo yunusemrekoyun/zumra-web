@@ -81,6 +81,23 @@ export async function probeImage(filePath: string) {
   return { height: image.height, width: image.width };
 }
 
+export async function probeMediaStreams(
+  filePath: string,
+): Promise<{ hasAudio: boolean; hasVideo: boolean }> {
+  const env = getRuntimeEnv();
+  const output = await runProcess(
+    env.FFPROBE_PATH,
+    ['-v', 'error', '-print_format', 'json', '-show_streams', filePath],
+    30_000,
+  );
+  const parsed = JSON.parse(output) as ProbeOutput;
+  const types = (parsed.streams ?? []).map((stream) => stream.codec_type);
+  return {
+    hasAudio: types.includes('audio'),
+    hasVideo: types.includes('video'),
+  };
+}
+
 export async function runProcess(
   executable: string,
   args: string[],

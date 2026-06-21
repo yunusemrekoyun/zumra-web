@@ -1,22 +1,24 @@
-import { MessageSquare } from 'lucide-react';
-import { useTranslations } from 'next-intl';
-import { Button, EmptyState } from '@/components/ui';
-import { withWorkspacePage } from '@/lib/server/workspace-page';
+import { MessagesWorkspace } from '@/components/messages-workspace';
+import { requireWorkspaceRole } from '@/lib/server/authorization';
 
-function TeacherMessagesPage() {
-  const t = useTranslations('teacher.empty.messages');
-  const common = useTranslations('common.actions');
+type TeacherMessagesPageProps = {
+  params: Promise<{ locale: string }>;
+  searchParams: Promise<{ with?: string }>;
+};
 
+export default async function TeacherMessagesPage({
+  params,
+  searchParams,
+}: TeacherMessagesPageProps) {
+  const { locale } = await params;
+  const { with: withId } = await searchParams;
+  const principal = await requireWorkspaceRole('teacher', locale);
   return (
-    <div className="workspace-page">
-      <EmptyState
-        icon={MessageSquare}
-        title={t('title')}
-        description={t('description')}
-        action={<Button variant="secondary" disabled>{common('soon')}</Button>}
-      />
-    </div>
+    <MessagesWorkspace
+      principal={principal}
+      locale={locale}
+      basePath={`/${locale}/ogretmen/mesajlar`}
+      withId={withId}
+    />
   );
 }
-
-export default withWorkspacePage('teacher', TeacherMessagesPage);

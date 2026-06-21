@@ -1216,6 +1216,38 @@
       }
     }
   },
+  "notifications": {
+    "title": "Bildirimler",
+    "empty": "Bildirim yok",
+    "assignmentAssigned": "Yeni ödev: {title}",
+    "assignmentSubmitted": "{student} ödev teslim etti: {title}",
+    "assignmentGraded": "Ödevin notlandı: {title} ({score}/{max})",
+    "chatMessage": "{from} mesaj gönderdi"
+  },
+  "chat": {
+    "title": "Mesajlar",
+    "description": "Konuşmalarını buradan sürdür.",
+    "emptyTitle": "Henüz konuşma yok",
+    "emptyDescription": "Aktif bir ilişki olduğunda konuşmaların burada görünür.",
+    "noMessages": "Henüz mesaj yok",
+    "assignment": "Ödev",
+    "material": "Materyal",
+    "searchPlaceholder": "Mesajlarda ara...",
+    "searchNoResults": "Sonuç bulunamadı",
+    "voiceRecord": "Sesli mesaj kaydet",
+    "voiceStop": "Kaydı durdur",
+    "voiceUploading": "Yükleniyor...",
+    "threadDescription": "Mesajlaşma",
+    "back": "Geri",
+    "composerPlaceholder": "Mesaj yaz...",
+    "send": "Gönder",
+    "sending": "Gönderiliyor...",
+    "emptyThread": "Konuşmayı başlat — ilk mesajı sen yaz.",
+    "error": "Mesaj gönderilemedi. Tekrar dene.",
+    "attachmentsAdd": "Dosya",
+    "attachmentsUploading": "Yükleniyor...",
+    "attachmentsError": "Dosya yüklenemedi"
+  },
   "student": {
     "nav": {
       "lessons": "Derslerim",
@@ -1455,6 +1487,8 @@
         "save": "Notla",
         "saved": "Kaydedildi",
         "error": "Kaydedilemedi",
+        "shareInChat": "Sohbette paylaş",
+        "shared": "Paylaşıldı",
         "awaitingSubmission": "Henüz teslim edilmedi."
       }
     },

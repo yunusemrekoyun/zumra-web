@@ -8,11 +8,15 @@ import { WorkspaceShell } from './workspace-shell';
 export function WorkspaceScopeShell({
   children,
   scope,
+  badges,
 }: {
   children: ReactNode;
   scope: WorkspaceScope;
+  badges?: Record<string, number>;
 }) {
   return (
-    <WorkspaceShell config={workspaceConfigs[scope]}>{children}</WorkspaceShell>
+    <WorkspaceShell config={workspaceConfigs[scope]} badges={badges}>
+      {children}
+    </WorkspaceShell>
   );
 }

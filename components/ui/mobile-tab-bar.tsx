@@ -5,8 +5,10 @@ import type { LucideIcon } from 'lucide-react';
 import { CircleUserRound } from 'lucide-react';
 import { Link } from '@/i18n/navigation';
 import { cn } from '@/lib/utils';
+import { NavCountBadge } from './nav-count-badge';
 
 export type MobileTabItem = {
+  badge?: number;
   icon: LucideIcon;
   label: string;
   path: string;
@@ -77,13 +79,19 @@ export function MobileTabBar({
               {isActive && (
                 <span className="absolute top-1.5 w-1 h-1 rounded-full bg-[#533089]" />
               )}
-              <tab.icon
-                className={cn(
-                  'w-[22px] h-[22px] transition-transform duration-200',
-                  isActive && 'scale-110',
-                )}
-                strokeWidth={isActive ? 2.4 : 1.8}
-              />
+              <span className="relative">
+                <tab.icon
+                  className={cn(
+                    'w-[22px] h-[22px] transition-transform duration-200',
+                    isActive && 'scale-110',
+                  )}
+                  strokeWidth={isActive ? 2.4 : 1.8}
+                />
+                <NavCountBadge
+                  count={tab.badge}
+                  className="absolute -top-1.5 -right-2.5"
+                />
+              </span>
               <span
                 className={cn(
                   'text-[10px] leading-none tracking-wide',

@@ -10,6 +10,7 @@ import {
   UnsupportedMediaTypeError,
 } from '@/lib/server/http/errors';
 import { mediaRoot } from './paths';
+import { probeMediaStreams } from './probe';
 
 const allowedMimeTypes = new Map([
   ['image/jpeg', 'image'],
@@ -58,7 +59,19 @@ export async function inspectUploadedFile(
   // file-type may append codec parameters (e.g. "audio/ogg; codecs=opus");
   // match the allowlist against the base media type only.
   const baseMime = detected.mime.split(';', 1)[0].trim();
-  const kind = allowedMimeTypes.get(baseMime);
+  let kind = allowedMimeTypes.get(baseMime);
+  let mimeType = baseMime;
+
+  // Browser voice notes are WebM/Opus, which file-type reports as video/webm.
+  // When the upload is declared as audio and the file is genuinely audio-only,
+  // accept it as audio (a WebM with a video stream is still rejected).
+  if (baseMime === 'video/webm' && expectedKind === 'audio' && kind !== 'audio') {
+    const streams = await probeMediaStreams(filePath);
+    if (streams.hasAudio && !streams.hasVideo) {
+      kind = 'audio';
+      mimeType = 'audio/webm';
+    }
+  }
 
   if (!kind || kind !== expectedKind) {
     throw new UnsupportedMediaTypeError();
@@ -67,7 +80,7 @@ export async function inspectUploadedFile(
   return {
     extension: detected.ext,
     kind,
-    mimeType: baseMime,
+    mimeType,
     sizeBytes: fileStat.size,
   };
 }

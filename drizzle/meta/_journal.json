@@ -155,6 +155,20 @@
       "when": 1781994749884,
       "tag": "0021_slimy_skreet",
       "breakpoints": true
+    },
+    {
+      "idx": 22,
+      "version": "7",
+      "when": 1782044310719,
+      "tag": "0022_productive_sasquatch",
+      "breakpoints": true
+    },
+    {
+      "idx": 23,
+      "version": "7",
+      "when": 1782054284528,
+      "tag": "0023_short_tattoo",
+      "breakpoints": true
     }
   ]
 }
