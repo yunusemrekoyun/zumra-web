@@ -7,7 +7,7 @@ import type {
   MediaSandboxTask,
 } from '@/lib/media-sandbox-contract';
 import { getRuntimeEnv } from '@/lib/server/env';
-import { probeVideo, runProcess } from './probe';
+import { probeImage, probeVideo, runProcess } from './probe';
 
 export async function processVideoInSandbox(task: MediaSandboxTask) {
   const env = getRuntimeEnv();
@@ -177,4 +177,38 @@ export function thumbnailArgs(
 
 function thumbnailSeek(durationSeconds: number) {
   return Math.max(0, Math.min(1, durationSeconds / 2));
+}
+
+// Images are processed via the in-worker direct path (libwebp is unavailable,
+// so output is JPEG). Downscale to fit a 1920px box (no upscaling), strip
+// metadata/EXIF, re-encode at high quality.
+export function imageArgs(inputPath: string, outputPath: string) {
+  return [
+    '-y',
+    '-i',
+    inputPath,
+    '-map_metadata',
+    '-1',
+    '-frames:v',
+    '1',
+    '-vf',
+    "scale='min(1920,iw)':'min(1920,ih)':force_original_aspect_ratio=decrease",
+    '-q:v',
+    '4',
+    outputPath,
+  ];
+}
+
+export async function processImageInSandbox(task: {
+  inputPath: string;
+  outputPath: string;
+}) {
+  const env = getRuntimeEnv();
+  await probeImage(task.inputPath);
+  await runProcess(
+    env.FFMPEG_PATH,
+    imageArgs(task.inputPath, task.outputPath),
+    Math.min(env.FFMPEG_JOB_TIMEOUT_MS, 120_000),
+  );
+  return probeImage(task.outputPath);
 }

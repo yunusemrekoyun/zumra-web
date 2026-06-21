@@ -21,7 +21,26 @@ const allowedMimeTypes = new Map([
   ['application/pdf', 'document'],
   ['audio/mpeg', 'audio'],
   ['audio/wav', 'audio'],
+  ['audio/ogg', 'audio'],
+  ['audio/webm', 'audio'],
 ]);
+
+// Per-kind upload ceilings — chat attachments stay well under the global video
+// max so the system never becomes free cloud storage. Always bounded by the
+// global MEDIA_MAX_UPLOAD_BYTES.
+export function maxBytesForKind(kind: string): number {
+  const env = getRuntimeEnv();
+  switch (kind) {
+    case 'image':
+      return Math.min(env.MEDIA_MAX_UPLOAD_BYTES, env.MEDIA_MAX_IMAGE_BYTES);
+    case 'document':
+      return Math.min(env.MEDIA_MAX_UPLOAD_BYTES, env.MEDIA_MAX_DOCUMENT_BYTES);
+    case 'audio':
+      return Math.min(env.MEDIA_MAX_UPLOAD_BYTES, env.MEDIA_MAX_AUDIO_BYTES);
+    default:
+      return env.MEDIA_MAX_UPLOAD_BYTES;
+  }
+}
 
 export async function inspectUploadedFile(
   filePath: string,
@@ -36,7 +55,10 @@ export async function inspectUploadedFile(
     throw new UnsupportedMediaTypeError();
   }
 
-  const kind = allowedMimeTypes.get(detected.mime);
+  // file-type may append codec parameters (e.g. "audio/ogg; codecs=opus");
+  // match the allowlist against the base media type only.
+  const baseMime = detected.mime.split(';', 1)[0].trim();
+  const kind = allowedMimeTypes.get(baseMime);
 
   if (!kind || kind !== expectedKind) {
     throw new UnsupportedMediaTypeError();
@@ -45,7 +67,7 @@ export async function inspectUploadedFile(
   return {
     extension: detected.ext,
     kind,
-    mimeType: detected.mime,
+    mimeType: baseMime,
     sizeBytes: fileStat.size,
   };
 }

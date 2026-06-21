@@ -55,6 +55,32 @@ export async function probeVideo(filePath: string) {
   };
 }
 
+export async function probeImage(filePath: string) {
+  const env = getRuntimeEnv();
+  const output = await runProcess(
+    env.FFPROBE_PATH,
+    ['-v', 'error', '-print_format', 'json', '-show_streams', filePath],
+    30_000,
+  );
+  const parsed = JSON.parse(output) as ProbeOutput;
+  const image = parsed.streams?.find((stream) => stream.codec_type === 'video');
+
+  if (!image?.width || !image.height) {
+    throw new Error('No valid image stream was found.');
+  }
+
+  // Guard against decompression bombs before full decode.
+  if (
+    image.width > 20_000 ||
+    image.height > 20_000 ||
+    image.width * image.height > 100_000_000
+  ) {
+    throw new Error('Image dimensions are outside the allowed range.');
+  }
+
+  return { height: image.height, width: image.width };
+}
+
 export async function runProcess(
   executable: string,
   args: string[],

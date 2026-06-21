@@ -5,6 +5,7 @@ export type WorkspaceIconKey =
   | 'barChart'
   | 'book'
   | 'calendar'
+  | 'clipboard'
   | 'creditCard'
   | 'dashboard'
   | 'messages'
@@ -108,7 +109,8 @@ export const workspaceModules = [
   { scope: 'admin', kind: 'account', labelKey: 'workspace.nav.settings', path: '/admin/settings', iconKey: 'settings', mobile: 'more' },
 
   { scope: 'student', kind: 'nav', labelKey: 'student.nav.lessons', path: '/ogrenci', iconKey: 'book', mobile: 'tab' },
-  { scope: 'student', kind: 'nav', labelKey: 'student.nav.calendar', path: '/ogrenci/takvim', iconKey: 'calendar', mobile: 'tab' },
+  { scope: 'student', kind: 'nav', labelKey: 'student.nav.assignments', path: '/ogrenci/odevler', iconKey: 'clipboard', mobile: 'tab' },
+  { scope: 'student', kind: 'nav', labelKey: 'student.nav.calendar', path: '/ogrenci/takvim', iconKey: 'calendar', mobile: 'more' },
   { scope: 'student', kind: 'nav', labelKey: 'student.nav.progress', path: '/ogrenci/ilerleme', iconKey: 'trending', mobile: 'tab' },
   { scope: 'student', kind: 'nav', labelKey: 'student.nav.messages', path: '/ogrenci/mesajlar', iconKey: 'messages', mobile: 'tab' },
   { scope: 'student', kind: 'nav', labelKey: 'student.nav.profile', path: '/ogrenci/profil', iconKey: 'profile', mobile: 'tab' },
@@ -122,9 +124,10 @@ export const workspaceModules = [
   { scope: 'advisor', kind: 'account', labelKey: 'workspace.nav.settings', path: '/danisman/ayarlar', iconKey: 'settings', mobile: 'more' },
 
   { scope: 'teacher', kind: 'nav', labelKey: 'teacher.nav.lessons', path: '/ogretmen', iconKey: 'book', mobile: 'tab' },
+  { scope: 'teacher', kind: 'nav', labelKey: 'teacher.nav.assignments', path: '/ogretmen/odevler', iconKey: 'clipboard', mobile: 'tab' },
   { scope: 'teacher', kind: 'nav', labelKey: 'teacher.nav.students', path: '/ogretmen/ogrenciler', iconKey: 'students', mobile: 'tab' },
-  { scope: 'teacher', kind: 'nav', labelKey: 'teacher.nav.calendar', path: '/ogretmen/takvim', iconKey: 'calendar', mobile: 'tab' },
-  { scope: 'teacher', kind: 'nav', labelKey: 'teacher.nav.messages', path: '/ogretmen/mesajlar', iconKey: 'messages', mobile: 'tab' },
+  { scope: 'teacher', kind: 'nav', labelKey: 'teacher.nav.calendar', path: '/ogretmen/takvim', iconKey: 'calendar', mobile: 'more' },
+  { scope: 'teacher', kind: 'nav', labelKey: 'teacher.nav.messages', path: '/ogretmen/mesajlar', iconKey: 'messages', mobile: 'more' },
   { scope: 'teacher', kind: 'nav', labelKey: 'teacher.nav.profile', path: '/ogretmen/profil', iconKey: 'userCheck', mobile: 'more' },
   { scope: 'teacher', kind: 'account', labelKey: 'workspace.nav.settings', path: '/ogretmen/ayarlar', iconKey: 'settings', mobile: 'more' },
 ] satisfies WorkspaceModuleDefinition[];
@@ -143,6 +146,9 @@ export const workspaceExtraRoutes = [
   '/admin/students/1',
   '/admin/leads/[candidateId]/enrollment',
   '/ogrenci/dersler',
+  '/ogretmen/odevler/yeni',
+  '/ogretmen/odevler/[assignmentId]',
+  '/ogrenci/odevler/[assignmentId]',
 ] as const;
 
 export const workspacePathnames = Object.fromEntries(

@@ -1219,10 +1219,48 @@
   "student": {
     "nav": {
       "lessons": "Derslerim",
+      "assignments": "Ödevler",
       "calendar": "Takvim",
       "progress": "İlerleme",
       "messages": "Mesajlar",
       "profile": "Profil"
+    },
+    "assignments": {
+      "title": "Ödevlerim",
+      "description": "Sana atanan ödev ve materyalleri buradan takip et.",
+      "emptyTitle": "Henüz ödev yok",
+      "emptyDescription": "Öğretmenin ödev veya materyal paylaştığında burada görünecek.",
+      "type": { "assignment": "Ödev", "material": "Materyal" },
+      "status": {
+        "material": "Materyal",
+        "not_submitted": "Teslim bekliyor",
+        "submitted": "Teslim edildi",
+        "graded": "Notlandı",
+        "gradedScore": "Not: {score}/{max}",
+        "late": "Geç teslim"
+      },
+      "detail": {
+        "from": "{name} tarafından",
+        "maxScore": "Tam not: {max}",
+        "attachments": "Ekler",
+        "gradedTitle": "Ödevin notlandı",
+        "feedback": "Geri bildirim",
+        "yourSubmission": "Teslimin",
+        "yourAttachments": "Eklerin"
+      },
+      "submit": {
+        "title": "Ödevini teslim et",
+        "bodyHint": "Cevabını buraya yazabilirsin...",
+        "attachmentsAdd": "Dosya ekle",
+        "attachmentsUploading": "Yükleniyor...",
+        "attachmentsError": "Dosya yüklenemedi",
+        "empty": "Lütfen bir metin yaz ya da dosya ekle.",
+        "saved": "Teslimin kaydedildi.",
+        "error": "Teslim kaydedilemedi. Tekrar dene.",
+        "saving": "Kaydediliyor...",
+        "update": "Teslimi güncelle",
+        "submit": "Teslim et"
+      }
     },
     "dashboard": {
       "hello": "Merhaba, {name}!",
@@ -1357,10 +1395,68 @@
   "teacher": {
     "nav": {
       "lessons": "Derslerim",
+      "assignments": "Ödevler",
       "students": "Öğrenciler",
       "calendar": "Takvim",
       "messages": "Mesajlar",
       "profile": "Profil"
+    },
+    "assignments": {
+      "title": "Ödevler",
+      "description": "Ödev ve materyal oluştur, teslimleri puanla.",
+      "new": "Yeni ödev",
+      "emptyTitle": "Henüz ödev yok",
+      "emptyDescription": "İlk ödevini veya materyalini oluşturmak için Yeni ödev'e dokun.",
+      "optional": "opsiyonel",
+      "type": { "assignment": "Ödev", "material": "Materyal" },
+      "submittedCount": "{submitted}/{expected} teslim",
+      "gradedCount": "{graded} notlandı",
+      "attachments": {
+        "title": "Ekler",
+        "add": "Dosya ekle",
+        "uploading": "Yükleniyor...",
+        "error": "Dosya yüklenemedi"
+      },
+      "status": {
+        "graded": "Notlandı",
+        "submitted": "Teslim edildi",
+        "not_submitted": "Teslim edilmedi",
+        "late": "Geç"
+      },
+      "create": {
+        "title": "Yeni ödev",
+        "description": "Bir şube veya öğrenci seç, ödev ya da materyal paylaş.",
+        "titleLabel": "Başlık",
+        "titlePlaceholder": "Örn. Present Perfect alıştırması",
+        "descriptionLabel": "Açıklama",
+        "descriptionPlaceholder": "Yönergeleri buraya yazabilirsin...",
+        "targetLabel": "Kime",
+        "targetPlaceholder": "Şube veya öğrenci seç",
+        "targetBranches": "Şubeler (grup)",
+        "targetStudents": "Öğrenciler (birebir)",
+        "maxScoreLabel": "Tam not",
+        "dueLabel": "Son teslim",
+        "attachmentsLabel": "Ekler",
+        "errorTitle": "Lütfen bir başlık gir.",
+        "errorTarget": "Lütfen bir hedef seç.",
+        "error": "Ödev oluşturulamadı. Tekrar dene.",
+        "saving": "Oluşturuluyor...",
+        "submit": "Ödevi oluştur"
+      },
+      "grading": {
+        "description": "{target} • teslimleri puanla",
+        "maxScore": "Tam not: {max}",
+        "materialRecipients": "Bu materyal {count} öğrenciyle paylaşıldı.",
+        "submittedAt": "Teslim: {date}",
+        "score": "Puan",
+        "feedback": "Geri bildirim",
+        "feedbackHint": "Öğrenciye kısa bir geri bildirim yaz...",
+        "saving": "Kaydediliyor...",
+        "save": "Notla",
+        "saved": "Kaydedildi",
+        "error": "Kaydedilemedi",
+        "awaitingSubmission": "Henüz teslim edilmedi."
+      }
     },
     "dashboard": {
       "title": "Öğretmen Paneli",

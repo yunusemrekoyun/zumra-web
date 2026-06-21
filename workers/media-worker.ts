@@ -1,7 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import { rename, unlink } from 'node:fs/promises';
 import { type Job, Worker } from 'bullmq';
-import { and, eq, isNotNull, isNull, lte, or, sql } from 'drizzle-orm';
+import { and, eq, inArray, isNotNull, isNull, lte, or, sql } from 'drizzle-orm';
 import { tryAcquireAdvisoryLock } from '@/lib/server/db/advisory-lock';
 import { database } from '@/lib/server/db/client';
 import { mediaAssets } from '@/lib/server/db/schema';
@@ -12,7 +12,10 @@ import {
   resolveMediaPath,
   thumbnailRelativePath,
 } from '@/lib/server/media/paths';
-import { processVideoInSandbox } from '@/lib/server/media/sandbox';
+import {
+  processImageInSandbox,
+  processVideoInSandbox,
+} from '@/lib/server/media/sandbox';
 import {
   getBullConnection,
   queueNames,
@@ -34,7 +37,7 @@ export async function requeuePendingMedia() {
     .where(
       and(
         eq(mediaAssets.status, 'processing'),
-        eq(mediaAssets.kind, 'video'),
+        inArray(mediaAssets.kind, ['video', 'image']),
         isNotNull(mediaAssets.sourcePath),
         or(
           isNull(mediaAssets.leaseExpiresAt),
@@ -144,7 +147,7 @@ async function processMediaJob(job: Job, workerId: string) {
           eq(mediaAssets.id, mediaId),
           eq(mediaAssets.processingGeneration, generation),
           eq(mediaAssets.status, 'processing'),
-          eq(mediaAssets.kind, 'video'),
+          inArray(mediaAssets.kind, ['video', 'image']),
           isNotNull(mediaAssets.sourcePath),
         ),
       )
@@ -159,28 +162,40 @@ async function processMediaJob(job: Job, workerId: string) {
     }
 
     await ensureMediaDirectories();
+    const isImage = asset.kind === 'image';
     const attemptId = randomUUID();
     const inputPath = resolveMediaPath(asset.sourcePath);
-    const outputPath = outputRelativePath(asset.id, 'mp4', asset.visibility);
-    const thumbnailPath = thumbnailRelativePath(asset.id, asset.visibility);
+    const ext = isImage ? 'jpg' : 'mp4';
+    const outputPath = outputRelativePath(asset.id, ext, asset.visibility);
     temporaryOutput = resolveMediaPath(
-      `tmp/${asset.id}-${generation}-${attemptId}.mp4`,
-    );
-    temporaryThumbnail = resolveMediaPath(
-      `tmp/${asset.id}-${generation}-${attemptId}.jpg`,
+      `tmp/${asset.id}-${generation}-${attemptId}.${ext}`,
     );
     publishedOutput = resolveMediaPath(outputPath);
-    publishedThumbnail = resolveMediaPath(thumbnailPath);
+
+    let thumbnailPath: string | undefined;
+    let processed: { durationSeconds?: number; height: number; width: number };
 
     beginJob();
     active = true;
-    const processed = await processVideoInSandbox({
-      generation,
-      inputPath,
-      mediaId: asset.id,
-      outputPath: temporaryOutput,
-      thumbnailPath: temporaryThumbnail,
-    });
+    if (isImage) {
+      processed = await processImageInSandbox({
+        inputPath,
+        outputPath: temporaryOutput,
+      });
+    } else {
+      thumbnailPath = thumbnailRelativePath(asset.id, asset.visibility);
+      temporaryThumbnail = resolveMediaPath(
+        `tmp/${asset.id}-${generation}-${attemptId}.jpg`,
+      );
+      publishedThumbnail = resolveMediaPath(thumbnailPath);
+      processed = await processVideoInSandbox({
+        generation,
+        inputPath,
+        mediaId: asset.id,
+        outputPath: temporaryOutput,
+        thumbnailPath: temporaryThumbnail,
+      });
+    }
 
     const [current] = await database
       .select({ generation: mediaAssets.processingGeneration })
@@ -192,9 +207,11 @@ async function processMediaJob(job: Job, workerId: string) {
       throw new Error('Stale media processing generation.');
     }
 
-    await rename(temporaryThumbnail, publishedThumbnail);
-    thumbnailPublished = true;
-    temporaryThumbnail = undefined;
+    if (temporaryThumbnail && publishedThumbnail) {
+      await rename(temporaryThumbnail, publishedThumbnail);
+      thumbnailPublished = true;
+      temporaryThumbnail = undefined;
+    }
     await rename(temporaryOutput, publishedOutput);
     outputPublished = true;
     temporaryOutput = undefined;
@@ -202,20 +219,22 @@ async function processMediaJob(job: Job, workerId: string) {
       .update(mediaAssets)
       .set({
         errorCode: null,
-        durationSeconds: processed.durationSeconds.toString(),
         height: processed.height,
         leaseExpiresAt: null,
         lockedAt: null,
         lockedBy: null,
-        mimeType: 'video/mp4',
+        mimeType: isImage ? 'image/jpeg' : 'video/mp4',
         outputPath,
-        sourceDeleteAfter: new Date(
-          Date.now() + 7 * 24 * 60 * 60 * 1000,
-        ),
         status: 'ready',
-        thumbnailPath,
         updatedAt: new Date(),
         width: processed.width,
+        ...(isImage
+          ? { sourcePath: null }
+          : {
+              durationSeconds: processed.durationSeconds?.toString() ?? null,
+              sourceDeleteAfter: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+              thumbnailPath,
+            }),
       })
       .where(
         and(
@@ -228,6 +247,10 @@ async function processMediaJob(job: Job, workerId: string) {
 
     if (!updated.length) {
       throw new Error('Media processing lease was lost.');
+    }
+
+    if (isImage) {
+      await unlink(inputPath).catch(() => undefined);
     }
   } catch (error) {
     if (asset) {

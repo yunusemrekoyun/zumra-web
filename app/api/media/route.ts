@@ -1,11 +1,11 @@
 import { z } from 'zod';
 import { requireSession } from '@/lib/server/authorization';
-import { getRuntimeEnv } from '@/lib/server/env';
 import {
   apiErrorResponse,
   apiResponse,
   requestId,
 } from '@/lib/server/http/api-errors';
+import { maxBytesForKind } from '@/lib/server/media/validation';
 import { isTrustedRequestOrigin } from '@/lib/server/security/network';
 import { receiveMediaUpload } from '@/lib/server/services/media';
 
@@ -41,10 +41,7 @@ export async function POST(request: Request) {
       return apiResponse({ error: 'invalid_request' }, 400, id);
     }
 
-    if (
-      contentLength <= 0 ||
-      contentLength > getRuntimeEnv().MEDIA_MAX_UPLOAD_BYTES
-    ) {
+    if (contentLength <= 0 || contentLength > maxBytesForKind(kind.data)) {
       return apiResponse({ error: 'invalid_size' }, 413, id);
     }
 

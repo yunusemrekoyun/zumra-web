@@ -15,7 +15,6 @@ import type {
 } from '@/lib/domain';
 import { database } from '@/lib/server/db/client';
 import { mediaAssets } from '@/lib/server/db/schema';
-import { getRuntimeEnv } from '@/lib/server/env';
 import {
   AuthorizationDeniedError,
   PayloadTooLargeError,
@@ -28,9 +27,11 @@ import {
   resolveMediaPath,
   sourceRelativePath,
 } from '@/lib/server/media/paths';
+import { assertUserQuota } from '@/lib/server/media/quota';
 import {
   assertUploadCapacity,
   inspectUploadedFile,
+  maxBytesForKind,
   scanWithClamAv,
 } from '@/lib/server/media/validation';
 import { mediaAuthorizationService } from './media-authorization';
@@ -65,13 +66,15 @@ export async function receiveMediaUpload(input: {
   owner: WorkspacePrincipal;
   visibility: MediaVisibility;
 }) {
-  const env = getRuntimeEnv();
   await ensureMediaDirectories();
   await assertUploadCapacity();
 
   if (!(await mediaAuthorizationService.canUpload(input.owner, input.visibility))) {
     throw new AuthorizationDeniedError('Media upload is not authorized.');
   }
+
+  // Fail fast if the user is already at/over their quota before streaming.
+  await assertUserQuota(input.owner.id, 0);
 
   const [asset] = await database
     .insert(mediaAssets)
@@ -94,11 +97,12 @@ export async function receiveMediaUpload(input: {
   let publishedOutputPath: string | undefined;
   const hash = createHash('sha256');
   let bytes = 0;
+  const maxBytes = maxBytesForKind(input.kind);
   const limiter = new Transform({
     transform(chunk: Buffer, _encoding, callback) {
       bytes += chunk.length;
 
-      if (bytes > env.MEDIA_MAX_UPLOAD_BYTES) {
+      if (bytes > maxBytes) {
         callback(new PayloadTooLargeError());
         return;
       }
@@ -116,6 +120,7 @@ export async function receiveMediaUpload(input: {
     );
 
     const inspected = await inspectUploadedFile(absoluteSource, input.kind);
+    await assertUserQuota(input.owner.id, inspected.sizeBytes);
     await database
       .update(mediaAssets)
       .set({
@@ -134,7 +139,7 @@ export async function receiveMediaUpload(input: {
       .where(eq(mediaAssets.id, asset.id));
     await scanWithClamAv(absoluteSource);
 
-    if (input.kind === 'video') {
+    if (input.kind === 'video' || input.kind === 'image') {
       const [processing] = await database
         .update(mediaAssets)
         .set({
