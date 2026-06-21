@@ -54,6 +54,7 @@ export type TeacherWorkspaceData = {
     email: string;
     fullName: string;
     id: string;
+    phone?: string;
   };
   students: TeacherStudentView[];
 };
@@ -69,6 +70,7 @@ export async function getTeacherWorkspaceData(
       firstName: instructorProfiles.firstName,
       id: instructorProfiles.id,
       lastName: instructorProfiles.lastName,
+      phone: instructorProfiles.phone,
     })
     .from(instructorProfiles)
     .where(eq(instructorProfiles.userId, principal.id))
@@ -156,6 +158,7 @@ export async function getTeacherWorkspaceData(
       email: profile.email,
       fullName: fullName(profile.firstName, profile.lastName),
       id: profile.id,
+      phone: profile.phone ?? undefined,
     },
     students: studentRows.map((student) => ({
       branchName: student.branchName ?? undefined,

@@ -1,7 +1,7 @@
 import 'server-only';
 
 import { createHmac, randomUUID, timingSafeEqual } from 'node:crypto';
-import { getAuthEnv } from '@/lib/server/env';
+import { cookiesAreSecure, getAuthEnv } from '@/lib/server/env';
 
 function signature(deviceId: string) {
   return createHmac('sha256', getAuthEnv().DEVICE_COOKIE_SECRET)
@@ -29,7 +29,5 @@ export function isValidDeviceCookie(value: string) {
 }
 
 export function deviceCookieName() {
-  return getAuthEnv().NODE_ENV === 'production'
-    ? '__Host-zumra.device'
-    : 'zumra.device';
+  return cookiesAreSecure() ? '__Host-zumra.device' : 'zumra.device';
 }

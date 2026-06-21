@@ -48,6 +48,7 @@ export type StudentWorkspaceData = {
     email: string;
     fullName: string;
     id: string;
+    phone?: string;
     status: string;
   };
 };
@@ -73,6 +74,7 @@ export async function getStudentWorkspaceData(
       firstName: contacts.firstName,
       id: studentProfiles.id,
       lastName: contacts.lastName,
+      phone: contacts.phone,
       status: studentProfiles.status,
     })
     .from(studentProfiles)
@@ -153,6 +155,7 @@ export async function getStudentWorkspaceData(
       email: profile.email,
       fullName: fullName(profile.firstName, profile.lastName),
       id: profile.id,
+      phone: profile.phone ?? undefined,
       status: profile.status,
     },
   };

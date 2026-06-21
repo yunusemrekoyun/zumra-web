@@ -1,14 +1,13 @@
 import 'server-only';
 
 import type { NextResponse } from 'next/server';
+import { cookiesAreSecure } from '@/lib/server/env';
 
 const PRODUCTION_COOKIE = '__Host-zumra.assessment';
 const DEVELOPMENT_COOKIE = 'zumra.assessment';
 
 export function publicAssessmentCookieName() {
-  return process.env.NODE_ENV === 'production'
-    ? PRODUCTION_COOKIE
-    : DEVELOPMENT_COOKIE;
+  return cookiesAreSecure() ? PRODUCTION_COOKIE : DEVELOPMENT_COOKIE;
 }
 
 export function setPublicAssessmentCookie(
@@ -21,7 +20,7 @@ export function setPublicAssessmentCookie(
     httpOnly: true,
     path: '/',
     sameSite: 'lax',
-    secure: process.env.NODE_ENV === 'production',
+    secure: cookiesAreSecure(),
   });
 }
 
@@ -31,6 +30,6 @@ export function clearPublicAssessmentCookie(response: NextResponse) {
     httpOnly: true,
     path: '/',
     sameSite: 'lax',
-    secure: process.env.NODE_ENV === 'production',
+    secure: cookiesAreSecure(),
   });
 }
