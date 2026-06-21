@@ -1216,6 +1216,38 @@
       }
     }
   },
+  "notifications": {
+    "title": "Notifications",
+    "empty": "No notifications",
+    "assignmentAssigned": "New assignment: {title}",
+    "assignmentSubmitted": "{student} submitted: {title}",
+    "assignmentGraded": "Your assignment was graded: {title} ({score}/{max})",
+    "chatMessage": "{from} sent a message"
+  },
+  "chat": {
+    "title": "Messages",
+    "description": "Keep your conversations here.",
+    "emptyTitle": "No conversations yet",
+    "emptyDescription": "Your conversations appear here once there's an active relationship.",
+    "noMessages": "No messages yet",
+    "assignment": "Assignment",
+    "material": "Material",
+    "searchPlaceholder": "Search messages...",
+    "searchNoResults": "No results found",
+    "voiceRecord": "Record voice message",
+    "voiceStop": "Stop recording",
+    "voiceUploading": "Uploading...",
+    "threadDescription": "Conversation",
+    "back": "Back",
+    "composerPlaceholder": "Write a message...",
+    "send": "Send",
+    "sending": "Sending...",
+    "emptyThread": "Start the conversation — send the first message.",
+    "error": "Could not send the message. Try again.",
+    "attachmentsAdd": "File",
+    "attachmentsUploading": "Uploading...",
+    "attachmentsError": "Upload failed"
+  },
   "student": {
     "nav": {
       "lessons": "My Lessons",
@@ -1455,6 +1487,8 @@
         "save": "Grade",
         "saved": "Saved",
         "error": "Could not save",
+        "shareInChat": "Share in chat",
+        "shared": "Shared",
         "awaitingSubmission": "Not submitted yet."
       }
     },

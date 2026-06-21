@@ -107,5 +107,6 @@ function formatDate(value: string, locale: string) {
     hour: '2-digit',
     minute: '2-digit',
     month: 'short',
+    timeZone: 'Europe/Istanbul',
   }).format(new Date(value));
 }

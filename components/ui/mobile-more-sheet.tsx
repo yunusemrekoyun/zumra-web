@@ -11,8 +11,10 @@ import {
 import { Link } from '@/i18n/navigation';
 import { cn } from '@/lib/utils';
 import { LogoutButton } from '@/components/auth/logout-button';
+import { NavCountBadge } from './nav-count-badge';
 
 export type SheetMenuItem = {
+  badge?: number;
   icon: LucideIcon;
   label: string;
   path: string;
@@ -115,6 +117,7 @@ export function MobileMoreSheet({
           )}
         />
         <span className="flex-1 text-[15px] font-medium">{item.label}</span>
+        <NavCountBadge count={item.badge} />
         <ChevronRight className="w-4 h-4 text-[#2E286C]/20 shrink-0" />
       </Link>
     );

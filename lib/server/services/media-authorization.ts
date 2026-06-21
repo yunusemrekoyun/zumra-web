@@ -11,8 +11,11 @@ import {
   assignments,
   assignmentSubmissionAttachments,
   assignmentSubmissions,
+  conversations,
   enrollments,
   instructorProfiles,
+  messageAttachments,
+  messages,
   studentProfiles,
 } from '@/lib/server/db/schema';
 
@@ -131,6 +134,59 @@ async function canReadAssignmentMedia(
   return false;
 }
 
+// A media asset attached to a chat message is readable by either party of the
+// conversation it belongs to (beyond the uploader/owner check).
+async function canReadMessageMedia(
+  principal: WorkspacePrincipal,
+  assetId: string,
+): Promise<boolean> {
+  if (principal.role === 'teacher') {
+    const [profile] = await database
+      .select({ id: instructorProfiles.id })
+      .from(instructorProfiles)
+      .where(eq(instructorProfiles.userId, principal.id))
+      .limit(1);
+    if (!profile) return false;
+    const rows = await database
+      .select({ id: messages.id })
+      .from(messageAttachments)
+      .innerJoin(messages, eq(messages.id, messageAttachments.messageId))
+      .innerJoin(conversations, eq(conversations.id, messages.conversationId))
+      .where(
+        and(
+          eq(messageAttachments.mediaAssetId, assetId),
+          eq(conversations.instructorProfileId, profile.id),
+        ),
+      )
+      .limit(1);
+    return rows.length > 0;
+  }
+
+  if (principal.role === 'student') {
+    const [profile] = await database
+      .select({ id: studentProfiles.id })
+      .from(studentProfiles)
+      .where(eq(studentProfiles.userId, principal.id))
+      .limit(1);
+    if (!profile) return false;
+    const rows = await database
+      .select({ id: messages.id })
+      .from(messageAttachments)
+      .innerJoin(messages, eq(messages.id, messageAttachments.messageId))
+      .innerJoin(conversations, eq(conversations.id, messages.conversationId))
+      .where(
+        and(
+          eq(messageAttachments.mediaAssetId, assetId),
+          eq(conversations.studentProfileId, profile.id),
+        ),
+      )
+      .limit(1);
+    return rows.length > 0;
+  }
+
+  return false;
+}
+
 export const mediaAuthorizationService: MediaAuthorizationService = {
   async canRead(principal, asset) {
     if (asset.visibility === 'public') {
@@ -153,7 +209,11 @@ export const mediaAuthorizationService: MediaAuthorizationService = {
       return true;
     }
 
-    return canReadAssignmentMedia(principal, asset.id);
+    if (await canReadAssignmentMedia(principal, asset.id)) {
+      return true;
+    }
+
+    return canReadMessageMedia(principal, asset.id);
   },
 
   async canUpload(principal, visibility) {

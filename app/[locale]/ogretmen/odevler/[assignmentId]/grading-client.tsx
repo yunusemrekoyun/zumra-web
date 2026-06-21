@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { useTranslations } from 'next-intl';
-import { CheckCircle2, Clock, Paperclip, Star } from 'lucide-react';
+import { CheckCircle2, Clock, MessageSquare, Paperclip, Star } from 'lucide-react';
 import type { AssignmentForGrading } from '@/lib/server/services/assignments';
 import { Avatar, Button, ModulePanel, StatusChip } from '@/components/ui';
 import { useRouter } from '@/i18n/navigation';
@@ -13,6 +13,8 @@ type Row = AssignmentForGrading['roster'][number] & {
   busy: boolean;
   saved: boolean;
   failed: boolean;
+  sharing: boolean;
+  sharedOk: boolean;
 };
 
 export function GradingClient({
@@ -33,6 +35,8 @@ export function GradingClient({
       busy: false,
       saved: false,
       failed: false,
+      sharing: false,
+      sharedOk: false,
     })),
   );
 
@@ -73,6 +77,22 @@ export function GradingClient({
       router.refresh();
     } catch {
       patch(index, { busy: false, failed: true });
+    }
+  }
+
+  async function share(index: number) {
+    patch(index, { sharing: true });
+    try {
+      const response = await fetch(`/api/assignments/${assignment.id}/share`, {
+        body: JSON.stringify({ studentProfileId: rows[index].studentProfileId }),
+        credentials: 'same-origin',
+        headers: { 'content-type': 'application/json' },
+        method: 'POST',
+      });
+      if (!response.ok) throw new Error('share_failed');
+      patch(index, { sharing: false, sharedOk: true });
+    } catch {
+      patch(index, { sharing: false });
     }
   }
 
@@ -134,6 +154,16 @@ export function GradingClient({
                 <StatusChip tone="gray">{t('status.not_submitted')}</StatusChip>
               )}
             </div>
+
+            <button
+              type="button"
+              onClick={() => share(index)}
+              disabled={row.sharing}
+              className="mt-3 inline-flex items-center gap-1.5 rounded-xl border border-black/[0.06] bg-white px-3 py-1.5 text-[11px] font-bold uppercase tracking-wider text-[#533089] transition-colors hover:bg-[#533089]/5 disabled:opacity-50"
+            >
+              <MessageSquare className="h-3.5 w-3.5" />
+              {row.sharedOk ? t('grading.shared') : t('grading.shareInChat')}
+            </button>
 
             {row.submission ? (
               <div className="mt-4 space-y-4">
@@ -269,5 +299,6 @@ function formatDate(value: string, locale: string) {
     hour: '2-digit',
     minute: '2-digit',
     month: 'short',
+    timeZone: 'Europe/Istanbul',
   }).format(new Date(value));
 }

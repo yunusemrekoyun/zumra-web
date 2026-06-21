@@ -3,7 +3,6 @@
 import React, { useMemo, useState } from 'react';
 import { useLocale, useTranslations } from 'next-intl';
 import {
-  Bell,
   HelpCircle,
   LogOut,
   MessageSquare,
@@ -19,13 +18,20 @@ import { LanguageSwitcher } from './language-switcher';
 import { DashboardRouteTransition, useDashboardRouteNavigation } from './route-animation-engine';
 import { MobileMoreSheet } from './mobile-more-sheet';
 import { MobileTabBar } from './mobile-tab-bar';
+import { NavCountBadge } from './nav-count-badge';
+import { NotificationBell } from './notification-bell';
 
 type WorkspaceShellProps = {
+  badges?: Record<string, number>;
   children: React.ReactNode;
   config: WorkspaceConfig;
 };
 
-export function WorkspaceShell({ children, config }: WorkspaceShellProps) {
+export function WorkspaceShell({
+  badges,
+  children,
+  config,
+}: WorkspaceShellProps) {
   const locale = useLocale();
   const pathname = usePathname();
   const t = useTranslations();
@@ -40,12 +46,14 @@ export function WorkspaceShell({ children, config }: WorkspaceShellProps) {
     .filter((item) => item.mobile === 'tab')
     .map((item) => ({
       ...item,
+      badge: badges?.[item.path],
       label: t(item.labelKey),
     }));
   const mobileMoreItems = config.navItems
     .filter((item) => item.mobile === 'more')
     .map((item) => ({
       ...item,
+      badge: badges?.[item.path],
       label: t(item.labelKey),
     }));
   const mobileAccountItems = config.accountItems.map((item) => ({
@@ -110,6 +118,7 @@ export function WorkspaceShell({ children, config }: WorkspaceShellProps) {
       >
         <WorkspaceSidebar
           accountItems={config.accountItems}
+          badges={badges}
           desktopNav={config.desktopNav}
           navItems={config.navItems}
           navigateWithTransition={navigateWithTransition}
@@ -168,14 +177,7 @@ export function WorkspaceShell({ children, config }: WorkspaceShellProps) {
                   <MessageSquare className="w-4 h-4" />
                 </button>
               )}
-              <button
-                type="button"
-                aria-label={t('workspace.header.notifications')}
-                className="relative w-9 h-9 lg:w-10 lg:h-10 rounded-full bg-white flex items-center justify-center shadow-sm text-[#2E286C]/40 hover:text-[#533089] transition-colors"
-              >
-                <Bell className="w-4 h-4" />
-                <span className="absolute top-0 right-0 w-2.5 h-2.5 lg:w-3 lg:h-3 bg-red-400 rounded-full border-2 border-white" />
-              </button>
+              <NotificationBell />
 
               <div className="flex items-center gap-3 cursor-pointer pl-3 lg:pl-4 border-l border-black/[0.05]">
                 <div className="text-right hidden sm:block">
@@ -204,6 +206,7 @@ export function WorkspaceShell({ children, config }: WorkspaceShellProps) {
 
 type WorkspaceSidebarProps = {
   accountItems: WorkspaceNavItem[];
+  badges?: Record<string, number>;
   desktopNav: WorkspaceConfig['desktopNav'];
   navItems: WorkspaceNavItem[];
   navigateWithTransition: (
@@ -217,6 +220,7 @@ type WorkspaceSidebarProps = {
 
 function WorkspaceSidebar({
   accountItems,
+  badges,
   desktopNav,
   navItems,
   navigateWithTransition,
@@ -235,6 +239,7 @@ function WorkspaceSidebar({
             {navItems.map((item) => (
               <RailNavLink
                 key={item.path}
+                badge={badges?.[item.path]}
                 item={item}
                 navigateWithTransition={navigateWithTransition}
                 pathname={pathname}
@@ -256,6 +261,7 @@ function WorkspaceSidebar({
           {navItems.map((item) => (
             <WideNavLink
               key={item.path}
+              badge={badges?.[item.path]}
               item={item}
               navigateWithTransition={navigateWithTransition}
               pathname={pathname}
@@ -309,6 +315,7 @@ function WorkspaceLogo({ compact = false }: { compact?: boolean }) {
 }
 
 type NavLinkProps = {
+  badge?: number;
   fallbackIcon?: typeof Settings;
   item: WorkspaceNavItem;
   navigateWithTransition: (
@@ -321,6 +328,7 @@ type NavLinkProps = {
 };
 
 function WideNavLink({
+  badge,
   fallbackIcon,
   item,
   navigateWithTransition,
@@ -348,11 +356,13 @@ function WideNavLink({
     >
       <Icon className={cn('w-5 h-5', isActive ? 'text-[#533089]' : 'text-[#2E286C]/40')} />
       {t(item.labelKey)}
+      <NavCountBadge count={badge} className="ml-auto" />
     </Link>
   );
 }
 
 function RailNavLink({
+  badge,
   item,
   navigateWithTransition,
   pathname,
@@ -378,7 +388,10 @@ function RailNavLink({
       )}
       title={label}
     >
-      <item.icon className="w-5 h-5" strokeWidth={isActive ? 2.4 : 1.8} />
+      <span className="relative">
+        <item.icon className="w-5 h-5" strokeWidth={isActive ? 2.4 : 1.8} />
+        <NavCountBadge count={badge} className="absolute -top-2 -right-2.5" />
+      </span>
       <span className={cn('text-[9px] leading-none tracking-wide', isActive ? 'font-bold' : 'font-medium')}>
         {label}
       </span>

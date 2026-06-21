@@ -19,6 +19,11 @@ import {
   AuthorizationDeniedError,
   PublicFlowError,
 } from '@/lib/server/http/errors';
+import {
+  notifyAssignmentAssigned,
+  notifyAssignmentGraded,
+  notifyAssignmentSubmitted,
+} from './notify-events';
 
 const DEFAULT_MAX_SCORE = 100;
 const activeEnrollmentStatuses = ['active', 'paused'] as const;
@@ -418,6 +423,7 @@ export async function createAssignment(
       .onConflictDoNothing();
   }
 
+  await notifyAssignmentAssigned(created.id);
   return { id: created.id };
 }
 
@@ -674,6 +680,8 @@ export async function gradeSubmission(
       updatedAt: new Date(),
     })
     .where(eq(assignmentSubmissions.id, input.submissionId));
+
+  await notifyAssignmentGraded(input.submissionId);
 }
 
 // ---------------------------------------------------------------------------
@@ -981,4 +989,6 @@ export async function submitAssignment(
       )
       .onConflictDoNothing();
   }
+
+  await notifyAssignmentSubmitted(submissionId);
 }
