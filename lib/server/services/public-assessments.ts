@@ -25,10 +25,12 @@ import {
   candidateInquiries,
   candidateProfiles,
   contacts,
+  programs,
   type LocalizedText,
 } from '@/lib/server/db/schema';
 import { PublicFlowError } from '@/lib/server/http/errors';
 import { createOpaqueToken, hashToken } from '@/lib/server/security/tokens';
+import { notifyLeadReceived } from './notify-events';
 
 const ATTEMPT_TTL_MS = 7 * 24 * 60 * 60 * 1000;
 const FORM_VERSION = 'public-level-test-v1';
@@ -325,6 +327,181 @@ export async function getPublicAssessmentState(
 ) {
   const context = await getAttemptContext(token);
   return context ? buildState(context, locale) : null;
+}
+
+export type PublicLeadKind = 'program' | 'callback';
+
+export type CreatePublicLeadInput = {
+  attribution?: Record<string, string>;
+  contactWindow?: string;
+  email: string;
+  firstName: string;
+  idempotencyKey: string;
+  kind: PublicLeadKind;
+  lastName: string;
+  locale: PublicAssessmentLocale;
+  marketingConsent?: boolean;
+  phone: string;
+  programId?: string;
+  referrer?: string;
+};
+
+// Low-friction lead capture (program "bilgi al" + "sizi arayalım" callback).
+// Lands in the same candidate pool as the assessment funnel, with a distinct
+// source and — for program inquiries — the program tagged on the inquiry.
+export async function createPublicLead(
+  input: CreatePublicLeadInput,
+  maskedIp: string | undefined,
+): Promise<{ ok: true }> {
+  const email = normalizeEmail(input.email);
+  const phone = input.phone.trim();
+  const normalizedPhone = normalizePhone(input.phone);
+  const firstName = input.firstName.trim();
+  const lastName = input.lastName.trim();
+  const now = new Date();
+  const source =
+    input.kind === 'program' ? 'program_inquiry' : 'callback_request';
+  const contactWindow =
+    input.kind === 'callback'
+      ? input.contactWindow?.trim() || undefined
+      : undefined;
+
+  let language = 'english';
+  let programId: string | undefined;
+  let programName: string | undefined;
+  if (input.kind === 'program' && input.programId) {
+    const [program] = await database
+      .select({
+        id: programs.id,
+        language: programs.language,
+        name: programs.name,
+      })
+      .from(programs)
+      .where(
+        and(
+          eq(programs.id, input.programId),
+          eq(programs.publicVisible, true),
+        ),
+      )
+      .limit(1);
+    if (program) {
+      programId = program.id;
+      programName = program.name;
+      language = program.language ?? 'english';
+    }
+  }
+
+  let created = false;
+  await database.transaction(async (transaction) => {
+    const [contact] = await transaction
+      .insert(contacts)
+      .values({
+        contactWindow,
+        email: input.email.trim(),
+        firstName,
+        lastName,
+        marketingConsent: input.marketingConsent ?? false,
+        normalizedEmail: email,
+        normalizedPhone,
+        phone,
+        preferredContactChannel: 'phone',
+      })
+      .onConflictDoUpdate({
+        set: {
+          contactWindow: contactWindow ?? sql`${contacts.contactWindow}`,
+          normalizedPhone,
+          phone,
+          updatedAt: now,
+        },
+        target: contacts.normalizedEmail,
+      })
+      .returning({ id: contacts.id });
+    if (!contact) {
+      throw new PublicFlowError('candidate_could_not_be_created', 409);
+    }
+
+    const [candidate] = await transaction
+      .insert(candidateProfiles)
+      .values({ contactId: contact.id, lastActivityAt: now })
+      .onConflictDoUpdate({
+        set: { lastActivityAt: now, updatedAt: now },
+        target: candidateProfiles.contactId,
+      })
+      .returning({ id: candidateProfiles.id });
+    if (!candidate) {
+      throw new PublicFlowError('candidate_could_not_be_created', 409);
+    }
+
+    const [inquiry] = await transaction
+      .insert(candidateInquiries)
+      .values({
+        attribution: input.attribution ?? {},
+        candidateId: candidate.id,
+        formVersion: FORM_VERSION,
+        idempotencyKey: input.idempotencyKey,
+        language,
+        locale: input.locale,
+        programId,
+        referrer: input.referrer,
+        source,
+      })
+      .onConflictDoNothing({ target: candidateInquiries.idempotencyKey })
+      .returning({ id: candidateInquiries.id });
+    if (!inquiry) {
+      // Duplicate submission (same idempotency key) — already captured.
+      return;
+    }
+    created = true;
+
+    await transaction.insert(candidateConsents).values([
+      {
+        accepted: true,
+        contactId: contact.id,
+        inquiryId: inquiry.id,
+        locale: input.locale,
+        maskedIp,
+        textSnapshot: consentCopy(input.locale),
+        type: 'candidate_notice',
+        version: CONSENT_VERSION,
+      },
+      {
+        accepted: input.marketingConsent ?? false,
+        contactId: contact.id,
+        inquiryId: inquiry.id,
+        locale: input.locale,
+        maskedIp,
+        textSnapshot:
+          input.locale === 'tr'
+            ? 'Haber ve duyuruları e-posta yoluyla almak istiyorum.'
+            : 'I would like to receive news and announcements by email.',
+        type: 'marketing_email',
+        version: CONSENT_VERSION,
+      },
+    ]);
+
+    await transaction.insert(candidateActivities).values([
+      {
+        candidateId: candidate.id,
+        inquiryId: inquiry.id,
+        metadata: { kind: input.kind, source },
+        type: 'candidate.inquiry_received',
+      },
+    ]);
+  });
+
+  if (created) {
+    await notifyLeadReceived({
+      email: input.email.trim(),
+      firstName,
+      idempotencyKey: input.idempotencyKey,
+      kind: input.kind,
+      lastName,
+      locale: input.locale,
+      programName,
+    });
+  }
+
+  return { ok: true };
 }
 
 export async function startPublicAssessment(

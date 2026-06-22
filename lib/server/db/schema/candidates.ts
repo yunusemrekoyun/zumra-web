@@ -13,6 +13,7 @@ import {
 } from 'drizzle-orm/pg-core';
 import { sql } from 'drizzle-orm';
 import { users } from './auth';
+import { programs } from './programs';
 
 export const candidateStageEnum = pgEnum('candidate_stage', [
   'new',
@@ -123,6 +124,9 @@ export const candidateInquiries = pgTable(
       .notNull()
       .references(() => candidateProfiles.id, { onDelete: 'restrict' }),
     language: text('language').notNull(),
+    programId: uuid('program_id').references(() => programs.id, {
+      onDelete: 'set null',
+    }),
     source: text('source').notNull().default('public_level_test'),
     locale: text('locale').notNull(),
     status: inquiryStatusEnum('status').notNull().default('open'),
@@ -151,6 +155,7 @@ export const candidateInquiries = pgTable(
       table.candidateId,
       table.createdAt,
     ),
+    index('candidate_inquiries_program_idx').on(table.programId),
     index('candidate_inquiries_language_status_idx').on(
       table.language,
       table.status,
@@ -486,6 +491,29 @@ export const candidateActivities = pgTable(
     index('candidate_activities_candidate_occurred_idx').on(
       table.candidateId,
       table.occurredAt,
+    ),
+  ],
+);
+
+export const candidateNotes = pgTable(
+  'candidate_notes',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    candidateId: uuid('candidate_id')
+      .notNull()
+      .references(() => candidateProfiles.id, { onDelete: 'cascade' }),
+    authorUserId: text('author_user_id').references(() => users.id, {
+      onDelete: 'set null',
+    }),
+    body: text('body').notNull(),
+    createdAt: timestamp('created_at', { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => [
+    index('candidate_notes_candidate_created_idx').on(
+      table.candidateId,
+      table.createdAt,
     ),
   ],
 );

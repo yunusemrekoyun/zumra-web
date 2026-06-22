@@ -1,5 +1,6 @@
 import { requireWorkspaceRole } from '@/lib/server/authorization';
 import { listCandidateDirectory } from '@/lib/server/services/candidate-directory';
+import { listAdvisors } from '@/lib/server/services/candidate-pipeline';
 import { CandidatesClient } from './_components/candidates-client';
 
 type CandidatesPageProps = {
@@ -8,7 +9,10 @@ type CandidatesPageProps = {
 
 export default async function CandidatesPage({ params }: CandidatesPageProps) {
   const { locale } = await params;
-  await requireWorkspaceRole('admin', locale);
-  const candidates = await listCandidateDirectory();
-  return <CandidatesClient candidates={candidates} />;
+  const principal = await requireWorkspaceRole('admin', locale);
+  const [candidates, advisors] = await Promise.all([
+    listCandidateDirectory(),
+    listAdvisors(principal),
+  ]);
+  return <CandidatesClient advisors={advisors} candidates={candidates} />;
 }

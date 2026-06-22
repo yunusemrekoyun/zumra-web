@@ -274,6 +274,7 @@
     "programs": {
       "title": "Featured Learning Models",
       "popular": "Popular",
+      "allLevels": "All Levels",
       "items": [
         { "title": "General English", "level": "A1 - C1 Levels", "desc": "Designed for women who want to speak confidently in everyday life. Practice-first and goal-oriented.", "icon": "message", "popular": true },
         { "title": "Academic English", "level": "IELTS / TOEFL Preparation", "desc": "Academic writing, presentation and exam skills for university and professional goals.", "icon": "book", "popular": false },
@@ -285,7 +286,28 @@
       "title": "Not sure which program is right for you?",
       "description": "After a short free consultation with our expert advisors, we will create a route designed around your goals.",
       "primary": "Book a Free Consultation",
-      "secondary": "Message on WhatsApp"
+      "secondary": "Message on WhatsApp",
+      "whatsappMessage": "Hello, I'd like to get information about your programs."
+    },
+    "leadForm": {
+      "programTitle": "Get Information",
+      "programSubtitle": "Let us tell you about {program}.",
+      "callbackTitle": "Request a Call",
+      "callbackSubtitle": "Leave your number and our advisor will call you back shortly.",
+      "firstName": "First name",
+      "lastName": "Last name",
+      "email": "Email",
+      "phone": "Phone",
+      "contactWindow": "Preferred call time (opt.)",
+      "consent": "I have read and accept the personal data processing notice.",
+      "marketingConsent": "I'd like to receive campaigns and announcements.",
+      "submit": "Send",
+      "submitting": "Sending...",
+      "successTitle": "Request received!",
+      "successText": "Our advisor will contact you shortly.",
+      "errorText": "Could not send. Please try again.",
+      "whatsappAlt": "Message on WhatsApp",
+      "close": "Close"
     },
     "instructors": {
       "title": "An inspiring team of strong women educators.",
@@ -625,11 +647,21 @@
         "listPrice": "Standard list price",
         "description": "Description",
         "active": "Available during enrollment",
+        "publicVisible": "Show on homepage (featured)",
+        "marketingIcon": "Featured icon",
+        "displayOrder": "Display order (lower first)",
+        "popular": "Popular badge",
         "teacher": "Instructor",
         "hourlyStudentPrice": "Hourly student sales price",
         "weekday": "Lesson day",
         "lessonTime": "Lesson time",
         "lessonDate": "Lesson date"
+      },
+      "marketingIcons": {
+        "message": "Speaking",
+        "book": "Book",
+        "headset": "Headset",
+        "briefcase": "Briefcase"
       },
       "languages": {
         "english": "English",
@@ -839,6 +871,11 @@
       "phoneCaptured": "Phone captured",
       "assessmentCompleted": "Level assessment completed",
       "statusSummary": "Status summary",
+      "notes": "Notes",
+      "notePlaceholder": "Add a call note...",
+      "addNote": "Add Note",
+      "noteSaving": "Saving...",
+      "noNotes": "No notes yet.",
       "contactCaptured": "Contact complete",
       "publicLevelTest": "Public level assessment",
       "startEnrollment": "Start Enrollment",
@@ -852,6 +889,23 @@
       "enrollmentStartError": "The enrollment draft could not be opened. Please try again.",
       "learningGoal": "Learning goal",
       "preferredContact": "Preferred contact",
+      "lessonModel": "Lesson model",
+      "city": "City",
+      "contactWindow": "Preferred call hours",
+      "attribution": "Marketing source (UTM)",
+      "referrer": "Referrer",
+      "consents": "Consent records (KVKK)",
+      "consentAccepted": "Accepted",
+      "consentDeclined": "Declined",
+      "lessonModels": {
+        "one_to_one": "One-to-one",
+        "group": "Group",
+        "undecided": "Undecided"
+      },
+      "consentTypes": {
+        "candidate_notice": "Privacy notice",
+        "marketing_email": "Marketing email"
+      },
       "appointmentPreferences": "Consultation time preferences",
       "preferenceRank": "Preference {rank}",
       "timeline": "Activity history",
@@ -863,6 +917,8 @@
         "profile_completed": "Contact profile completed",
         "appointment_requested": "Consultation request created",
         "advisor_assigned": "Advisor assigned",
+        "stage_changed": "Stage changed",
+        "note_added": "Note added",
         "enrollment_started": "Enrollment process started",
         "enrollment_completed": "Candidate converted to student"
       },
@@ -1222,7 +1278,8 @@
     "assignmentAssigned": "New assignment: {title}",
     "assignmentSubmitted": "{student} submitted: {title}",
     "assignmentGraded": "Your assignment was graded: {title} ({score}/{max})",
-    "chatMessage": "{from} sent a message"
+    "chatMessage": "{from} sent a message",
+    "leadReceived": "New lead: {name}"
   },
   "chat": {
     "title": "Messages",

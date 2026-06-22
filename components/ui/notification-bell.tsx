@@ -9,7 +9,8 @@ type NotificationType =
   | 'assignment_assigned'
   | 'assignment_submitted'
   | 'assignment_graded'
-  | 'chat_message';
+  | 'chat_message'
+  | 'lead_received';
 
 type NotificationItem = {
   id: string;
@@ -99,6 +100,8 @@ export function NotificationBell() {
         });
       case 'chat_message':
         return t('chatMessage', { from: String(p.fromName ?? '') });
+      case 'lead_received':
+        return t('leadReceived', { name: String(p.name ?? '') });
       default:
         return '';
     }

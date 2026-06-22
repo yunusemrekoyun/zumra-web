@@ -21,6 +21,11 @@ import {
 import Image from 'next/image';
 import { LanguageSwitcher } from '@/components/ui';
 import { Link } from '@/i18n/navigation';
+import {
+  LeadModalProvider,
+  useLeadModal,
+  whatsappHref,
+} from './lead-form-modal';
 
 type PublicStep = { desc: string; num: string; title: string };
 type PublicLanguage = { name: string; subtitle: string; symbol: string };
@@ -30,6 +35,15 @@ type PublicProgram = {
   level: string;
   popular: boolean;
   title: string;
+};
+type PublicProgramCard = {
+  description: string | null;
+  id: string;
+  language: string | null;
+  levels: string[];
+  marketingIcon: string | null;
+  name: string;
+  popular: boolean;
 };
 type PublicReview = { image: number; name: string; program: string; text: string };
 type PublicFaq = { a: string; q: string };
@@ -63,23 +77,29 @@ function FloatingLanguages() {
   );
 }
 
-export default function PublicLandingClient() {
+export default function PublicLandingClient({
+  programs,
+}: {
+  programs: PublicProgramCard[];
+}) {
   return (
-    <div className="min-h-screen overflow-x-hidden font-neubau">
-      <Navbar />
-      <main>
-        <Hero />
-        <WhyZumra />
-        <HowItWorks />
-        <LanguagesGrid />
-        <FeaturedPrograms />
-        <ConsultationCTA />
-        <InstructorsTeaser />
-        <Testimonials />
-        <FAQ />
-      </main>
-      <Footer />
-    </div>
+    <LeadModalProvider>
+      <div className="min-h-screen overflow-x-hidden font-neubau">
+        <Navbar />
+        <main>
+          <Hero />
+          <WhyZumra />
+          <HowItWorks />
+          <LanguagesGrid />
+          <FeaturedPrograms programs={programs} />
+          <ConsultationCTA />
+          <InstructorsTeaser />
+          <Testimonials />
+          <FAQ />
+        </main>
+        <Footer />
+      </div>
+    </LeadModalProvider>
   );
 }
 
@@ -523,10 +543,34 @@ function LanguagesGrid() {
 }
 
 // --- SEC 6: FEATURED PROGRAMS ---
-function FeaturedPrograms() {
+function FeaturedPrograms({ programs }: { programs: PublicProgramCard[] }) {
   const t = useTranslations('public.programs');
   const action = useTranslations('common.actions');
-  const progs = t.raw('items') as PublicProgram[];
+  const { openProgram } = useLeadModal();
+  const fallback = t.raw('items') as PublicProgram[];
+  const progs: Array<{
+    desc: string;
+    icon: string;
+    id?: string;
+    level: string;
+    popular: boolean;
+    title: string;
+  }> = programs.length
+    ? programs.map((p) => ({
+        desc: p.description ?? '',
+        icon: p.marketingIcon ?? 'message',
+        id: p.id,
+        level: p.levels.length ? p.levels.join(' · ') : t('allLevels'),
+        popular: p.popular,
+        title: p.name,
+      }))
+    : fallback.map((p) => ({
+        desc: p.desc,
+        icon: p.icon,
+        level: p.level,
+        popular: p.popular,
+        title: p.title,
+      }));
 
   return (
     <section id="egitim-modelleri" className="py-16 lg:py-24 bg-[#F8F5FC] border-t border-brand-primary/[0.03]">
@@ -542,8 +586,8 @@ function FeaturedPrograms() {
          
          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-5 lg:gap-8">
             {progs.map((prog, i) => (
-              <motion.div 
-                key={i}
+              <motion.div
+                key={prog.id ?? i}
                 initial={{ opacity: 0, y: 30 }}
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true, margin: "-50px" }}
@@ -562,9 +606,12 @@ function FeaturedPrograms() {
                 <p className="text-[10px] font-bold text-brand-muted mb-4 uppercase tracking-widest">{prog.level}</p>
                 <p className="text-sm text-brand-dark/60 font-neubau leading-relaxed mb-8 flex-grow">{prog.desc}</p>
                 
-                <motion.button 
+                <motion.button
                   whileHover={{ scale: 1.02 }}
                   whileTap={{ scale: 0.98 }}
+                  onClick={() =>
+                    openProgram({ id: prog.id, name: prog.title })
+                  }
                   className="w-full py-3.5 rounded-xl bg-[#FCFCFD] border border-black/5 text-xs font-bold uppercase tracking-wider hover:bg-brand-primary hover:text-white transition-colors text-brand-dark mt-auto"
                 >
                   {action('getInfo')}
@@ -577,7 +624,7 @@ function FeaturedPrograms() {
   );
 }
 
-function ProgramIcon({ name }: { name: PublicProgram['icon'] }) {
+function ProgramIcon({ name }: { name: string }) {
   const className = 'w-6 h-6';
 
   switch (name) {
@@ -595,6 +642,7 @@ function ProgramIcon({ name }: { name: PublicProgram['icon'] }) {
 // --- SEC 7: CTA / CONSULTATION ---
 function ConsultationCTA() {
   const t = useTranslations('public.cta');
+  const { openCallback } = useLeadModal();
   const mouseX = useMotionValue(0);
   const mouseY = useMotionValue(0);
   const handleMouseMove = React.useCallback(
@@ -646,20 +694,24 @@ function ConsultationCTA() {
               {t('description')}
             </p>
             <div className="flex flex-col sm:flex-row gap-6 justify-center">
-              <motion.button 
+              <motion.button
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
+                onClick={() => openCallback()}
                 className="h-14 px-6 sm:px-10 rounded-[1rem] bg-white text-brand-dark font-bold uppercase tracking-wider text-xs shadow-2xl glow-effect"
               >
                 {t('primary')}
               </motion.button>
-              <motion.button 
+              <motion.a
+                href={whatsappHref(t('whatsappMessage'))}
+                target="_blank"
+                rel="noreferrer"
                 whileHover={{ scale: 1.05, backgroundColor: 'rgba(255,255,255,0.1)' }}
                 whileTap={{ scale: 0.95 }}
                 className="h-14 px-6 sm:px-10 rounded-[1rem] bg-white/5 text-white font-bold uppercase tracking-wider text-xs border border-white/20 flex items-center justify-center gap-3 transition-colors"
               >
                 {t('secondary')} <ArrowRight className="w-4 h-4"/>
-              </motion.button>
+              </motion.a>
             </div>
           </div>
         </motion.div>
@@ -686,9 +738,6 @@ function InstructorsTeaser() {
              <p className="text-lg text-brand-dark/70 font-neubau mb-10 max-w-xl">
                {t('description')}
              </p>
-             <button className="text-brand-primary font-bold uppercase tracking-widest text-xs flex items-center gap-3 hover:gap-4 transition-all">
-               {t('cta')} <ArrowRight className="w-4 h-4" />
-             </button>
            </motion.div>
 
            <motion.div 

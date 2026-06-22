@@ -9,7 +9,8 @@ export type NotificationType =
   | 'assignment_assigned'
   | 'assignment_submitted'
   | 'assignment_graded'
-  | 'chat_message';
+  | 'chat_message'
+  | 'lead_received';
 
 export type NotificationView = {
   id: string;

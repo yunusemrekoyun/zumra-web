@@ -10,6 +10,7 @@ import {
   enrollments,
   instructorProfiles,
   studentProfiles,
+  users,
 } from '@/lib/server/db/schema';
 import {
   createChatNotification,
@@ -298,5 +299,51 @@ export async function notifyNewMessage(input: {
     }
   } catch (error) {
     logFailure('new_message', error);
+  }
+}
+
+// New public lead (program "bilgi al" / "sizi arayalım" callback) → broadcast an
+// in-app notification to every advisor + admin, and send the lead an instant
+// welcome email so they stay warm until someone calls.
+export async function notifyLeadReceived(input: {
+  email: string;
+  firstName: string;
+  idempotencyKey: string;
+  kind: 'callback' | 'program';
+  lastName: string;
+  locale: 'tr' | 'en';
+  programName?: string;
+}): Promise<void> {
+  try {
+    const name = fullName(input.firstName, input.lastName);
+
+    const staff = await database
+      .select({ id: users.id })
+      .from(users)
+      .where(inArray(users.role, ['advisor', 'admin']));
+
+    await createNotifications(
+      staff.map((member) => ({
+        userId: member.id,
+        type: 'lead_received',
+        payload: {
+          kind: input.kind,
+          name,
+          program: input.programName ?? '',
+        },
+        href: '/admin/leads',
+      })),
+    );
+
+    await notificationService.enqueue({
+      channel: 'email',
+      idempotencyKey: `lead-welcome:${input.idempotencyKey}`,
+      locale: input.locale,
+      payload: { name, program: input.programName ?? '' },
+      recipient: input.email,
+      templateKey: 'lead-welcome',
+    });
+  } catch (error) {
+    logFailure('lead_received', error);
   }
 }

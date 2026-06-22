@@ -48,6 +48,7 @@ const languages: ProgramLanguage[] = [
   'arabic',
 ];
 const levels: ProgramLevel[] = ['A1', 'A2', 'B1', 'B2', 'C1', 'C2'];
+const marketingIcons = ['message', 'book', 'headset', 'briefcase'] as const;
 const lessonTimeOptions = [
   '09:00',
   '10:00',
@@ -66,11 +67,15 @@ const lessonTimeOptions = [
 type ProgramDraft = {
   active: boolean;
   description: string;
+  displayOrder: number;
   id?: string;
   language: ProgramLanguage;
   levels: ProgramLevel[];
   listPriceCents: number;
+  marketingIcon: 'book' | 'briefcase' | 'headset' | 'message';
   name: string;
+  popular: boolean;
+  publicVisible: boolean;
   systemManaged: boolean;
 };
 
@@ -195,14 +200,18 @@ export function ProgramsClient({
     setProgramDraft({
       active: program.active,
       description: program.description ?? '',
+      displayOrder: program.displayOrder,
       id: program.id,
       language: program.language ?? 'english',
       levels: program.systemManaged ? ['A1'] : program.levels,
       listPriceCents: program.listPriceCents ?? 0,
+      marketingIcon: program.marketingIcon ?? 'message',
       name:
         program.systemKey === 'private-lesson'
           ? t('privateLesson')
           : program.name,
+      popular: program.popular,
+      publicVisible: program.publicVisible,
       systemManaged: program.systemManaged,
     });
     setMessage('');
@@ -237,11 +246,15 @@ export function ProgramsClient({
         body: JSON.stringify({
           active: programDraft.active,
           description: programDraft.description,
+          displayOrder: programDraft.displayOrder,
           id: programDraft.id,
           language: programDraft.language,
           levels: programDraft.levels,
           listPriceCents: programDraft.listPriceCents,
+          marketingIcon: programDraft.marketingIcon,
           name: programDraft.name,
+          popular: programDraft.popular,
+          publicVisible: programDraft.publicVisible,
         }),
         credentials: 'same-origin',
         headers: { 'content-type': 'application/json' },
@@ -258,6 +271,7 @@ export function ProgramsClient({
           programs.find((program) => program.id === body.id)?.canDelete ??
           true,
         description: programDraft.description || undefined,
+        displayOrder: programDraft.displayOrder,
         id: body.id,
         kind: programDraft.systemManaged ? 'private' : 'group',
         language: programDraft.systemManaged
@@ -267,7 +281,14 @@ export function ProgramsClient({
         listPriceCents: programDraft.systemManaged
           ? undefined
           : programDraft.listPriceCents,
+        marketingIcon: programDraft.systemManaged
+          ? undefined
+          : programDraft.marketingIcon,
         name: programDraft.name,
+        popular: programDraft.systemManaged ? false : programDraft.popular,
+        publicVisible: programDraft.systemManaged
+          ? false
+          : programDraft.publicVisible,
         systemKey: programDraft.systemManaged
           ? 'private-lesson'
           : undefined,
@@ -963,6 +984,68 @@ export function ProgramsClient({
                       className="min-h-24 w-full resize-y rounded-xl border border-transparent bg-[#F8F9FC] px-4 py-3 text-sm text-[#2E286C] outline-none focus:border-[#533089]/30"
                     />
                   </FormField>
+                  <label className="flex items-center gap-3 rounded-xl bg-[#F8F9FC] p-4 text-sm font-semibold text-[#2E286C]/65">
+                    <input
+                      type="checkbox"
+                      checked={programDraft.publicVisible}
+                      onChange={(event) =>
+                        setProgramDraft((current) => ({
+                          ...current,
+                          publicVisible: event.target.checked,
+                        }))
+                      }
+                      className="h-4 w-4 accent-[#533089]"
+                    />
+                    {t('fields.publicVisible')}
+                  </label>
+                  {programDraft.publicVisible && (
+                    <>
+                      <FormField label={t('fields.marketingIcon')}>
+                        <Select
+                          value={programDraft.marketingIcon}
+                          onChange={(value) =>
+                            setProgramDraft((current) => ({
+                              ...current,
+                              marketingIcon:
+                                value as ProgramDraft['marketingIcon'],
+                            }))
+                          }
+                          options={marketingIcons.map((icon) => [
+                            icon,
+                            t(`marketingIcons.${icon}`),
+                          ])}
+                        />
+                      </FormField>
+                      <FormField label={t('fields.displayOrder')}>
+                        <input
+                          type="number"
+                          min={0}
+                          value={programDraft.displayOrder}
+                          onChange={(event) =>
+                            setProgramDraft((current) => ({
+                              ...current,
+                              displayOrder: Number(event.target.value) || 0,
+                            }))
+                          }
+                          className="w-full rounded-xl border border-transparent bg-[#F8F9FC] px-4 py-3 text-sm text-[#2E286C] outline-none focus:border-[#533089]/30"
+                        />
+                      </FormField>
+                      <label className="flex items-center gap-3 rounded-xl bg-[#F8F9FC] p-4 text-sm font-semibold text-[#2E286C]/65">
+                        <input
+                          type="checkbox"
+                          checked={programDraft.popular}
+                          onChange={(event) =>
+                            setProgramDraft((current) => ({
+                              ...current,
+                              popular: event.target.checked,
+                            }))
+                          }
+                          className="h-4 w-4 accent-[#533089]"
+                        />
+                        {t('fields.popular')}
+                      </label>
+                    </>
+                  )}
                 </>
               )}
               <label className="flex items-center gap-3 rounded-xl bg-[#F8F9FC] p-4 text-sm font-semibold text-[#2E286C]/65">
@@ -2049,10 +2132,14 @@ function emptyProgram(): ProgramDraft {
   return {
     active: true,
     description: '',
+    displayOrder: 0,
     language: 'english',
     levels: ['A1'],
     listPriceCents: 0,
+    marketingIcon: 'message',
     name: '',
+    popular: false,
+    publicVisible: false,
     systemManaged: false,
   };
 }
