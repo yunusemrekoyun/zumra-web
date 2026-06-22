@@ -7,7 +7,9 @@ import {
   appointmentRequests,
   assessmentAttempts,
   candidateActivities,
+  candidateConsents,
   candidateInquiries,
+  candidateNotes,
   candidateProfiles,
   contacts,
   enrollmentDrafts,
@@ -24,6 +26,7 @@ export type CandidateDirectoryRecord = {
     occurredAt: string;
     type: string;
   }>;
+  advisorId?: string;
   advisorName?: string;
   applicationCount: number;
   appointmentPreferences: Array<{
@@ -32,8 +35,17 @@ export type CandidateDirectoryRecord = {
   }>;
   appointmentStatus?: string;
   assessmentStatus: 'completed' | 'in_progress' | 'not_started';
+  attribution?: Record<string, string>;
   city?: string;
   communicationComplete: boolean;
+  consents: Array<{
+    accepted: boolean;
+    acceptedAt: string;
+    locale: string;
+    type: string;
+    version: string;
+  }>;
+  contactWindow?: string;
   email: string;
   fullName: string;
   id: string;
@@ -42,9 +54,17 @@ export type CandidateDirectoryRecord = {
   lastActivityAt: string;
   lastActivityMinutesAgo: number;
   learningGoal?: string;
+  lessonModel?: string;
   locale?: string;
+  notes: Array<{
+    authorName?: string;
+    body: string;
+    createdAt: string;
+    id: string;
+  }>;
   phone?: string;
   preferredContactChannel?: string;
+  referrer?: string;
   resultLevel?: string;
   score?: number;
   source?: string;
@@ -59,6 +79,7 @@ export async function listCandidateDirectory(): Promise<
   const generatedAt = Date.now();
   const candidates = await database
     .select({
+      advisorId: candidateProfiles.advisorId,
       advisorName: users.name,
       email: contacts.email,
       firstName: contacts.firstName,
@@ -72,6 +93,9 @@ export async function listCandidateDirectory(): Promise<
       stage: candidateProfiles.stage,
       timezone: contacts.timezone,
       city: contacts.city,
+      contactId: candidateProfiles.contactId,
+      lessonModel: contacts.lessonModel,
+      contactWindow: contacts.contactWindow,
     })
     .from(candidateProfiles)
     .innerJoin(contacts, eq(contacts.id, candidateProfiles.contactId))
@@ -83,6 +107,7 @@ export async function listCandidateDirectory(): Promise<
   }
 
   const candidateIds = candidates.map((candidate) => candidate.id);
+  const contactIds = candidates.map((candidate) => candidate.contactId);
   const inquiries = await database
     .select({
       candidateId: candidateInquiries.candidateId,
@@ -91,6 +116,8 @@ export async function listCandidateDirectory(): Promise<
       language: candidateInquiries.language,
       locale: candidateInquiries.locale,
       source: candidateInquiries.source,
+      referrer: candidateInquiries.referrer,
+      attribution: candidateInquiries.attribution,
     })
     .from(candidateInquiries)
     .where(inArray(candidateInquiries.candidateId, candidateIds))
@@ -121,7 +148,8 @@ export async function listCandidateDirectory(): Promise<
         .orderBy(desc(appointmentRequests.createdAt))
     : [];
   const appointmentIds = appointments.map((appointment) => appointment.id);
-  const [preferences, activities, drafts, students] = await Promise.all([
+  const [preferences, activities, drafts, students, consentRows, noteRows] =
+    await Promise.all([
     appointmentIds.length
       ? database
           .select({
@@ -166,6 +194,30 @@ export async function listCandidateDirectory(): Promise<
       })
       .from(studentProfiles)
       .where(inArray(studentProfiles.candidateId, candidateIds)),
+    database
+      .select({
+        accepted: candidateConsents.accepted,
+        acceptedAt: candidateConsents.acceptedAt,
+        contactId: candidateConsents.contactId,
+        locale: candidateConsents.locale,
+        type: candidateConsents.type,
+        version: candidateConsents.version,
+      })
+      .from(candidateConsents)
+      .where(inArray(candidateConsents.contactId, contactIds))
+      .orderBy(desc(candidateConsents.acceptedAt)),
+    database
+      .select({
+        authorName: users.name,
+        body: candidateNotes.body,
+        candidateId: candidateNotes.candidateId,
+        createdAt: candidateNotes.createdAt,
+        id: candidateNotes.id,
+      })
+      .from(candidateNotes)
+      .leftJoin(users, eq(users.id, candidateNotes.authorUserId))
+      .where(inArray(candidateNotes.candidateId, candidateIds))
+      .orderBy(desc(candidateNotes.createdAt)),
   ]);
 
   return candidates.map((candidate) => {
@@ -200,6 +252,7 @@ export async function listCandidateDirectory(): Promise<
           occurredAt: activity.occurredAt.toISOString(),
           type: activity.type,
         })),
+      advisorId: candidate.advisorId ?? undefined,
       advisorName: candidate.advisorName ?? undefined,
       applicationCount: candidateInquiriesList.length,
       appointmentPreferences: latestAppointment
@@ -215,8 +268,21 @@ export async function listCandidateDirectory(): Promise<
         : [],
       appointmentStatus: latestAppointment?.status,
       assessmentStatus: latestAttempt?.status ?? 'not_started',
+      attribution:
+        (latestInquiry?.attribution as Record<string, string> | null) ??
+        undefined,
       city: candidate.city ?? undefined,
       communicationComplete: Boolean(candidate.phone),
+      consents: consentRows
+        .filter((consent) => consent.contactId === candidate.contactId)
+        .map((consent) => ({
+          accepted: consent.accepted,
+          acceptedAt: consent.acceptedAt.toISOString(),
+          locale: consent.locale,
+          type: consent.type,
+          version: consent.version,
+        })),
+      contactWindow: candidate.contactWindow ?? undefined,
       email: candidate.email,
       fullName: `${candidate.firstName} ${candidate.lastName}`.trim(),
       id: candidate.id,
@@ -231,9 +297,19 @@ export async function listCandidateDirectory(): Promise<
       ),
       locale: latestInquiry?.locale,
       learningGoal: candidate.learningGoal ?? undefined,
+      lessonModel: candidate.lessonModel ?? undefined,
+      notes: noteRows
+        .filter((note) => note.candidateId === candidate.id)
+        .map((note) => ({
+          authorName: note.authorName ?? undefined,
+          body: note.body,
+          createdAt: note.createdAt.toISOString(),
+          id: note.id,
+        })),
       phone: candidate.phone ?? undefined,
       preferredContactChannel:
         candidate.preferredContactChannel ?? undefined,
+      referrer: latestInquiry?.referrer ?? undefined,
       resultLevel: latestAttempt?.resultLevel ?? undefined,
       score: latestAttempt?.score ?? undefined,
       source: latestInquiry?.source,

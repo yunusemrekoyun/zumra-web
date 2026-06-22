@@ -27,6 +27,16 @@ import {
 } from '@/components/ui';
 import { useRouter } from '@/i18n/navigation';
 import type { CandidateDirectoryRecord } from '@/lib/server/services/candidate-directory';
+import type { AdvisorOption } from '@/lib/server/services/candidate-pipeline';
+
+const STAGES = [
+  'new',
+  'contacted',
+  'qualified',
+  'offer_pending',
+  'enrolled',
+  'lost',
+] as const;
 
 type CandidateFilter =
   | 'all'
@@ -36,8 +46,10 @@ type CandidateFilter =
   | 'not_started';
 
 export function CandidatesClient({
+  advisors,
   candidates,
 }: {
+  advisors: AdvisorOption[];
   candidates: CandidateDirectoryRecord[];
 }) {
   const locale = useLocale();
@@ -137,7 +149,12 @@ export function CandidatesClient({
   );
 
   const profile = selected ? (
-    <CandidateProfile candidate={selected} locale={locale} t={t} />
+    <CandidateProfile
+      advisors={advisors}
+      candidate={selected}
+      locale={locale}
+      t={t}
+    />
   ) : (
     <EmptyState
       className="min-h-[36rem] flex-1"
@@ -170,10 +187,12 @@ export function CandidatesClient({
 }
 
 function CandidateProfile({
+  advisors,
   candidate,
   locale,
   t,
 }: {
+  advisors: AdvisorOption[];
   candidate: CandidateDirectoryRecord;
   locale: string;
   t: ReturnType<typeof useTranslations>;
@@ -181,6 +200,46 @@ function CandidateProfile({
   const router = useRouter();
   const [startingEnrollment, setStartingEnrollment] = useState(false);
   const [enrollmentError, setEnrollmentError] = useState(false);
+  const [noteBody, setNoteBody] = useState('');
+  const [savingNote, setSavingNote] = useState(false);
+
+  async function patchCandidate(payload: {
+    advisorId?: string | null;
+    stage?: string;
+  }) {
+    try {
+      await fetch(`/api/admin/candidates/${candidate.id}`, {
+        body: JSON.stringify(payload),
+        credentials: 'same-origin',
+        headers: { 'content-type': 'application/json' },
+        method: 'PATCH',
+      });
+    } finally {
+      router.refresh();
+    }
+  }
+
+  async function submitNote() {
+    const body = noteBody.trim();
+    if (!body || savingNote) return;
+    setSavingNote(true);
+    try {
+      const response = await fetch(
+        `/api/admin/candidates/${candidate.id}/notes`,
+        {
+          body: JSON.stringify({ body }),
+          credentials: 'same-origin',
+          headers: { 'content-type': 'application/json' },
+          method: 'POST',
+        },
+      );
+      if (!response.ok) throw new Error('note_failed');
+      setNoteBody('');
+      router.refresh();
+    } finally {
+      setSavingNote(false);
+    }
+  }
 
   async function startEnrollment() {
     setStartingEnrollment(true);
@@ -218,7 +277,17 @@ function CandidateProfile({
               </p>
             </div>
           </div>
-          <StatusChip tone="purple">{stageLabel(candidate.stage, t)}</StatusChip>
+          <select
+            value={candidate.stage}
+            onChange={(event) => patchCandidate({ stage: event.target.value })}
+            className="rounded-xl border border-black/10 bg-white px-3 py-2 text-xs font-bold text-[#533089] outline-none focus:border-[#533089]/40"
+          >
+            {STAGES.map((stage) => (
+              <option key={stage} value={stage}>
+                {stageLabel(stage, t)}
+              </option>
+            ))}
+          </select>
         </div>
 
         <div className="flex flex-col gap-3 border-b border-black/[0.04] py-5 sm:flex-row sm:items-center sm:justify-between">
@@ -286,11 +355,26 @@ function CandidateProfile({
                 : t('noAppointment')
             }
           />
-          <Metric
-            icon={UserRound}
-            label={t('assignedAdvisor')}
-            value={candidate.advisorName ?? t('noAdvisor')}
-          />
+          <div className="rounded-2xl border border-black/[0.03] p-4">
+            <UserRound className="h-5 w-5 text-[#533089]" />
+            <div className="mt-4 text-[10px] font-bold uppercase tracking-wider text-[#2E286C]/35">
+              {t('assignedAdvisor')}
+            </div>
+            <select
+              value={candidate.advisorId ?? ''}
+              onChange={(event) =>
+                patchCandidate({ advisorId: event.target.value || null })
+              }
+              className="mt-1 w-full rounded-lg border border-black/10 bg-white px-2 py-1.5 text-sm font-bold text-[#2E286C] outline-none focus:border-[#533089]/40"
+            >
+              <option value="">{t('noAdvisor')}</option>
+              {advisors.map((advisor) => (
+                <option key={advisor.id} value={advisor.id}>
+                  {advisor.name}
+                </option>
+              ))}
+            </select>
+          </div>
         </div>
 
         <div className="mt-6 rounded-3xl bg-[#F8F7FB] p-5">
@@ -311,6 +395,15 @@ function CandidateProfile({
             <InfoField
               label={t('preferredContact')}
               value={candidate.preferredContactChannel ?? '-'}
+            />
+            <InfoField
+              label={t('lessonModel')}
+              value={lessonModelLabel(candidate.lessonModel, t)}
+            />
+            <InfoField label={t('city')} value={candidate.city ?? '-'} />
+            <InfoField
+              label={t('contactWindow')}
+              value={candidate.contactWindow ?? '-'}
             />
             <InfoField
               label={t('lastActivity')}
@@ -343,6 +436,60 @@ function CandidateProfile({
                       timeStyle: 'short',
                     }).format(new Date(preference.startsAt))}
                   </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {(candidate.referrer ||
+          (candidate.attribution &&
+            Object.keys(candidate.attribution).length > 0)) && (
+          <div className="mt-6 rounded-3xl bg-[#F8F7FB] p-5">
+            <h3 className="text-xs font-bold uppercase tracking-[0.16em] text-[#2E286C]/40">
+              {t('attribution')}
+            </h3>
+            <div className="mt-5 grid gap-5 sm:grid-cols-2">
+              {candidate.attribution &&
+                Object.entries(candidate.attribution).map(([key, value]) => (
+                  <InfoField key={key} label={key} value={String(value)} />
+                ))}
+              {candidate.referrer && (
+                <InfoField label={t('referrer')} value={candidate.referrer} />
+              )}
+            </div>
+          </div>
+        )}
+
+        {candidate.consents.length > 0 && (
+          <div className="mt-6 rounded-3xl bg-[#F8F7FB] p-5">
+            <h3 className="text-xs font-bold uppercase tracking-[0.16em] text-[#2E286C]/40">
+              {t('consents')}
+            </h3>
+            <div className="mt-4 space-y-3">
+              {candidate.consents.map((consent, index) => (
+                <div
+                  key={`${consent.type}-${index}`}
+                  className="flex items-center justify-between gap-3 rounded-2xl bg-white p-4"
+                >
+                  <div>
+                    <div className="text-sm font-bold text-[#2E286C]">
+                      {consentTypeLabel(consent.type, t)}
+                    </div>
+                    <div className="mt-1 text-xs font-medium text-[#2E286C]/45">
+                      {new Intl.DateTimeFormat(locale, {
+                        dateStyle: 'medium',
+                        timeStyle: 'short',
+                        timeZone: 'Europe/Istanbul',
+                      }).format(new Date(consent.acceptedAt))}{' '}
+                      · v{consent.version} · {consent.locale.toUpperCase()}
+                    </div>
+                  </div>
+                  <StatusChip tone={consent.accepted ? 'emerald' : 'gray'}>
+                    {consent.accepted
+                      ? t('consentAccepted')
+                      : t('consentDeclined')}
+                  </StatusChip>
                 </div>
               ))}
             </div>
@@ -398,6 +545,49 @@ function CandidateProfile({
             {candidate.appointmentStatus === 'requested' && (
               <StatusChip tone="purple">{t('appointmentRequested')}</StatusChip>
             )}
+          </div>
+        </ModulePanel>
+
+        <ModulePanel className="rounded-3xl">
+          <h3 className="text-xs font-bold uppercase tracking-[0.16em] text-[#2E286C]/40">
+            {t('notes')}
+          </h3>
+          <div className="mt-4 space-y-3">
+            <textarea
+              value={noteBody}
+              onChange={(event) => setNoteBody(event.target.value)}
+              placeholder={t('notePlaceholder')}
+              className="min-h-20 w-full resize-y rounded-2xl border border-black/[0.06] bg-[#F8F7FB] px-4 py-3 text-sm text-[#2E286C] outline-none focus:border-[#533089]/30"
+            />
+            <Button
+              size="sm"
+              onClick={submitNote}
+              disabled={savingNote || !noteBody.trim()}
+            >
+              {savingNote ? t('noteSaving') : t('addNote')}
+            </Button>
+            <div className="space-y-3 pt-1">
+              {candidate.notes.map((note) => (
+                <div key={note.id} className="rounded-2xl bg-[#F8F7FB] p-3">
+                  <p className="whitespace-pre-wrap text-sm text-[#2E286C]/80">
+                    {note.body}
+                  </p>
+                  <p className="mt-1.5 text-[10px] font-semibold text-[#2E286C]/35">
+                    {note.authorName ?? '—'} ·{' '}
+                    {new Intl.DateTimeFormat(locale, {
+                      dateStyle: 'medium',
+                      timeStyle: 'short',
+                      timeZone: 'Europe/Istanbul',
+                    }).format(new Date(note.createdAt))}
+                  </p>
+                </div>
+              ))}
+              {!candidate.notes.length && (
+                <p className="text-sm font-medium text-[#2E286C]/40">
+                  {t('noNotes')}
+                </p>
+              )}
+            </div>
           </div>
         </ModulePanel>
       </div>
@@ -496,6 +686,23 @@ function sourceLabel(source: string | undefined, t: ReturnType<typeof useTransla
   return source === 'public_level_test' ? t('publicLevelTest') : source ?? '-';
 }
 
+function lessonModelLabel(
+  model: string | undefined,
+  t: ReturnType<typeof useTranslations>,
+) {
+  const supported = ['one_to_one', 'group', 'undecided'];
+  if (!model) return '-';
+  return supported.includes(model) ? t(`lessonModels.${model}`) : model;
+}
+
+function consentTypeLabel(
+  type: string,
+  t: ReturnType<typeof useTranslations>,
+) {
+  const supported = ['candidate_notice', 'marketing_email'];
+  return supported.includes(type) ? t(`consentTypes.${type}`) : type;
+}
+
 function activityLabel(
   type: string,
   t: ReturnType<typeof useTranslations>,
@@ -507,6 +714,8 @@ function activityLabel(
     'candidate.profile_completed',
     'candidate.appointment_requested',
     'candidate.advisor_assigned',
+    'candidate.stage_changed',
+    'candidate.note_added',
     'candidate.enrollment_started',
     'candidate.enrollment_completed',
   ];

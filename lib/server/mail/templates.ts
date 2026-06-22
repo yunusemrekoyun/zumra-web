@@ -49,6 +49,19 @@ export function renderMailTemplate(input: TemplateInput) {
     };
   }
 
+  if (input.templateKey === 'lead-welcome') {
+    const program = escapeHtml(String(input.payload.program ?? ''));
+    return {
+      html: `<p>${english ? 'Hello' : 'Merhaba'} ${name},</p><p>${
+        english
+          ? 'Thanks for reaching out — we received your request and our advisor will contact you shortly.'
+          : 'Bize ulaştığınız için teşekkürler — talebinizi aldık, danışmanımız en kısa sürede sizinle iletişime geçecek.'
+      }</p>${program ? `<p><strong>${program}</strong></p>` : ''}`,
+      subject: english ? 'We received your request' : 'Talebinizi aldık',
+      text: english ? 'We received your request.' : 'Talebinizi aldık.',
+    };
+  }
+
   if (input.templateKey === 'assignment-assigned') {
     const title = escapeHtml(String(input.payload.assignmentTitle ?? ''));
     return {

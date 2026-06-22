@@ -274,6 +274,7 @@
     "programs": {
       "title": "Öne Çıkan Eğitim Modelleri",
       "popular": "Popüler",
+      "allLevels": "Tüm Seviyeler",
       "items": [
         { "title": "Genel İngilizce", "level": "A1 - C1 Seviyeleri", "desc": "Günlük hayatta özgüvenle konuşmak isteyenler için tasarlandı. Pratik odaklı.", "icon": "message", "popular": true },
         { "title": "Akademik İngilizce", "level": "IELTS / TOEFL Hazırlık", "desc": "Üniversite hayatı ve sınavlar için akademik makale ve sunum teknikleri.", "icon": "book", "popular": false },
@@ -285,7 +286,28 @@
       "title": "Hangi programın size uygun olduğundan emin değil misiniz?",
       "description": "Uzman danışmanlarımızla yapacağınız kısa ve ücretsiz bir görüşme sonucunda, sadece size özel bir rota çıkartalım.",
       "primary": "Ücretsiz Randevu Oluştur",
-      "secondary": "WhatsApp'tan Yaz"
+      "secondary": "WhatsApp'tan Yaz",
+      "whatsappMessage": "Merhaba, programlarınız hakkında bilgi almak istiyorum."
+    },
+    "leadForm": {
+      "programTitle": "Bilgi Al",
+      "programSubtitle": "{program} hakkında sizi bilgilendirelim.",
+      "callbackTitle": "Sizi Arayalım",
+      "callbackSubtitle": "Numaranızı bırakın, danışmanımız en kısa sürede dönsün.",
+      "firstName": "Adınız",
+      "lastName": "Soyadınız",
+      "email": "E-posta",
+      "phone": "Telefon",
+      "contactWindow": "Uygun arama saatiniz (ops.)",
+      "consent": "Kişisel verilerimin işlenmesine ilişkin aydınlatma metnini okudum, onaylıyorum.",
+      "marketingConsent": "Kampanya ve duyurulardan haberdar olmak istiyorum.",
+      "submit": "Gönder",
+      "submitting": "Gönderiliyor...",
+      "successTitle": "Talebiniz alındı!",
+      "successText": "Danışmanımız en kısa sürede sizinle iletişime geçecek.",
+      "errorText": "Gönderilemedi. Lütfen tekrar deneyin.",
+      "whatsappAlt": "WhatsApp'tan yaz",
+      "close": "Kapat"
     },
     "instructors": {
       "title": "İlham veren, güçlü kadınlardan oluşan eğitim kadrosu.",
@@ -625,11 +647,21 @@
         "listPrice": "Standart liste fiyatı",
         "description": "Açıklama",
         "active": "Kayıtlarda seçilebilir",
+        "publicVisible": "Ana sayfada göster (vitrin)",
+        "marketingIcon": "Vitrin ikonu",
+        "displayOrder": "Sıralama (küçük önce)",
+        "popular": "Popüler rozeti",
         "teacher": "Eğitmen",
         "hourlyStudentPrice": "Öğrenci saatlik satış fiyatı",
         "weekday": "Ders günü",
         "lessonTime": "Ders saati",
         "lessonDate": "Ders tarihi"
+      },
+      "marketingIcons": {
+        "message": "Konuşma",
+        "book": "Kitap",
+        "headset": "Kulaklık",
+        "briefcase": "Çanta"
       },
       "languages": {
         "english": "İngilizce",
@@ -839,6 +871,11 @@
       "phoneCaptured": "Telefon alındı",
       "assessmentCompleted": "Seviye tespiti tamamlandı",
       "statusSummary": "Durum özeti",
+      "notes": "Notlar",
+      "notePlaceholder": "Görüşme notu ekle...",
+      "addNote": "Not Ekle",
+      "noteSaving": "Kaydediliyor...",
+      "noNotes": "Henüz not yok.",
       "contactCaptured": "İletişim tamam",
       "publicLevelTest": "Public seviye tespiti",
       "startEnrollment": "Kayıt Başlat",
@@ -852,6 +889,23 @@
       "enrollmentStartError": "Kayıt taslağı açılamadı. Lütfen yeniden deneyin.",
       "learningGoal": "Öğrenme amacı",
       "preferredContact": "Tercih edilen iletişim",
+      "lessonModel": "Ders modeli",
+      "city": "Şehir",
+      "contactWindow": "Uygun arama saati",
+      "attribution": "Pazarlama kaynağı (UTM)",
+      "referrer": "Yönlendiren site",
+      "consents": "KVKK rıza kayıtları",
+      "consentAccepted": "Onaylandı",
+      "consentDeclined": "Reddedildi",
+      "lessonModels": {
+        "one_to_one": "Birebir",
+        "group": "Grup",
+        "undecided": "Kararsız"
+      },
+      "consentTypes": {
+        "candidate_notice": "Aydınlatma metni",
+        "marketing_email": "Pazarlama e-postası"
+      },
       "appointmentPreferences": "Görüşme zaman tercihleri",
       "preferenceRank": "{rank}. tercih",
       "timeline": "Aktivite geçmişi",
@@ -863,6 +917,8 @@
         "profile_completed": "İletişim profili tamamlandı",
         "appointment_requested": "Görüşme talebi oluşturuldu",
         "advisor_assigned": "Danışman atandı",
+        "stage_changed": "Aşama değiştirildi",
+        "note_added": "Not eklendi",
         "enrollment_started": "Kayıt süreci başlatıldı",
         "enrollment_completed": "Aday öğrenciye dönüştürüldü"
       },
@@ -1222,7 +1278,8 @@
     "assignmentAssigned": "Yeni ödev: {title}",
     "assignmentSubmitted": "{student} ödev teslim etti: {title}",
     "assignmentGraded": "Ödevin notlandı: {title} ({score}/{max})",
-    "chatMessage": "{from} mesaj gönderdi"
+    "chatMessage": "{from} mesaj gönderdi",
+    "leadReceived": "Yeni aday: {name}"
   },
   "chat": {
     "title": "Mesajlar",

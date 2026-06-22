@@ -40,6 +40,10 @@ export const programs = pgTable(
     currency: text('currency').notNull().default('TRY'),
     active: boolean('active').notNull().default(true),
     systemManaged: boolean('system_managed').notNull().default(false),
+    publicVisible: boolean('public_visible').notNull().default(false),
+    displayOrder: integer('display_order').notNull().default(0),
+    marketingIcon: text('marketing_icon'),
+    popular: boolean('popular').notNull().default(false),
     archivedAt: timestamp('archived_at', { withTimezone: true }),
     createdByUserId: text('created_by_user_id').references(() => users.id, {
       onDelete: 'restrict',
@@ -57,6 +61,10 @@ export const programs = pgTable(
       .where(sql`${table.systemKey} is not null`),
     index('programs_active_kind_idx').on(table.active, table.kind),
     index('programs_language_idx').on(table.language),
+    index('programs_public_visible_idx').on(
+      table.publicVisible,
+      table.displayOrder,
+    ),
     check('programs_currency_check', sql`${table.currency} = 'TRY'`),
     check(
       'programs_list_price_non_negative_check',

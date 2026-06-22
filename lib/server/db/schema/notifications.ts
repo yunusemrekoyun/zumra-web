@@ -14,6 +14,7 @@ export const notificationTypeEnum = pgEnum('notification_type', [
   'assignment_submitted',
   'assignment_graded',
   'chat_message',
+  'lead_received',
 ]);
 
 // In-app notifications (the bell). Distinct from notification_outbox, which is

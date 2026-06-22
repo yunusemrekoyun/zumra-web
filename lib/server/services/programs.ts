@@ -54,6 +54,15 @@ export const supportedProgramLevels = [
   'C2',
 ] as const;
 
+// Marketing card icons available for the public landing page.
+export const programMarketingIcons = [
+  'message',
+  'book',
+  'headset',
+  'briefcase',
+] as const;
+export type ProgramMarketingIcon = (typeof programMarketingIcons)[number];
+
 export type ProgramLanguage = (typeof supportedProgramLanguages)[number];
 export type ProgramLevel = (typeof supportedProgramLevels)[number];
 export type ProgramBranchStatus =
@@ -69,12 +78,16 @@ export type ProgramCatalogItem = {
   archivedAt?: string;
   canDelete: boolean;
   description?: string;
+  displayOrder: number;
   id: string;
   kind: 'group' | 'private';
   language?: ProgramLanguage;
   levels: ProgramLevel[];
   listPriceCents?: number;
+  marketingIcon?: ProgramMarketingIcon;
   name: string;
+  popular: boolean;
+  publicVisible: boolean;
   systemKey?: string;
   systemManaged: boolean;
 };
@@ -143,10 +156,14 @@ export type BranchTransferInput = {
 export type ProgramInput = {
   active: boolean;
   description?: string;
+  displayOrder?: number;
   language: ProgramLanguage;
   levels: ProgramLevel[];
   listPriceCents: number;
+  marketingIcon?: ProgramMarketingIcon | null;
   name: string;
+  popular?: boolean;
+  publicVisible?: boolean;
 };
 
 export type ProgramBranchInput = {
@@ -395,6 +412,39 @@ export async function getEnrollmentProgramCatalog(
   };
 }
 
+export type PublicProgramCard = {
+  description: string | null;
+  id: string;
+  language: string | null;
+  levels: string[];
+  marketingIcon: string | null;
+  name: string;
+  popular: boolean;
+};
+
+// Public, no-auth: only programs an admin has flagged for the marketing site.
+export async function listPublicPrograms(): Promise<PublicProgramCard[]> {
+  return database
+    .select({
+      description: programs.description,
+      id: programs.id,
+      language: programs.language,
+      levels: programs.levels,
+      marketingIcon: programs.marketingIcon,
+      name: programs.name,
+      popular: programs.popular,
+    })
+    .from(programs)
+    .where(
+      and(
+        eq(programs.publicVisible, true),
+        eq(programs.active, true),
+        isNull(programs.archivedAt),
+      ),
+    )
+    .orderBy(asc(programs.displayOrder), asc(programs.name));
+}
+
 export async function createProgram(
   principal: WorkspacePrincipal,
   input: ProgramInput,
@@ -408,11 +458,15 @@ export async function createProgram(
       active: input.active,
       createdByUserId: principal.id,
       description: cleanOptional(input.description),
+      displayOrder: input.displayOrder ?? 0,
       kind: 'group',
       language: input.language,
       levels: uniqueLevels(input.levels),
       listPriceCents: input.listPriceCents,
+      marketingIcon: input.marketingIcon ?? null,
       name: clean(input.name),
+      popular: input.popular ?? false,
+      publicVisible: input.publicVisible ?? false,
     })
     .returning({ id: programs.id });
 
@@ -457,10 +511,14 @@ export async function updateProgram(
     .set({
       active: input.active,
       description: cleanOptional(input.description),
+      displayOrder: input.displayOrder ?? 0,
       language: input.language,
       levels: uniqueLevels(input.levels),
       listPriceCents: input.listPriceCents,
+      marketingIcon: input.marketingIcon ?? null,
       name: clean(input.name),
+      popular: input.popular ?? false,
+      publicVisible: input.publicVisible ?? false,
       updatedAt: new Date(),
     })
     .where(eq(programs.id, programId));
@@ -1319,6 +1377,7 @@ function mapProgram(row: typeof programs.$inferSelect): ProgramCatalogItem {
     archivedAt: row.archivedAt?.toISOString(),
     canDelete: false,
     description: row.description ?? undefined,
+    displayOrder: row.displayOrder,
     id: row.id,
     kind: row.kind,
     language: row.language
@@ -1326,7 +1385,11 @@ function mapProgram(row: typeof programs.$inferSelect): ProgramCatalogItem {
       : undefined,
     levels: row.levels as ProgramLevel[],
     listPriceCents: row.listPriceCents ?? undefined,
+    marketingIcon:
+      (row.marketingIcon as ProgramMarketingIcon | null) ?? undefined,
     name: row.name,
+    popular: row.popular,
+    publicVisible: row.publicVisible,
     systemKey: row.systemKey ?? undefined,
     systemManaged: row.systemManaged,
   };

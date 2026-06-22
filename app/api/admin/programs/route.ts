@@ -12,6 +12,7 @@ import {
 import { auditService } from '@/lib/server/services/audit';
 import {
   createProgram,
+  programMarketingIcons,
   supportedProgramLanguages,
   supportedProgramLevels,
   updateProgram,
@@ -20,10 +21,14 @@ import {
 const programSchema = z.object({
   active: z.boolean(),
   description: z.string().trim().max(2000).optional().or(z.literal('')),
+  displayOrder: z.number().int().min(0).max(999).optional(),
   language: z.enum(supportedProgramLanguages),
   levels: z.array(z.enum(supportedProgramLevels)).min(1).max(6),
   listPriceCents: z.number().int().nonnegative(),
+  marketingIcon: z.enum(programMarketingIcons).optional(),
   name: z.string().trim().min(2).max(180),
+  popular: z.boolean().optional(),
+  publicVisible: z.boolean().optional(),
 });
 
 const updateSchema = programSchema.extend({
