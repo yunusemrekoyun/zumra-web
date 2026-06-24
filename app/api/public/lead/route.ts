@@ -24,7 +24,12 @@ const leadSchema = z.object({
   formStartedAt: z.number().int().positive(),
   idempotencyKey: z.string().uuid(),
   kind: z.enum(['program', 'callback']),
+  language: z.enum(['english', 'german', 'french', 'arabic']).optional(),
   lastName: z.string().trim().min(1).max(60),
+  learningGoal: z
+    .enum(['daily_life', 'career', 'academic', 'exam', 'travel', 'other'])
+    .optional(),
+  lessonModel: z.enum(['one_to_one', 'group', 'undecided']).optional(),
   locale: z.enum(['tr', 'en']),
   marketingConsent: z.boolean().default(false),
   phone: z.string().trim().min(7).max(32),
@@ -72,7 +77,10 @@ export async function POST(request: NextRequest) {
         firstName: input.firstName,
         idempotencyKey: input.idempotencyKey,
         kind: input.kind,
+        language: input.language,
         lastName: input.lastName,
+        learningGoal: input.learningGoal,
+        lessonModel: input.lessonModel,
         locale: input.locale,
         marketingConsent: input.marketingConsent,
         phone: input.phone,

@@ -10,6 +10,7 @@ import {
 } from 'react';
 import { useLocale, useTranslations } from 'next-intl';
 import { CheckCircle2, MessageCircle, X } from 'lucide-react';
+import { cn } from '@/lib/utils';
 
 const WHATSAPP_NUMBER = (
   process.env.NEXT_PUBLIC_WHATSAPP_NUMBER ?? '905550000000'
@@ -19,6 +20,52 @@ export function whatsappHref(text?: string) {
   const base = `https://wa.me/${WHATSAPP_NUMBER}`;
   return text ? `${base}?text=${encodeURIComponent(text)}` : base;
 }
+
+function ChipRow({
+  label,
+  onChange,
+  options,
+  value,
+}: {
+  label: string;
+  onChange: (value: string) => void;
+  options: Array<[string, string]>;
+  value: string;
+}) {
+  return (
+    <div>
+      <p className="mb-1.5 text-xs font-semibold text-brand-dark/50">{label}</p>
+      <div className="flex flex-wrap gap-1.5">
+        {options.map(([key, text]) => (
+          <button
+            key={key}
+            type="button"
+            onClick={() => onChange(value === key ? '' : key)}
+            className={cn(
+              'rounded-full border px-3 py-1.5 text-xs font-semibold transition-colors',
+              value === key
+                ? 'border-brand-primary bg-brand-primary text-white'
+                : 'border-black/10 text-brand-dark/60 hover:border-brand-primary/40',
+            )}
+          >
+            {text}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+const LANGUAGES = ['english', 'german', 'french', 'arabic'] as const;
+const GOALS = [
+  'daily_life',
+  'career',
+  'academic',
+  'exam',
+  'travel',
+  'other',
+] as const;
+const LESSON_MODELS = ['one_to_one', 'group', 'undecided'] as const;
 
 type LeadProgram = { id?: string; name: string };
 type LeadConfig =
@@ -72,6 +119,9 @@ function LeadFormModal({
   const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
   const [contactWindow, setContactWindow] = useState('');
+  const [language, setLanguage] = useState('');
+  const [learningGoal, setLearningGoal] = useState('');
+  const [lessonModel, setLessonModel] = useState('');
   const [consent, setConsent] = useState(false);
   const [marketingConsent, setMarketingConsent] = useState(false);
   const [website, setWebsite] = useState('');
@@ -113,7 +163,11 @@ function LeadFormModal({
           formStartedAt,
           idempotencyKey: crypto.randomUUID(),
           kind: config.kind,
+          language:
+            config.kind === 'callback' ? language || undefined : undefined,
           lastName,
+          learningGoal: learningGoal || undefined,
+          lessonModel: lessonModel || undefined,
           locale: locale === 'en' ? 'en' : 'tr',
           marketingConsent,
           phone,
@@ -153,6 +207,9 @@ function LeadFormModal({
               {isProgram
                 ? t('programSubtitle', { program: config.program.name })
                 : t('callbackSubtitle')}
+            </p>
+            <p className="mt-1.5 text-[11px] font-bold uppercase tracking-wider text-brand-primary">
+              {t('trust')}
             </p>
           </div>
           <button
@@ -244,6 +301,35 @@ function LeadFormModal({
                 onChange={(event) => setContactWindow(event.target.value)}
               />
             )}
+            {config.kind === 'callback' && (
+              <select
+                className={inputClass}
+                value={language}
+                onChange={(event) => setLanguage(event.target.value)}
+              >
+                <option value="">{t('languageLabel')}</option>
+                {LANGUAGES.map((lang) => (
+                  <option key={lang} value={lang}>
+                    {t(`languages.${lang}`)}
+                  </option>
+                ))}
+              </select>
+            )}
+            <ChipRow
+              label={t('goalLabel')}
+              onChange={setLearningGoal}
+              options={GOALS.map((goal) => [goal, t(`goals.${goal}`)])}
+              value={learningGoal}
+            />
+            <ChipRow
+              label={t('lessonModelLabel')}
+              onChange={setLessonModel}
+              options={LESSON_MODELS.map((model) => [
+                model,
+                t(`lessonModels.${model}`),
+              ])}
+              value={lessonModel}
+            />
             <label className="flex items-start gap-2.5 text-xs font-medium text-brand-dark/60">
               <input
                 type="checkbox"

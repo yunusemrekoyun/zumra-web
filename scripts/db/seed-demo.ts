@@ -42,6 +42,19 @@ function attendanceStatus(i: number): 'present' | 'late' | 'absent' | 'excused' 
 }
 
 void (async () => {
+  // Kazara gerçek prod verisini silmeyi/kirletmeyi önle. Bilerek bir DEMO
+  // veritabanına örnek veri yüklemek için ALLOW_DEMO_SEED=true ver.
+  if (
+    process.env.NODE_ENV === 'production' &&
+    process.env.ALLOW_DEMO_SEED !== 'true'
+  ) {
+    console.error(
+      '[seed-demo] production ortamında engellendi. Bilerek demo verisi ' +
+        'yüklemek için ALLOW_DEMO_SEED=true ile çalıştır (yalnız DEMO DB!).',
+    );
+    process.exit(1);
+  }
+
   const [fx] = await database
     .select({
       studentProfileId: studentProfiles.id,

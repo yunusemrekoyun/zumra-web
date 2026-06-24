@@ -89,7 +89,7 @@ require_value "${root}/shared/infra.env" BACKUP_DB_USER zumra_backup
 for key in \
   APP_URL BETTER_AUTH_URL BETTER_AUTH_SECRET AUTH_ENFORCEMENT_ENABLED \
   DEVICE_COOKIE_SECRET READINESS_TOKEN \
-  OUTBOX_ENCRYPTION_SECRET \
+  OUTBOX_ENCRYPTION_SECRET IDENTITY_ENCRYPTION_SECRET \
   DATABASE_URL REDIS_URL; do
   require_key "${root}/shared/app.env" "$key"
 done
@@ -117,7 +117,7 @@ require_pattern \
   'REDIS_URL for the scoped zumra user'
 
 for key in \
-  OUTBOX_ENCRYPTION_SECRET DATABASE_URL REDIS_URL \
+  OUTBOX_ENCRYPTION_SECRET IDENTITY_ENCRYPTION_SECRET DATABASE_URL REDIS_URL \
   SMTP_HOST SMTP_PORT SMTP_SECURE SMTP_FROM; do
   require_key "${root}/shared/worker.env" "$key"
 done

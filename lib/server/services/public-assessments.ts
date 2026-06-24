@@ -338,7 +338,10 @@ export type CreatePublicLeadInput = {
   firstName: string;
   idempotencyKey: string;
   kind: PublicLeadKind;
+  language?: PublicAssessmentLanguage;
   lastName: string;
+  learningGoal?: string;
+  lessonModel?: string;
   locale: PublicAssessmentLocale;
   marketingConsent?: boolean;
   phone: string;
@@ -366,7 +369,7 @@ export async function createPublicLead(
       ? input.contactWindow?.trim() || undefined
       : undefined;
 
-  let language = 'english';
+  let language: string = input.language ?? 'english';
   let programId: string | undefined;
   let programName: string | undefined;
   if (input.kind === 'program' && input.programId) {
@@ -387,7 +390,7 @@ export async function createPublicLead(
     if (program) {
       programId = program.id;
       programName = program.name;
-      language = program.language ?? 'english';
+      language = program.language ?? language;
     }
   }
 
@@ -400,6 +403,8 @@ export async function createPublicLead(
         email: input.email.trim(),
         firstName,
         lastName,
+        learningGoal: input.learningGoal,
+        lessonModel: input.lessonModel,
         marketingConsent: input.marketingConsent ?? false,
         normalizedEmail: email,
         normalizedPhone,
@@ -409,6 +414,8 @@ export async function createPublicLead(
       .onConflictDoUpdate({
         set: {
           contactWindow: contactWindow ?? sql`${contacts.contactWindow}`,
+          learningGoal: input.learningGoal ?? sql`${contacts.learningGoal}`,
+          lessonModel: input.lessonModel ?? sql`${contacts.lessonModel}`,
           normalizedPhone,
           phone,
           updatedAt: now,

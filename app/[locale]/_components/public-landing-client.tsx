@@ -916,8 +916,6 @@ function Footer() {
             <h4 className="font-bold font-neubau text-[11px] uppercase tracking-widest text-brand-dark mb-6">{t('support')}</h4>
             <ul className="space-y-4 text-[14px] font-neubau text-brand-dark/70">
               <li><a href="#sss" className="hover:text-brand-primary transition-colors">{t('links.faq')}</a></li>
-              <li><span aria-disabled="true" className="cursor-default text-brand-dark/40">{t('links.privacy')}</span></li>
-              <li><span aria-disabled="true" className="cursor-default text-brand-dark/40">{t('links.terms')}</span></li>
             </ul>
           </div>
        </div>

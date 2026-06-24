@@ -299,6 +299,29 @@
       "email": "E-posta",
       "phone": "Telefon",
       "contactWindow": "Uygun arama saatiniz (ops.)",
+      "trust": "15 dk · ücretsiz · taahhütsüz",
+      "languageLabel": "Hangi dili öğrenmek istiyorsun?",
+      "languages": {
+        "english": "İngilizce",
+        "german": "Almanca",
+        "french": "Fransızca",
+        "arabic": "Arapça"
+      },
+      "goalLabel": "Hedefin? (ops.)",
+      "goals": {
+        "daily_life": "Günlük hayat",
+        "career": "İş / kariyer",
+        "academic": "Akademik",
+        "exam": "Sınav",
+        "travel": "Seyahat",
+        "other": "Diğer"
+      },
+      "lessonModelLabel": "Ders tercihi (ops.)",
+      "lessonModels": {
+        "one_to_one": "Birebir",
+        "group": "Grup",
+        "undecided": "Kararsız"
+      },
       "consent": "Kişisel verilerimin işlenmesine ilişkin aydınlatma metnini okudum, onaylıyorum.",
       "marketingConsent": "Kampanya ve duyurulardan haberdar olmak istiyorum.",
       "submit": "Gönder",
@@ -395,7 +418,54 @@
       "programs": "Programlar",
       "messages": "Mesajlar",
       "payments": "Ödemeler",
-      "reports": "Raporlar"
+      "reports": "Raporlar",
+      "storage": "Depolama"
+    },
+    "storage": {
+      "title": "Depolama & Dosya Bakımı",
+      "description": "Yüklenen dosyaların disk kullanımını yönet, boşa yer kaplayanları temizle.",
+      "diskUsage": "Disk kullanımı",
+      "usedOfTotal": "{used} / {total} kullanılıyor",
+      "zumraMedia": "Zümra medya",
+      "otherUsage": "Diğer / sistem",
+      "free": "Boş",
+      "totalFiles": "Toplam dosya",
+      "managedSpace": "Medya alanı",
+      "cleanable": "Temizlenebilir",
+      "cleanableHint": "{count} atıl dosya",
+      "byKind": "Tür dağılımı",
+      "kinds": {
+        "image": "Görsel",
+        "video": "Video",
+        "audio": "Ses",
+        "document": "Belge"
+      },
+      "byUser": "Kullanıcı bazında",
+      "unknownUser": "Bilinmiyor",
+      "empty": "Kayıt yok.",
+      "tabs": {
+        "orphans": "Atıl dosyalar",
+        "biggest": "En büyük",
+        "oldest": "En eski"
+      },
+      "orphansHint": "Bu dosyalar hiçbir mesaj, ödev veya profile bağlı değil — güvenle silebilirsin.",
+      "noOrphans": "Atıl dosya yok — her şey kullanımda 🎉",
+      "delete": "Sil",
+      "close": "Kapat",
+      "userFileCount": "{count} dosya",
+      "download": "İndir",
+      "downloadZip": "ZIP indir ({count})",
+      "selectAll": "Tümünü seç",
+      "clearSelection": "Seçimi temizle",
+      "inUse": "kullanımda",
+      "roles": {
+        "all": "Tümü",
+        "student": "Öğrenci",
+        "teacher": "Öğretmen",
+        "advisor": "Danışman",
+        "admin": "Admin"
+      },
+      "deleteConfirm": "Bu dosya kalıcı olarak silinsin mi?"
     },
     "shell": {
       "searchPlaceholder": "Öğrenci, eğitmen veya mesaj ara..."
