@@ -8,6 +8,8 @@ FROM node:24.16.0-alpine AS builder
 WORKDIR /app
 ENV NEXT_TELEMETRY_DISABLED=1
 ENV NODE_ENV=production
+ARG NEXT_PUBLIC_WHATSAPP_NUMBER=905550000000
+ENV NEXT_PUBLIC_WHATSAPP_NUMBER=$NEXT_PUBLIC_WHATSAPP_NUMBER
 COPY --from=dependencies /app/node_modules ./node_modules
 COPY . .
 RUN npm run build
