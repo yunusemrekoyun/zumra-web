@@ -21,7 +21,15 @@ RUN ./node_modules/.bin/esbuild workers/index.ts \
       --format=cjs \
       --target=node24 \
       --external:pg-native \
-      --outfile=dist/migrate.cjs
+      --outfile=dist/migrate.cjs \
+  && ./node_modules/.bin/esbuild scripts/db/seed-demo.ts \
+      --bundle \
+      --platform=node \
+      --format=cjs \
+      --target=node24 \
+      --conditions=react-server \
+      --external:pg-native \
+      --outfile=dist/seed-demo.cjs
 
 FROM node:24.16.0-alpine
 WORKDIR /app

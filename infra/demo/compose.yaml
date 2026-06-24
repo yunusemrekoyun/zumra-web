@@ -1,0 +1,145 @@
+name: zumra-demo
+
+# Single-instance demo stack for the Hostinger VPS.
+# The app is published only on 127.0.0.1:3004; the system nginx proxies
+# yunusemrekoyun.tech to it and terminates TLS. Postgres/Redis/ClamAV stay on
+# the internal network. Run with:
+#   docker compose -f infra/demo/compose.yaml --env-file /srv/zumra/demo.env up -d --build
+
+x-app-env: &app-env
+  NODE_ENV: production
+  AUTH_ENFORCEMENT_ENABLED: "true"
+  APP_URL: https://yunusemrekoyun.tech
+  BETTER_AUTH_URL: https://yunusemrekoyun.tech
+  BETTER_AUTH_SECRET: ${BETTER_AUTH_SECRET}
+  DEVICE_COOKIE_SECRET: ${DEVICE_COOKIE_SECRET}
+  READINESS_TOKEN: ${READINESS_TOKEN}
+  OUTBOX_ENCRYPTION_SECRET: ${OUTBOX_ENCRYPTION_SECRET}
+  IDENTITY_ENCRYPTION_SECRET: ${IDENTITY_ENCRYPTION_SECRET}
+  DATABASE_URL: postgres://zumra:${POSTGRES_PASSWORD}@postgres:5432/zumra
+  DATABASE_SSL_MODE: disable
+  REDIS_URL: redis://default:${REDIS_PASSWORD}@redis:6379
+  MEDIA_ROOT: /data/media
+  MEDIA_JOB_ROOT: /data/media-jobs
+  CLAMAV_HOST: clamav
+  CLAMAV_PORT: "3310"
+  SMTP_HOST: ${SMTP_HOST}
+  SMTP_PORT: ${SMTP_PORT}
+  SMTP_SECURE: ${SMTP_SECURE}
+  SMTP_REQUIRE_TLS: ${SMTP_REQUIRE_TLS}
+  SMTP_FROM: ${SMTP_FROM}
+  SMTP_RELAY_USER: ${SMTP_RELAY_USER}
+  SMTP_RELAY_PASSWORD: ${SMTP_RELAY_PASSWORD}
+  GOOGLE_MEET_ENABLED: "false"
+  RELEASE_ID: demo
+
+services:
+  postgres:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: zumra
+      POSTGRES_USER: zumra
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      TZ: UTC
+      PGTZ: UTC
+    volumes:
+      - /srv/zumra/data/postgres:/var/lib/postgresql/data
+    networks:
+      - backend
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U zumra -d zumra"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    command:
+      - redis-server
+      - --requirepass
+      - ${REDIS_PASSWORD}
+      - --appendonly
+      - "yes"
+    volumes:
+      - /srv/zumra/data/redis:/data
+    networks:
+      - backend
+    healthcheck:
+      test: ["CMD-SHELL", "redis-cli -a \"${REDIS_PASSWORD}\" ping | grep -q PONG"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+
+  clamav:
+    image: clamav/clamav:1.4
+    restart: unless-stopped
+    volumes:
+      - /srv/zumra/data/clamav:/var/lib/clamav
+    networks:
+      - backend
+
+  app:
+    build:
+      context: ../..
+      dockerfile: Dockerfile
+      args:
+        NEXT_PUBLIC_WHATSAPP_NUMBER: ${NEXT_PUBLIC_WHATSAPP_NUMBER}
+    image: zumra-demo-app:latest
+    restart: unless-stopped
+    environment:
+      <<: *app-env
+      DATABASE_POOL_MAX: "15"
+    ports:
+      - "127.0.0.1:3004:3000"
+    volumes:
+      - /srv/zumra/data/media:/data/media
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - backend
+
+  worker:
+    build:
+      context: ../..
+      dockerfile: Dockerfile.worker
+    image: zumra-demo-worker:latest
+    restart: unless-stopped
+    stop_grace_period: 5m
+    environment:
+      <<: *app-env
+      DATABASE_POOL_MAX: "5"
+      FFMPEG_SANDBOX_MODE: filesystem
+    volumes:
+      - /srv/zumra/data/media:/data/media
+      - /srv/zumra/runtime/media-jobs:/data/media-jobs
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - backend
+
+  media_processor:
+    build:
+      context: ../..
+      dockerfile: Dockerfile.media-processor
+    image: zumra-demo-media:latest
+    restart: unless-stopped
+    stop_grace_period: 5m
+    network_mode: none
+    environment:
+      MEDIA_ROOT: /data/media
+      MEDIA_JOB_ROOT: /data/media-jobs
+      FFMPEG_JOB_TIMEOUT_MS: "900000"
+    volumes:
+      - /srv/zumra/data/media:/data/media
+      - /srv/zumra/runtime/media-jobs:/data/media-jobs
+
+networks:
+  backend:
