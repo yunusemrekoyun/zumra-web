@@ -124,7 +124,7 @@ void (async () => {
   if (!DEMO_PASSWORD || DEMO_PASSWORD.length < 8) {
     console.error(
       '[seed-demo] DEMO_SEED_PASSWORD gerekli (en az 8 karakter). ' +
-        'Örn: -e DEMO_SEED_PASSWORD="***REMOVED***."',
+        'Örn: -e DEMO_SEED_PASSWORD="<sifre>"',
     );
     process.exit(1);
   }
