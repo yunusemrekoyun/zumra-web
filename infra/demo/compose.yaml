@@ -3,7 +3,9 @@ name: zumra-demo
 # Single-instance demo stack for the Hostinger VPS.
 # The app is published only on 127.0.0.1:3004; the system nginx proxies
 # yunusemrekoyun.tech to it and terminates TLS. Postgres/Redis/ClamAV stay on
-# the internal network. Run with:
+# the internal network. Everything is namespaced under the "zumra-demo" project
+# and stores data under /srv/zumra — it does not touch the other projects.
+# Run with:
 #   docker compose -f infra/demo/compose.yaml --env-file /srv/zumra/demo.env up -d --build
 
 x-app-env: &app-env
@@ -52,6 +54,10 @@ services:
       interval: 10s
       timeout: 5s
       retries: 12
+    deploy:
+      resources:
+        limits:
+          memory: 512m
 
   redis:
     image: redis:7-alpine
@@ -71,6 +77,10 @@ services:
       interval: 10s
       timeout: 5s
       retries: 12
+    deploy:
+      resources:
+        limits:
+          memory: 256m
 
   clamav:
     image: clamav/clamav:1.4
@@ -79,6 +89,10 @@ services:
       - /srv/zumra/data/clamav:/var/lib/clamav
     networks:
       - backend
+    deploy:
+      resources:
+        limits:
+          memory: 1536m
 
   app:
     build:
@@ -102,6 +116,10 @@ services:
         condition: service_healthy
     networks:
       - backend
+    deploy:
+      resources:
+        limits:
+          memory: 1024m
 
   worker:
     build:
@@ -124,6 +142,10 @@ services:
         condition: service_healthy
     networks:
       - backend
+    deploy:
+      resources:
+        limits:
+          memory: 768m
 
   media_processor:
     build:
@@ -140,6 +162,10 @@ services:
     volumes:
       - /srv/zumra/data/media:/data/media
       - /srv/zumra/runtime/media-jobs:/data/media-jobs
+    deploy:
+      resources:
+        limits:
+          memory: 1024m
 
 networks:
   backend:
