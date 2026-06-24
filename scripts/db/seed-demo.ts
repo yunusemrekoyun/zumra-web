@@ -32,7 +32,7 @@ import {
   users,
 } from '@/lib/server/db/schema';
 
-const DEMO_PASSWORD = 'Yunusemre123.';
+const DEMO_PASSWORD = process.env.DEMO_SEED_PASSWORD ?? '';
 const TZ = 'Europe/Istanbul';
 const day = 24 * 60 * 60 * 1000;
 const HOUR = 18;
@@ -117,6 +117,14 @@ void (async () => {
     console.error(
       '[seed-demo] production ortamında engellendi. Demo verisi için ' +
         'ALLOW_DEMO_SEED=true ile çalıştır (yalnız DEMO DB!).',
+    );
+    process.exit(1);
+  }
+
+  if (!DEMO_PASSWORD || DEMO_PASSWORD.length < 8) {
+    console.error(
+      '[seed-demo] DEMO_SEED_PASSWORD gerekli (en az 8 karakter). ' +
+        'Örn: -e DEMO_SEED_PASSWORD="Yunusemre123."',
     );
     process.exit(1);
   }
@@ -443,7 +451,7 @@ void (async () => {
     console.log(`   admin: 1 · öğretmen: ${TEACHERS.length} · öğrenci: ${STUDENTS.length}`);
     console.log(`   program: ${PROGRAMS.length} · şube: ${BRANCHES.length}`);
     console.log(`   ders: ${lessonTotal} · ödev: ${homeworkTotal} · materyal: ${materialTotal} · teslim: ${submissionTotal}`);
-    console.log(`   tüm girişler şifresi: ${DEMO_PASSWORD}  (admin / elifhoca / ayseyilmaz ...)`);
+    console.log('   girişler: admin / elifhoca / ayseyilmaz ... (şifre: DEMO_SEED_PASSWORD)');
   });
 
   process.exit(0);
