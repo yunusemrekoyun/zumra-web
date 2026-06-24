@@ -299,6 +299,29 @@
       "email": "Email",
       "phone": "Phone",
       "contactWindow": "Preferred call time (opt.)",
+      "trust": "15 min · free · no commitment",
+      "languageLabel": "Which language do you want to learn?",
+      "languages": {
+        "english": "English",
+        "german": "German",
+        "french": "French",
+        "arabic": "Arabic"
+      },
+      "goalLabel": "Your goal? (opt.)",
+      "goals": {
+        "daily_life": "Daily life",
+        "career": "Work / career",
+        "academic": "Academic",
+        "exam": "Exam",
+        "travel": "Travel",
+        "other": "Other"
+      },
+      "lessonModelLabel": "Lesson preference (opt.)",
+      "lessonModels": {
+        "one_to_one": "One-to-one",
+        "group": "Group",
+        "undecided": "Undecided"
+      },
       "consent": "I have read and accept the personal data processing notice.",
       "marketingConsent": "I'd like to receive campaigns and announcements.",
       "submit": "Send",
@@ -395,7 +418,54 @@
       "programs": "Programs",
       "messages": "Messages",
       "payments": "Payments",
-      "reports": "Reports"
+      "reports": "Reports",
+      "storage": "Storage"
+    },
+    "storage": {
+      "title": "Storage & File Care",
+      "description": "Manage disk usage of uploaded files and clean up wasted space.",
+      "diskUsage": "Disk usage",
+      "usedOfTotal": "{used} / {total} used",
+      "zumraMedia": "Zümra media",
+      "otherUsage": "Other / system",
+      "free": "Free",
+      "totalFiles": "Total files",
+      "managedSpace": "Media space",
+      "cleanable": "Cleanable",
+      "cleanableHint": "{count} orphan files",
+      "byKind": "By type",
+      "kinds": {
+        "image": "Image",
+        "video": "Video",
+        "audio": "Audio",
+        "document": "Document"
+      },
+      "byUser": "By user",
+      "unknownUser": "Unknown",
+      "empty": "No records.",
+      "tabs": {
+        "orphans": "Orphan files",
+        "biggest": "Largest",
+        "oldest": "Oldest"
+      },
+      "orphansHint": "These files aren't linked to any message, assignment or profile — safe to delete.",
+      "noOrphans": "No orphan files — everything is in use 🎉",
+      "delete": "Delete",
+      "close": "Close",
+      "userFileCount": "{count} files",
+      "download": "Download",
+      "downloadZip": "Download ZIP ({count})",
+      "selectAll": "Select all",
+      "clearSelection": "Clear",
+      "inUse": "in use",
+      "roles": {
+        "all": "All",
+        "student": "Student",
+        "teacher": "Teacher",
+        "advisor": "Advisor",
+        "admin": "Admin"
+      },
+      "deleteConfirm": "Permanently delete this file?"
     },
     "shell": {
       "searchPlaceholder": "Search students, instructors or messages..."
