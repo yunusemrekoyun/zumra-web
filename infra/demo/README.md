@@ -82,6 +82,34 @@ $DC restart app
 $DC down                 # stop (keeps volumes/data on disk)
 ```
 
+## Isolation — what this touches
+
+Everything is namespaced and self-contained; the other projects on the box are
+untouched:
+
+- **Containers / network / volumes:** all under the `zumra-demo` compose project
+  (`zumra-demo-*`). Data is bind-mounted under `/srv/zumra` only — no named
+  volumes, no shared paths.
+- **Port:** binds `127.0.0.1:3004` only (3000/3001/3002 stay free for the others).
+- **Host Redis (6379):** not used — this stack runs its own Redis on the internal
+  network, not published.
+- **System nginx:** adds one new site (`yunusemrekoyun.tech`); the existing site
+  files are not modified. `nginx -t` gates every reload.
+- **certbot:** adds a cert for `yunusemrekoyun.tech` only; other certs untouched.
+- **Memory:** every service has a hard memory limit so a runaway container can't
+  starve the neighbours.
+
+## Teardown
+
+```bash
+cd /srv/zumra/app
+bash infra/demo/teardown.sh           # remove containers + images + nginx site + cert (keeps data)
+bash infra/demo/teardown.sh --purge   # also delete /srv/zumra (all demo data)
+```
+
+Removes only zumra-demo resources — the other projects, host Redis, and other
+nginx sites are left alone.
+
 ## Notes
 
 - ClamAV downloads its signature DB on first boot (a few minutes); uploads are
