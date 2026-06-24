@@ -47,6 +47,7 @@ services:
       PGTZ: UTC
     volumes:
       - /srv/zumra/data/postgres:/var/lib/postgresql/data
+      - ./postgres-init.sql:/docker-entrypoint-initdb.d/10-roles.sql:ro
     networks:
       - backend
     healthcheck:
@@ -132,6 +133,7 @@ services:
       <<: *app-env
       DATABASE_POOL_MAX: "5"
       FFMPEG_SANDBOX_MODE: filesystem
+      MIGRATION_DATABASE_URL: postgres://zumra:${POSTGRES_PASSWORD}@postgres:5432/zumra
     volumes:
       - /srv/zumra/data/media:/data/media
       - /srv/zumra/runtime/media-jobs:/data/media-jobs
