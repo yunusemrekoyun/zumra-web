@@ -9,6 +9,7 @@ import { admin, twoFactor, username } from 'better-auth/plugins';
 import { database } from '@/lib/server/db/client';
 import * as schema from '@/lib/server/db/schema';
 import { cookiesAreSecure, getAuthEnv } from '@/lib/server/env';
+import { consumeRateLimit } from '@/lib/server/redis/rate-limit';
 import {
   googleAccountSecurityPolicy,
   googleProviderSecurityPolicy,
@@ -145,7 +146,7 @@ export const auth = betterAuth({
       maxAge: 60,
       strategy: 'jwe',
     },
-    expiresIn: 30 * 24 * 60 * 60,
+    expiresIn: 14 * 24 * 60 * 60,
     freshAge: 15 * 60,
     storeSessionInDatabase: true,
     updateAge: 24 * 60 * 60,
@@ -193,6 +194,31 @@ export const auth = betterAuth({
   },
   hooks: {
     before: createAuthMiddleware(async (context) => {
+      if (context.path === '/sign-in/username') {
+        const rawUsername = (context.body as { username?: unknown } | undefined)
+          ?.username;
+        if (typeof rawUsername === 'string' && rawUsername.trim().length > 0) {
+          // Account-level brute-force lockout, keyed by the normalized
+          // username and shared across replicas via Redis. Complements Better
+          // Auth's per-IP limit (which is per-instance/in-memory) by also
+          // capping distributed attempts against a single account. Fail-open
+          // if Redis is unavailable so a cache outage cannot lock everyone out.
+          const normalized = rawUsername.trim().toLocaleLowerCase('en-US');
+          const lock = await consumeRateLimit(
+            `login-account:${normalized}`,
+            20,
+            15 * 60 * 1000,
+          ).catch(() => ({ allowed: true }));
+          if (!lock.allowed) {
+            throw new APIError('TOO_MANY_REQUESTS', {
+              code: 'RATE_LIMITED',
+              message: 'Too many login attempts. Please try again later.',
+            });
+          }
+        }
+        return;
+      }
+
       if (context.path !== '/reset-password') {
         return;
       }
