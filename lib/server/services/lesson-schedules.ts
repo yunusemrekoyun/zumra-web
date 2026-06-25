@@ -563,33 +563,38 @@ export async function getStudentCalendarData(
     privateRowsPromise,
   ]);
 
-  const googleLinked = await hasLinkedGoogleIdentity(principal.id);
-  const absenceRows = await database
-    .select({ lessonSessionId: lessonAbsenceReports.lessonSessionId })
-    .from(lessonAbsenceReports)
-    .where(eq(lessonAbsenceReports.studentProfileId, profile.id));
+  // These are all independent of each other (keyed on the same student) — run
+  // them concurrently instead of one round-trip after another.
+  const [googleLinked, absenceRows, attendanceRows, joinLeadMinutes] =
+    await Promise.all([
+      hasLinkedGoogleIdentity(principal.id),
+      database
+        .select({ lessonSessionId: lessonAbsenceReports.lessonSessionId })
+        .from(lessonAbsenceReports)
+        .where(eq(lessonAbsenceReports.studentProfileId, profile.id)),
+      database
+        .select({
+          firstJoinedAt: lessonAttendanceRecords.firstJoinedAt,
+          lastLeftAt: lessonAttendanceRecords.lastLeftAt,
+          lessonSessionId: lessonAttendanceRecords.lessonSessionId,
+          status: lessonAttendanceRecords.status,
+          totalSeconds: lessonAttendanceRecords.totalSeconds,
+        })
+        .from(lessonAttendanceRecords)
+        .where(
+          and(
+            eq(lessonAttendanceRecords.studentProfileId, profile.id),
+            isNotNull(lessonAttendanceRecords.confirmedAt),
+          ),
+        ),
+      getSetting('joinLeadMinutes'),
+    ]);
   const absenceLessonIds = new Set(
     absenceRows.map((row) => row.lessonSessionId),
   );
-  const attendanceRows = await database
-    .select({
-      firstJoinedAt: lessonAttendanceRecords.firstJoinedAt,
-      lastLeftAt: lessonAttendanceRecords.lastLeftAt,
-      lessonSessionId: lessonAttendanceRecords.lessonSessionId,
-      status: lessonAttendanceRecords.status,
-      totalSeconds: lessonAttendanceRecords.totalSeconds,
-    })
-    .from(lessonAttendanceRecords)
-    .where(
-      and(
-        eq(lessonAttendanceRecords.studentProfileId, profile.id),
-        isNotNull(lessonAttendanceRecords.confirmedAt),
-      ),
-    );
   const attendanceBySession = new Map(
     attendanceRows.map((row) => [row.lessonSessionId, row]),
   );
-  const joinLeadMinutes = await getSetting('joinLeadMinutes');
   const mappedEvents = dedupeEvents(
     [...branchRows, ...privateRows].map((row) => mapCalendarRow(row)),
   ).map((event) => {
