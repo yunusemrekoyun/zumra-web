@@ -1,7 +1,6 @@
 import 'server-only';
 
-import { inArray } from 'drizzle-orm';
-import { revalidateTag, unstable_cache } from 'next/cache';
+import { eq, inArray } from 'drizzle-orm';
 import { database } from '@/lib/server/db/client';
 import { workspaceSettings } from '@/lib/server/db/schema';
 
@@ -13,39 +12,33 @@ export const SETTING_DEFAULTS = {
 export type SettingKey = keyof typeof SETTING_DEFAULTS;
 
 const SETTING_KEYS = Object.keys(SETTING_DEFAULTS) as SettingKey[];
-const SETTINGS_CACHE_TAG = 'workspace-settings';
-
-// Settings change rarely but are read on most page renders. Cache the whole set
-// across requests and refresh it on update (revalidateTag below), so individual
-// renders skip the database entirely.
-const readAllSettings = unstable_cache(
-  async (): Promise<Record<SettingKey, number>> => {
-    const rows = await database
-      .select({ key: workspaceSettings.key, value: workspaceSettings.value })
-      .from(workspaceSettings)
-      .where(inArray(workspaceSettings.key, SETTING_KEYS));
-
-    const byKey = new Map(rows.map((row) => [row.key, row.value]));
-
-    return SETTING_KEYS.reduce(
-      (acc, key) => {
-        const value = byKey.get(key);
-        acc[key] = typeof value === 'number' ? value : SETTING_DEFAULTS[key];
-        return acc;
-      },
-      {} as Record<SettingKey, number>,
-    );
-  },
-  [SETTINGS_CACHE_TAG],
-  { revalidate: 60, tags: [SETTINGS_CACHE_TAG] },
-);
 
 export async function getSetting(key: SettingKey): Promise<number> {
-  return (await readAllSettings())[key];
+  const [row] = await database
+    .select({ value: workspaceSettings.value })
+    .from(workspaceSettings)
+    .where(eq(workspaceSettings.key, key))
+    .limit(1);
+
+  return typeof row?.value === 'number' ? row.value : SETTING_DEFAULTS[key];
 }
 
 export async function getAllSettings(): Promise<Record<SettingKey, number>> {
-  return readAllSettings();
+  const rows = await database
+    .select({ key: workspaceSettings.key, value: workspaceSettings.value })
+    .from(workspaceSettings)
+    .where(inArray(workspaceSettings.key, SETTING_KEYS));
+
+  const byKey = new Map(rows.map((row) => [row.key, row.value]));
+
+  return SETTING_KEYS.reduce(
+    (acc, key) => {
+      const value = byKey.get(key);
+      acc[key] = typeof value === 'number' ? value : SETTING_DEFAULTS[key];
+      return acc;
+    },
+    {} as Record<SettingKey, number>,
+  );
 }
 
 export async function updateSettings(
@@ -70,12 +63,6 @@ export async function updateSettings(
           });
       }
     });
-    try {
-      revalidateTag(SETTINGS_CACHE_TAG);
-    } catch {
-      // revalidateTag only works inside a request scope; the 60s TTL covers
-      // other callers (scripts/tests).
-    }
   }
 
   return getAllSettings();
