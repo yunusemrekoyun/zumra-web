@@ -46,7 +46,7 @@ const nextConfig: NextConfig = {
     ].join(' ');
     const securityHeaders = [
       {
-        key: 'Content-Security-Policy-Report-Only',
+        key: 'Content-Security-Policy',
         value: [
           "default-src 'self'",
           `script-src ${scriptSources}`,
