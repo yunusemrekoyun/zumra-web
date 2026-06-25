@@ -141,7 +141,7 @@ export const auth = betterAuth({
       },
     },
     cookieCache: {
-      enabled: true,
+      enabled: false,
       maxAge: 60,
       strategy: 'jwe',
     },

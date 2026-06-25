@@ -118,7 +118,12 @@ export async function getStudentWorkspaceData(
     status: row.status as 'active' | 'paused',
   }));
 
-  const { events } = await getStudentCalendarData(principal);
+  const { events } = await getStudentCalendarData(principal, {
+    email: profile.email,
+    firstName: profile.firstName,
+    id: profile.id,
+    lastName: profile.lastName,
+  });
   const now = Date.now();
   const isUpcoming = (event: CalendarEventView) =>
     (event.status === 'scheduled' || event.status === 'postponed') &&

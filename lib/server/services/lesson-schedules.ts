@@ -441,20 +441,32 @@ export async function getTeacherCalendarData(
 
 export async function getStudentCalendarData(
   principal: WorkspacePrincipal,
+  // The student workspace already loaded the profile; pass it to skip a
+  // duplicate profile + contact lookup on every student dashboard render.
+  preloadedStudent?: {
+    email: string;
+    firstName: string;
+    id: string;
+    lastName: string;
+  },
 ): Promise<StudentCalendarData> {
   assertStudent(principal);
 
-  const [profile] = await database
-    .select({
-      email: contacts.email,
-      firstName: contacts.firstName,
-      id: studentProfiles.id,
-      lastName: contacts.lastName,
-    })
-    .from(studentProfiles)
-    .innerJoin(contacts, eq(contacts.id, studentProfiles.contactId))
-    .where(eq(studentProfiles.userId, principal.id))
-    .limit(1);
+  const profile =
+    preloadedStudent ??
+    (
+      await database
+        .select({
+          email: contacts.email,
+          firstName: contacts.firstName,
+          id: studentProfiles.id,
+          lastName: contacts.lastName,
+        })
+        .from(studentProfiles)
+        .innerJoin(contacts, eq(contacts.id, studentProfiles.contactId))
+        .where(eq(studentProfiles.userId, principal.id))
+        .limit(1)
+    ).at(0);
 
   if (!profile) {
     return { events: [] };
