@@ -473,7 +473,9 @@ export async function getStudentCalendarData(
   }
 
   const activeEnrollmentStatuses = ['active', 'paused'] as const;
-  const branchRows = await database
+  // The branch and private lesson queries are independent — run them
+  // concurrently so the slowest one (not their sum) gates the response.
+  const branchRowsPromise = database
     .select({
       branchId: lessonSessions.branchId,
       branchName: programBranches.name,
@@ -514,7 +516,7 @@ export async function getStudentCalendarData(
       ),
     )
     .orderBy(asc(lessonSessions.startsAt));
-  const privateRows = await database
+  const privateRowsPromise = database
     .select({
       branchId: lessonSessions.branchId,
       branchName: programBranches.name,
@@ -555,6 +557,11 @@ export async function getStudentCalendarData(
       ),
     )
     .orderBy(asc(lessonSessions.startsAt));
+
+  const [branchRows, privateRows] = await Promise.all([
+    branchRowsPromise,
+    privateRowsPromise,
+  ]);
 
   const googleLinked = await hasLinkedGoogleIdentity(principal.id);
   const absenceRows = await database
