@@ -4,6 +4,7 @@ import { verifyPassword } from 'better-auth/crypto';
 import { and, eq } from 'drizzle-orm';
 import { headers } from 'next/headers';
 import { notFound, redirect } from 'next/navigation';
+import { cache } from 'react';
 import type {
   AuthorizationService,
   SessionSecurityLevel,
@@ -35,40 +36,44 @@ export const authorizationService: AuthorizationService = {
   },
 };
 
-export async function getSessionPrincipal(): Promise<WorkspacePrincipal | null> {
-  const session = await auth.api.getSession({
-    headers: await headers(),
-  });
+// Memoized per request so the layout + page + nested page share a single
+// session lookup instead of hitting Better Auth (and the DB) 2-3 times.
+export const getSessionPrincipal = cache(
+  async (): Promise<WorkspacePrincipal | null> => {
+    const session = await auth.api.getSession({
+      headers: await headers(),
+    });
 
-  if (!session) {
-    return null;
-  }
+    if (!session) {
+      return null;
+    }
 
-  const user = session.user as typeof session.user & {
-    accountStatus?: WorkspacePrincipal['accountStatus'];
-    role?: UserRole;
-    twoFactorEnabled?: boolean;
-  };
-  const sessionData = session.session as typeof session.session & {
-    lastVerifiedAt?: Date | string | null;
-    securityLevel?: SessionSecurityLevel;
-  };
+    const user = session.user as typeof session.user & {
+      accountStatus?: WorkspacePrincipal['accountStatus'];
+      role?: UserRole;
+      twoFactorEnabled?: boolean;
+    };
+    const sessionData = session.session as typeof session.session & {
+      lastVerifiedAt?: Date | string | null;
+      securityLevel?: SessionSecurityLevel;
+    };
 
-  return {
-    accountStatus: user.accountStatus ?? 'pending',
-    email: user.email,
-    id: user.id,
-    name: user.name,
-    role: user.role ?? 'student',
-    sessionCreatedAt: sessionData.createdAt.toISOString(),
-    sessionId: sessionData.id,
-    sessionLastVerifiedAt: sessionData.lastVerifiedAt
-      ? new Date(sessionData.lastVerifiedAt).toISOString()
-      : undefined,
-    sessionSecurityLevel: sessionData.securityLevel ?? 'pending',
-    twoFactorEnabled: user.twoFactorEnabled ?? false,
-  };
-}
+    return {
+      accountStatus: user.accountStatus ?? 'pending',
+      email: user.email,
+      id: user.id,
+      name: user.name,
+      role: user.role ?? 'student',
+      sessionCreatedAt: sessionData.createdAt.toISOString(),
+      sessionId: sessionData.id,
+      sessionLastVerifiedAt: sessionData.lastVerifiedAt
+        ? new Date(sessionData.lastVerifiedAt).toISOString()
+        : undefined,
+      sessionSecurityLevel: sessionData.securityLevel ?? 'pending',
+      twoFactorEnabled: user.twoFactorEnabled ?? false,
+    };
+  },
+);
 
 export async function requireSession() {
   const principal = await getSessionPrincipal();
