@@ -1,7 +1,10 @@
 import { NextResponse } from 'next/server';
 import { requestId } from '@/lib/server/http/api-errors';
 import { consumeRateLimit } from '@/lib/server/redis/rate-limit';
-import { requestIp } from '@/lib/server/security/network';
+import {
+  isTrustedRequestOrigin,
+  requestIp,
+} from '@/lib/server/security/network';
 import { auditService } from '@/lib/server/services/audit';
 
 export const runtime = 'nodejs';
@@ -21,6 +24,14 @@ export async function POST(request: Request) {
     return new NextResponse(null, { status: 413 });
   }
 
+  // Browsers may omit Origin on CSP reports, so only reject when an explicit
+  // untrusted origin is present (blocks cross-origin spam without dropping
+  // legitimate same-origin reports).
+  const origin = request.headers.get('origin');
+  if (origin && !isTrustedRequestOrigin(request.headers)) {
+    return new NextResponse(null, { status: 204 });
+  }
+
   const ip = requestIp(request.headers) ?? 'unknown';
   const limit = await consumeRateLimit(
     `csp-report:${ip}`,
@@ -28,7 +39,7 @@ export async function POST(request: Request) {
     60 * 1000,
   ).catch(() => ({ allowed: false }));
 
-  if (!limit.allowed || Math.random() > 0.25) {
+  if (!limit.allowed) {
     return new NextResponse(null, { status: 204 });
   }
 
