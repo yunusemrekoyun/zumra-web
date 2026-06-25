@@ -1,4 +1,4 @@
-import { requireSession } from '@/lib/server/authorization';
+import { requireAdminSession } from '@/lib/server/authorization';
 import {
   apiErrorResponse,
   apiResponse,
@@ -16,7 +16,7 @@ export async function GET(request: Request) {
   const id = requestId(request);
 
   try {
-    const principal = await requireSession();
+    const principal = await requireAdminSession();
     const status = await getBackgroundJobStatus(principal);
     return apiResponse({ status }, 200, id);
   } catch (error) {
@@ -32,7 +32,7 @@ export async function POST(request: Request) {
   }
 
   try {
-    const principal = await requireSession();
+    const principal = await requireAdminSession();
     const result = await retryFailedNotifications(principal);
     const status = await getBackgroundJobStatus(principal);
     return apiResponse({ result, status }, 200, id);
