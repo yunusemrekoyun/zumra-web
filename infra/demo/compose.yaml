@@ -122,6 +122,31 @@ services:
         limits:
           memory: 1024m
 
+  # Second stateless app instance so both VPS cores are used. Shares the same
+  # built image, DB, Redis and media volume; published on 3005 for the nginx
+  # upstream to load-balance with 3004.
+  app2:
+    image: zumra-demo-app:latest
+    restart: unless-stopped
+    environment:
+      <<: *app-env
+      DATABASE_POOL_MAX: "15"
+    ports:
+      - "127.0.0.1:3005:3000"
+    volumes:
+      - /srv/zumra/data/media:/data/media
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - backend
+    deploy:
+      resources:
+        limits:
+          memory: 1024m
+
   worker:
     build:
       context: ../..
