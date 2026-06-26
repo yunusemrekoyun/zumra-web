@@ -11,6 +11,10 @@ name: zumra-demo
 x-app-env: &app-env
   NODE_ENV: production
   AUTH_ENFORCEMENT_ENABLED: "true"
+  # Demo-only: non-admin sign-ins skip email-OTP device verification so seeded
+  # accounts (placeholder @zumra.local emails) reach their panels directly.
+  # This is the demo stack; real production (infra/production) must NOT set it.
+  DEMO_TRUST_DEVICES: "true"
   APP_URL: https://yunusemrekoyun.tech
   BETTER_AUTH_URL: https://yunusemrekoyun.tech
   BETTER_AUTH_SECRET: ${BETTER_AUTH_SECRET}
