@@ -358,10 +358,9 @@ export const auth = betterAuth({
             };
           }
 
-          const trusted = await isTrustedDevice(
-            session.userId,
-            context?.request,
-          );
+          const trusted =
+            env.DEMO_TRUST_DEVICES ||
+            (await isTrustedDevice(session.userId, context?.request));
 
           return {
             data: {

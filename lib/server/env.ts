@@ -68,6 +68,11 @@ const authEnvSchema = z
     BETTER_AUTH_URL: z.string().url(),
     BETTER_AUTH_SECRET: z.string().min(48),
     AUTH_ENFORCEMENT_ENABLED: booleanString.default(false),
+    // Demo-only: when true, non-admin sign-ins skip device verification (email
+    // OTP) so seeded accounts with placeholder emails can reach their panels
+    // directly. MUST stay false (unset) in real production — it disables a
+    // security layer for every non-admin user.
+    DEMO_TRUST_DEVICES: booleanString.default(false),
     DEVICE_COOKIE_SECRET: z.string().min(48),
     GOOGLE_CLIENT_ID: z.string().min(1).optional(),
     GOOGLE_CLIENT_SECRET: z.string().min(1).optional(),
