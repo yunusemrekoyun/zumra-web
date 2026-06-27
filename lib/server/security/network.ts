@@ -207,10 +207,16 @@ export function isTrustedRequestOrigin(headers: Headers) {
 
   try {
     const env = getAuthEnv();
-    const allowedOrigins = new Set([
-      new URL(env.APP_URL).origin,
-      new URL(env.BETTER_AUTH_URL).origin,
-    ]);
+    const allowedOrigins = new Set<string>();
+    for (const base of [env.APP_URL, env.BETTER_AUTH_URL]) {
+      const url = new URL(base);
+      allowedOrigins.add(url.origin);
+      // Also trust the www. subdomain — the demo nginx serves both apex and www.
+      if (!url.hostname.startsWith('www.')) {
+        url.hostname = `www.${url.hostname}`;
+        allowedOrigins.add(url.origin);
+      }
+    }
     return allowedOrigins.has(new URL(origin).origin);
   } catch {
     return false;

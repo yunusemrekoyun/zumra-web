@@ -383,5 +383,5 @@ export const auth = betterAuth({
       },
     },
   },
-  trustedOrigins: [env.APP_URL],
+  trustedOrigins: [env.APP_URL, env.APP_URL.replace('://', '://www.')],
 });
