@@ -349,11 +349,15 @@ export const auth = betterAuth({
           }
 
           if (user.role === 'admin') {
+            // Demo-only: DEMO_TRUST_DEVICES also clears the admin MFA wall so
+            // the demo admin can sign in with just a password (no authenticator).
+            const adminVerified =
+              env.DEMO_TRUST_DEVICES || user.twoFactorEnabled;
             return {
               data: {
                 ...session,
-                lastVerifiedAt: user.twoFactorEnabled ? new Date() : undefined,
-                securityLevel: user.twoFactorEnabled ? 'mfa' : 'pending',
+                lastVerifiedAt: adminVerified ? new Date() : undefined,
+                securityLevel: adminVerified ? 'mfa' : 'pending',
               },
             };
           }

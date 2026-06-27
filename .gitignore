@@ -136,3 +136,6 @@ zumra-akademi-*.json
 .swc/
 playwright-report/
 test-results/
+
+# Local Claude Code session + memory backup (sensitive — never commit)
+claude-sessions-backup/
