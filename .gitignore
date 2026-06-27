@@ -136,3 +136,6 @@ zumra-akademi-*.json
 .swc/
 playwright-report/
 test-results/
+
+# Local session backups (never commit)
+.sessions-backup/
