@@ -4,26 +4,57 @@ import { eq, inArray } from 'drizzle-orm';
 import { database } from '@/lib/server/db/client';
 import { workspaceSettings } from '@/lib/server/db/schema';
 
-export const SETTING_DEFAULTS = {
+export type MailMode = 'live' | 'test';
+
+export type SettingValues = {
+  joinLeadMinutes: number;
+  lessonAutoCloseHours: number;
+  mailMode: MailMode;
+};
+
+export type SettingKey = keyof SettingValues;
+
+export const SETTING_DEFAULTS: SettingValues = {
   joinLeadMinutes: 15,
   lessonAutoCloseHours: 3,
-} as const;
-
-export type SettingKey = keyof typeof SETTING_DEFAULTS;
+  mailMode: 'live',
+};
 
 const SETTING_KEYS = Object.keys(SETTING_DEFAULTS) as SettingKey[];
 
-export async function getSetting(key: SettingKey): Promise<number> {
+// Per-key validators: coerce a raw jsonb value to the typed setting, or return
+// undefined when the stored value doesn't match its expected shape (then the
+// caller falls back to the default). Keeps the mixed-type store type-safe.
+const SETTING_VALIDATORS: {
+  [K in SettingKey]: (value: unknown) => SettingValues[K] | undefined;
+} = {
+  joinLeadMinutes: (value) => (typeof value === 'number' ? value : undefined),
+  lessonAutoCloseHours: (value) =>
+    typeof value === 'number' ? value : undefined,
+  mailMode: (value) =>
+    value === 'live' || value === 'test' ? value : undefined,
+};
+
+function coerce<K extends SettingKey>(key: K, value: unknown): SettingValues[K] {
+  const validate = SETTING_VALIDATORS[key] as (
+    value: unknown,
+  ) => SettingValues[K] | undefined;
+  return validate(value) ?? SETTING_DEFAULTS[key];
+}
+
+export async function getSetting<K extends SettingKey>(
+  key: K,
+): Promise<SettingValues[K]> {
   const [row] = await database
     .select({ value: workspaceSettings.value })
     .from(workspaceSettings)
     .where(eq(workspaceSettings.key, key))
     .limit(1);
 
-  return typeof row?.value === 'number' ? row.value : SETTING_DEFAULTS[key];
+  return coerce(key, row?.value);
 }
 
-export async function getAllSettings(): Promise<Record<SettingKey, number>> {
+export async function getAllSettings(): Promise<SettingValues> {
   const rows = await database
     .select({ key: workspaceSettings.key, value: workspaceSettings.value })
     .from(workspaceSettings)
@@ -31,25 +62,33 @@ export async function getAllSettings(): Promise<Record<SettingKey, number>> {
 
   const byKey = new Map(rows.map((row) => [row.key, row.value]));
 
-  return SETTING_KEYS.reduce(
-    (acc, key) => {
-      const value = byKey.get(key);
-      acc[key] = typeof value === 'number' ? value : SETTING_DEFAULTS[key];
-      return acc;
-    },
-    {} as Record<SettingKey, number>,
-  );
+  return {
+    joinLeadMinutes: coerce('joinLeadMinutes', byKey.get('joinLeadMinutes')),
+    lessonAutoCloseHours: coerce(
+      'lessonAutoCloseHours',
+      byKey.get('lessonAutoCloseHours'),
+    ),
+    mailMode: coerce('mailMode', byKey.get('mailMode')),
+  };
+}
+
+/** Current mail delivery mode (live SMTP vs Mailpit capture). */
+export function getMailMode(): Promise<MailMode> {
+  return getSetting('mailMode');
 }
 
 export async function updateSettings(
-  updates: Partial<Record<SettingKey, number>>,
+  updates: Partial<SettingValues>,
   updatedByUserId: string,
-): Promise<Record<SettingKey, number>> {
+): Promise<SettingValues> {
   const now = new Date();
-  const entries = Object.entries(updates).filter(
+  const entries = (
+    Object.entries(updates) as Array<[SettingKey, number | string]>
+  ).filter(
     ([key, value]) =>
-      SETTING_KEYS.includes(key as SettingKey) && typeof value === 'number',
-  ) as Array<[SettingKey, number]>;
+      SETTING_KEYS.includes(key) &&
+      SETTING_VALIDATORS[key](value) !== undefined,
+  );
 
   if (entries.length) {
     await database.transaction(async (transaction) => {

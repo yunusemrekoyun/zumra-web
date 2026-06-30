@@ -531,6 +531,23 @@
         "success": "Ayarlar kaydedildi.",
         "error": "Ayarlar kaydedilemedi. Tekrar deneyin."
       },
+      "mailMode": {
+        "badge": "Mail",
+        "title": "Mail gönderim modu",
+        "description": "Sistem maillerinin (davet, doğrulama kodu, bildirim) nereye gönderileceğini seçin. Anında geçerli olur, yeniden başlatma gerekmez.",
+        "active": "Aktif",
+        "live": {
+          "label": "Canlı",
+          "hint": "Gerçek SMTP üzerinden gerçek e-posta adreslerine gönderilir."
+        },
+        "test": {
+          "label": "Test (Mailpit)",
+          "hint": "Mail gönderilmez; Mailpit kutusunda toplanır. Doğrulama kodlarını ve davetleri oradan okursunuz."
+        },
+        "note": "Test modunda mailler Mailpit'e düşer; sunucuda korumalı Mailpit arayüzünden, yerelde http://localhost:8025 adresinden okuyabilirsiniz.",
+        "success": "Mail modu güncellendi.",
+        "error": "Mail modu güncellenemedi. Tekrar deneyin."
+      },
       "devReset": {
         "badge": "Geliştirme aracı",
         "title": "Verileri sıfırla",

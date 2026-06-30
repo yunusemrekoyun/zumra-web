@@ -11,11 +11,6 @@ name: zumra-demo
 x-app-env: &app-env
   NODE_ENV: production
   AUTH_ENFORCEMENT_ENABLED: "true"
-  # Demo-only: ALL sign-ins skip extra verification — non-admin users skip the
-  # email-OTP device check and admins skip the MFA/TOTP wall — so seeded demo
-  # accounts (placeholder @zumra.local emails, no authenticator) sign in with
-  # just a password. Demo stack only; real production (infra/production) must NOT set it.
-  DEMO_TRUST_DEVICES: "true"
   APP_URL: https://yunusemrekoyun.tech
   BETTER_AUTH_URL: https://yunusemrekoyun.tech
   BETTER_AUTH_SECRET: ${BETTER_AUTH_SECRET}
@@ -37,6 +32,10 @@ x-app-env: &app-env
   SMTP_FROM: ${SMTP_FROM}
   SMTP_RELAY_USER: ${SMTP_RELAY_USER}
   SMTP_RELAY_PASSWORD: ${SMTP_RELAY_PASSWORD}
+  # "Test" mail mode (toggled from Admin → Settings) routes mail to the in-stack
+  # mailpit instead of the real relay. Read captured mail at the mailpit UI.
+  SMTP_TEST_HOST: mailpit
+  SMTP_TEST_PORT: "1025"
   GOOGLE_MEET_ENABLED: "false"
   RELEASE_ID: demo
 
@@ -99,6 +98,31 @@ services:
       resources:
         limits:
           memory: 1536m
+
+  # Mail sink for "test" mail mode (Admin → Settings). The app/worker send to
+  # mailpit:1025 on the internal network; the web inbox is published only on the
+  # loopback (127.0.0.1:8025) so the system nginx can proxy it behind auth at a
+  # protected path. Real mail (live mode) bypasses this entirely.
+  mailpit:
+    image: axllent/mailpit:v1.27.8
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:8025:8025"
+    environment:
+      MP_MAX_MESSAGES: 500
+      MP_DATABASE: /data/mailpit.db
+      MP_SMTP_AUTH_ACCEPT_ANY: "1"
+      MP_SMTP_AUTH_ALLOW_INSECURE: "1"
+    volumes:
+      - /srv/zumra/data/mailpit:/data
+    networks:
+      - backend
+    security_opt:
+      - no-new-privileges:true
+    deploy:
+      resources:
+        limits:
+          memory: 128m
 
   app:
     build:

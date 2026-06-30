@@ -16,11 +16,13 @@ const patchSchema = z
   .object({
     joinLeadMinutes: z.number().int().min(0).max(120).optional(),
     lessonAutoCloseHours: z.number().int().min(1).max(48).optional(),
+    mailMode: z.enum(['live', 'test']).optional(),
   })
   .refine(
     (value) =>
       value.joinLeadMinutes !== undefined ||
-      value.lessonAutoCloseHours !== undefined,
+      value.lessonAutoCloseHours !== undefined ||
+      value.mailMode !== undefined,
     { message: 'no_fields' },
   );
 

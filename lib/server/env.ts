@@ -68,12 +68,6 @@ const authEnvSchema = z
     BETTER_AUTH_URL: z.string().url(),
     BETTER_AUTH_SECRET: z.string().min(48),
     AUTH_ENFORCEMENT_ENABLED: booleanString.default(false),
-    // Demo-only: when true, ALL sign-ins skip extra verification — non-admin
-    // users skip email-OTP device verification and admins skip the MFA/TOTP
-    // wall — so seeded accounts (placeholder emails, no authenticator) reach
-    // their panels with just a password. MUST stay false (unset) in real
-    // production — it disables auth security layers for every user.
-    DEMO_TRUST_DEVICES: booleanString.default(false),
     DEVICE_COOKIE_SECRET: z.string().min(48),
     GOOGLE_CLIENT_ID: z.string().min(1).optional(),
     GOOGLE_CLIENT_SECRET: z.string().min(1).optional(),
@@ -132,6 +126,10 @@ const mailEnvSchema = z.object({
   SMTP_FROM: z.string().min(3),
   SMTP_RELAY_USER: z.string().optional(),
   SMTP_RELAY_PASSWORD: z.string().optional(),
+  // Mailpit (or any catch-all SMTP sink) used when mail mode is "test". On the
+  // demo VPS this points at the mailpit container; locally at 127.0.0.1:1025.
+  SMTP_TEST_HOST: z.string().min(1).default('127.0.0.1'),
+  SMTP_TEST_PORT: z.coerce.number().int().positive().default(1025),
 });
 
 const outboxEnvSchema = z.object({
