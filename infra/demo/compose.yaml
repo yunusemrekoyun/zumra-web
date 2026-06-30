@@ -113,6 +113,9 @@ services:
       MP_DATABASE: /data/mailpit.db
       MP_SMTP_AUTH_ACCEPT_ANY: "1"
       MP_SMTP_AUTH_ALLOW_INSECURE: "1"
+      # Serve the web UI under /mail/ so nginx can reverse-proxy it at a subpath
+      # (assets resolve relative to this webroot instead of the domain root).
+      MP_WEBROOT: mail
     volumes:
       - /srv/zumra/data/mailpit:/data
     networks:
