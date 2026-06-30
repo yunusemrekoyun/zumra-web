@@ -17,8 +17,8 @@ All commands run as root on the VPS.
 ## 1 — Directories + code
 
 ```bash
-mkdir -p /srv/zumra/data/{postgres,redis,clamav,media} /srv/zumra/runtime/media-jobs
-chmod 777 /srv/zumra/data/media /srv/zumra/runtime/media-jobs   # demo: containers run as different uids
+mkdir -p /srv/zumra/data/{postgres,redis,clamav,media,mailpit} /srv/zumra/runtime/media-jobs
+chmod 777 /srv/zumra/data/media /srv/zumra/runtime/media-jobs /srv/zumra/data/mailpit   # demo: containers run as different uids
 git clone https://github.com/yunusemrekoyun/zumra-web.git /srv/zumra/app
 cd /srv/zumra/app
 ```
@@ -63,6 +63,49 @@ certbot --nginx -d yunusemrekoyun.tech -d www.yunusemrekoyun.tech
 ```
 
 Then open https://yunusemrekoyun.tech.
+
+## 7 — Mail mode + Mailpit (test inbox)
+
+Real device verification (email OTP) and admin MFA/TOTP are **enforced** — the old
+`DEMO_TRUST_DEVICES` bypass is gone. Because the seeded accounts use placeholder
+`@zumra.local` addresses, real SMTP can't deliver their OTPs. So the stack ships a
+**mailpit** container and a runtime **mail mode** toggle (Admin → Settings → "Mail
+delivery mode"):
+
+- **live** — mail goes to the real relay (Gmail) → real addresses.
+- **test** — mail is captured by the in-stack mailpit (`mailpit:1025`), never
+  delivered. Read OTPs/invites from the mailpit web inbox.
+
+The default is **live**. For the demo, sign in as admin and switch it to **test**.
+
+First-run sequence after this deploy (no DEMO_TRUST_DEVICES):
+
+1. Admin signs in with the password → lands at `pending` security → the app routes
+   to MFA setup (`/mfa-kurulum`). Enroll an authenticator (Google Authenticator,
+   etc.) once. (TOTP is app-based, so this needs no email.)
+2. In Admin → Settings, set **Mail delivery mode = test**.
+3. Now non-admin (teacher/student) sign-ins trigger an email OTP that lands in
+   mailpit — read the code there to complete device verification.
+
+The mailpit UI is published on the loopback only (`127.0.0.1:8025`). Expose it
+behind nginx basic-auth at a protected path so it isn't public:
+
+```bash
+# one-time: create a credential
+apt-get install -y apache2-utils
+htpasswd -c /etc/nginx/zumra-mail.htpasswd youruser
+
+# in the yunusemrekoyun.tech server block, add:
+#   location /mail/ {
+#     auth_basic "Zumra Mail";
+#     auth_basic_user_file /etc/nginx/zumra-mail.htpasswd;
+#     proxy_pass http://127.0.0.1:8025/;
+#     proxy_set_header Host $host;
+#   }
+nginx -t && systemctl reload nginx
+```
+
+Then read captured mail at `https://yunusemrekoyun.tech/mail/`.
 
 ## Updating later
 

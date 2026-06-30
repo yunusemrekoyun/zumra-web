@@ -6,6 +6,7 @@ import { getMeetQueue } from '@/lib/server/queues/meet';
 import { databasePool } from '@/lib/server/db/client';
 import { getMediaQueue } from '@/lib/server/queues/media';
 import { verifyMailTransport } from '@/lib/server/mail/transport';
+import { getMailMode } from '@/lib/server/services/settings';
 import { getNotificationQueue } from '@/lib/server/queues/notifications';
 import {
   getBullConnection,
@@ -56,11 +57,13 @@ async function main() {
   const stopLessonAutoCloseSweep = startLessonAutoCloseSweep();
   const stopNotificationReconciliation = startNotificationReconciliation();
 
-  await verifyMailTransport()
+  const mailMode = await getMailMode().catch(() => 'live' as const);
+  await verifyMailTransport(mailMode)
     .then(() => {
       console.log(
         JSON.stringify({
           event: 'mail.transport_verified',
+          mode: mailMode,
           timestamp: new Date().toISOString(),
         }),
       );

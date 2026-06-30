@@ -531,6 +531,23 @@
         "success": "Settings saved.",
         "error": "Could not save settings. Try again."
       },
+      "mailMode": {
+        "badge": "Mail",
+        "title": "Mail delivery mode",
+        "description": "Choose where system mail (invites, verification codes, notifications) is sent. Applies instantly, no restart needed.",
+        "active": "Active",
+        "live": {
+          "label": "Live",
+          "hint": "Delivered to real email addresses over real SMTP."
+        },
+        "test": {
+          "label": "Test (Mailpit)",
+          "hint": "Not delivered; captured in the Mailpit inbox. Read verification codes and invites there."
+        },
+        "note": "In test mode mail goes to Mailpit. Read it from the protected Mailpit UI on the server, or at http://localhost:8025 locally.",
+        "success": "Mail mode updated.",
+        "error": "Could not update mail mode. Try again."
+      },
       "devReset": {
         "badge": "Development tool",
         "title": "Reset data",

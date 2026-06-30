@@ -3,8 +3,9 @@ import { and, eq, inArray, isNull, lte, or, sql } from 'drizzle-orm';
 import { database } from '@/lib/server/db/client';
 import { notificationOutbox } from '@/lib/server/db/schema';
 import { getMailEnv } from '@/lib/server/env';
-import { mailTransport } from '@/lib/server/mail/transport';
+import { getMailTransport } from '@/lib/server/mail/transport';
 import { renderMailTemplate } from '@/lib/server/mail/templates';
+import { getMailMode } from '@/lib/server/services/settings';
 import { enqueueNotificationOutbox } from '@/lib/server/queues/notifications';
 import {
   getBullConnection,
@@ -71,7 +72,8 @@ export function createNotificationWorker() {
           templateKey: message.templateKey,
         });
 
-        const delivery = await mailTransport.sendMail({
+        const mailMode = await getMailMode();
+        const delivery = await getMailTransport(mailMode).sendMail({
           from: getMailEnv().SMTP_FROM,
           html: rendered.html,
           subject: rendered.subject,
