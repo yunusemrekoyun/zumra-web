@@ -76,7 +76,7 @@ export function AttachmentInput({
         type="button"
         disabled={disabled || busy}
         onClick={() => inputRef.current?.click()}
-        className="inline-flex items-center gap-2 rounded-xl border border-black/[0.06] bg-white px-3 py-2 text-xs font-bold text-[#533089] transition-colors hover:bg-black/[0.02] disabled:opacity-50"
+        className="inline-flex min-h-11 items-center gap-2 rounded-xl border border-black/[0.06] bg-white px-3 py-2 text-xs font-bold text-[#533089] transition-colors hover:bg-black/[0.02] disabled:opacity-50"
       >
         {busy ? (
           <Loader2 className="h-4 w-4 animate-spin" />
@@ -93,9 +93,9 @@ export function AttachmentInput({
           {value.map((attachment) => (
             <span
               key={attachment.mediaAssetId}
-              className="inline-flex items-center gap-1.5 rounded-lg bg-[#F8F9FC] px-2.5 py-1 text-xs font-medium text-[#2E286C]/70"
+              className="inline-flex max-w-full items-center gap-1.5 rounded-lg bg-[#F8F9FC] px-2.5 py-1 text-xs font-medium text-[#2E286C]/70"
             >
-              {attachment.name}
+              <span className="min-w-0 truncate">{attachment.name}</span>
               <button
                 type="button"
                 disabled={disabled}
@@ -106,7 +106,7 @@ export function AttachmentInput({
                     ),
                   )
                 }
-                className="text-[#2E286C]/40 transition-colors hover:text-red-600"
+                className="-my-1 flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-[#2E286C]/40 transition-colors hover:text-red-600"
               >
                 <X className="h-3.5 w-3.5" />
               </button>

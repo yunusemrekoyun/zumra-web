@@ -286,7 +286,7 @@ export function InstructorsClient({
 
       {archivedConflict && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#1F1646]/35 p-4">
-          <ModulePanel className="w-full max-w-lg rounded-3xl bg-white p-6 shadow-2xl">
+          <ModulePanel className="max-h-[85dvh] w-full max-w-lg overflow-y-auto rounded-3xl bg-white p-6 shadow-2xl">
             <div className="mb-3 inline-flex items-center gap-2 rounded-full bg-amber-50 px-3 py-1 text-[11px] font-bold uppercase tracking-wider text-amber-700">
               <ArchiveRestore className="h-4 w-4" />
               {t('archivedConflictBadge')}

@@ -124,7 +124,7 @@ function Navbar() {
       transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
       className={`fixed top-0 inset-x-0 z-50 transition-all duration-500 ease-out ${scrolled ? 'bg-white/90 backdrop-blur-md border-b border-black/5 shadow-sm py-0' : 'bg-transparent border-transparent py-2'}`}
     >
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 h-20 items-center grid grid-cols-[1fr_auto] md:grid-cols-3 gap-3">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 h-20 items-center grid grid-cols-[1fr_auto] lg:grid-cols-[auto_1fr_auto] gap-3">
         <div className="flex items-center gap-2">
           <div className="w-8 h-8 rounded-lg bg-brand-primary flex items-center justify-center text-white shadow-sm premium-shadow">
             <div className="w-3 h-3 bg-brand-muted rounded-full" />
@@ -133,7 +133,7 @@ function Navbar() {
             {brand('name')}<span className="text-brand-muted font-neubau text-[11px] font-bold tracking-widest uppercase ml-2 align-middle border-l border-brand-muted/30 pl-2">{brand('suffix')}</span>
           </span>
         </div>
-        <nav className="hidden md:flex justify-center gap-10 text-[13px] font-bold uppercase tracking-widest text-brand-dark/70">
+        <nav className="hidden lg:flex justify-center gap-10 text-[13px] font-bold uppercase tracking-widest text-brand-dark/70">
           <a href="#neden-biz" className="hover:text-brand-primary transition-colors">{t('why')}</a>
           <a href="#nasil-calisiyoruz" className="hover:text-brand-primary transition-colors">{t('process')}</a>
           <a href="#programlar" className="hover:text-brand-primary transition-colors">{t('programs')}</a>
@@ -150,13 +150,13 @@ function Navbar() {
             type="button"
             aria-label={t('openMenu')}
             onClick={() => setIsOpen((value) => !value)}
-            className="md:hidden w-11 h-11 rounded-full bg-white/90 border border-black/5 shadow-sm flex items-center justify-center text-brand-dark"
+            className="lg:hidden w-11 h-11 rounded-full bg-white/90 border border-black/5 shadow-sm flex items-center justify-center text-brand-dark"
           >
             {isOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
           </button>
         </div>
       </div>
-      <div className={`md:hidden overflow-hidden transition-all duration-300 ${isOpen ? 'max-h-80 border-t border-black/5 bg-white/95 backdrop-blur-md' : 'max-h-0'}`}>
+      <div className={`lg:hidden overflow-hidden transition-all duration-300 ${isOpen ? 'max-h-80 border-t border-black/5 bg-white/95 backdrop-blur-md' : 'max-h-0'}`}>
         <nav className="site-container py-4 grid gap-2 text-[12px] font-bold uppercase tracking-widest text-brand-dark/70">
           <LanguageSwitcher className="mb-1 w-fit" />
           <a href="#neden-biz" onClick={() => setIsOpen(false)} className="rounded-2xl px-4 py-3 hover:bg-brand-primary/5 hover:text-brand-primary transition-colors">{t('why')}</a>
@@ -178,7 +178,7 @@ function Hero() {
   const stats = t.raw('stats') as string[];
 
   return (
-    <section className="relative pt-32 sm:pt-40 pb-20 sm:pb-28 lg:pt-56 lg:pb-40 overflow-hidden">
+    <section className="scroll-mt-24 relative pt-32 sm:pt-40 pb-20 sm:pb-28 lg:pt-56 lg:pb-40 overflow-hidden">
       <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-[#F8F5FC] via-white to-white -z-20" />
       <FloatingLanguages />
       
@@ -297,7 +297,7 @@ function Hero() {
             <motion.div
               animate={{ y: [0, -10, 0] }}
               transition={{ duration: 5, repeat: Infinity, ease: "easeInOut" }}
-              className="absolute top-16 -left-8 bg-white px-6 py-4 rounded-2xl premium-shadow z-20 border border-brand-primary/5 flex items-center gap-4 glow-effect"
+              className="absolute top-16 left-4 xl:-left-8 bg-white px-6 py-4 rounded-2xl premium-shadow z-20 border border-brand-primary/5 flex items-center gap-4 glow-effect"
             >
               <div className="w-12 h-12 rounded-full bg-brand-primary/5 flex items-center justify-center text-brand-primary">
                 <Shield className="w-5 h-5" />
@@ -321,7 +321,7 @@ function WhyZumra() {
   const cards = t.raw('cards') as Array<{ description: string; title: string }>;
 
   return (
-    <section id="neden-biz" className="py-16 lg:py-24 bg-white relative overflow-hidden">
+    <section id="neden-biz" className="scroll-mt-24 py-16 lg:py-24 bg-white relative overflow-hidden">
       <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_bottom_left,_var(--tw-gradient-stops))] from-brand-muted/5 via-white to-white -z-10" />
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6">
@@ -427,7 +427,7 @@ function HowItWorks() {
   });
 
   return (
-    <section id="nasil-calisiyoruz" className="py-16 lg:py-24 bg-[#F8F5FC] border-y border-brand-primary/[0.03] overflow-x-hidden">
+    <section id="nasil-calisiyoruz" className="scroll-mt-24 py-16 lg:py-24 bg-[#F8F5FC] border-y border-brand-primary/[0.03] overflow-x-hidden">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 grid lg:grid-cols-2 gap-10 lg:gap-16 items-center">
         <motion.div
            initial={{ opacity: 0, x: -30 }}
@@ -494,7 +494,7 @@ function LanguagesGrid() {
   const languages = t.raw('items') as PublicLanguage[];
 
   return (
-    <section className="py-16 lg:py-24 bg-white relative" id="programlar">
+    <section className="scroll-mt-24 py-16 lg:py-24 bg-white relative" id="programlar">
       <div className="absolute top-0 right-0 w-[min(600px,120vw)] h-[min(600px,120vw)] bg-brand-primary/5 rounded-full blur-[100px] -z-10" />
       
       <div className="max-w-7xl mx-auto px-4 sm:px-6">
@@ -573,7 +573,7 @@ function FeaturedPrograms({ programs }: { programs: PublicProgramCard[] }) {
       }));
 
   return (
-    <section id="egitim-modelleri" className="py-16 lg:py-24 bg-[#F8F5FC] border-t border-brand-primary/[0.03]">
+    <section id="egitim-modelleri" className="scroll-mt-24 py-16 lg:py-24 bg-[#F8F5FC] border-t border-brand-primary/[0.03]">
       <div className="max-w-7xl mx-auto px-4 sm:px-6">
          <motion.h2 
            initial={{ opacity: 0, y: 20 }}
@@ -655,7 +655,7 @@ function ConsultationCTA() {
   );
 
   return (
-    <section id="randevu" className="py-16 lg:py-24 bg-white relative overflow-hidden">
+    <section id="randevu" className="scroll-mt-24 py-16 lg:py-24 bg-white relative overflow-hidden">
       <div className="max-w-7xl mx-auto px-4 sm:px-6">
         <motion.div 
           onMouseMove={handleMouseMove}
@@ -725,7 +725,7 @@ function InstructorsTeaser() {
   const t = useTranslations('public.instructors');
 
   return (
-    <section id="egitmenler" className="py-16 lg:py-24 bg-white relative border-t border-black/[0.02] overflow-x-hidden">
+    <section id="egitmenler" className="scroll-mt-24 py-16 lg:py-24 bg-white relative border-t border-black/[0.02] overflow-x-hidden">
       <div className="max-w-7xl mx-auto px-4 sm:px-6">
         <div className="grid md:grid-cols-2 gap-10 lg:gap-16 items-center">
            <motion.div 
@@ -767,7 +767,7 @@ function Testimonials() {
   const reviews = t.raw('items') as PublicReview[];
 
   return (
-    <section id="yorumlar" className="py-16 lg:py-24 bg-[#F8F5FC]">
+    <section id="yorumlar" className="scroll-mt-24 py-16 lg:py-24 bg-[#F8F5FC]">
       <div className="max-w-7xl mx-auto px-4 sm:px-6">
         <motion.h2 
           initial={{ opacity: 0, y: 20 }}
@@ -822,7 +822,7 @@ function FAQ() {
   const faqs = t.raw('items') as PublicFaq[];
 
   return (
-    <section id="sss" className="py-16 lg:py-24 bg-[#F8F5FC] border-t border-brand-primary/[0.03]">
+    <section id="sss" className="scroll-mt-24 py-16 lg:py-24 bg-[#F8F5FC] border-t border-brand-primary/[0.03]">
       <div className="max-w-3xl mx-auto px-4 sm:px-6">
         <motion.div 
           initial={{ opacity: 0, y: 20 }}
@@ -884,7 +884,7 @@ function Footer() {
     <footer className="bg-white border-t border-black/5 pt-16 lg:pt-24 pb-12 relative overflow-hidden">
        <div className="absolute top-0 right-0 w-[min(800px,140vw)] h-[min(800px,140vw)] bg-brand-muted/5 rounded-full blur-[120px] -z-10" />
        
-       <div className="max-w-7xl mx-auto px-4 sm:px-6 grid sm:grid-cols-2 md:grid-cols-4 gap-10 lg:gap-12 mb-14 lg:mb-20 relative z-10">
+       <div className="max-w-7xl mx-auto px-4 sm:px-6 grid sm:grid-cols-2 lg:grid-cols-4 gap-10 lg:gap-12 mb-14 lg:mb-20 relative z-10">
           <div className="md:col-span-1">
              <div className="flex items-center gap-3 mb-8">
                 <div className="w-10 h-10 rounded-[10px] bg-brand-primary flex items-center justify-center text-white font-bold premium-shadow">Z</div>

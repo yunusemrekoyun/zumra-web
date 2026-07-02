@@ -202,10 +202,10 @@ function AttachmentList({
             href={`/api/media/${attachment.mediaAssetId}`}
             target="_blank"
             rel="noreferrer"
-            className="inline-flex items-center gap-1.5 rounded-lg border border-black/[0.06] bg-white px-2.5 py-1 text-xs font-medium text-[#533089] transition-colors hover:bg-[#533089]/5"
+            className="inline-flex max-w-full items-center gap-1.5 rounded-lg border border-black/[0.06] bg-white px-2.5 py-1 text-xs font-medium text-[#533089] transition-colors hover:bg-[#533089]/5"
           >
-            <Paperclip className="h-3.5 w-3.5" />
-            {attachment.name}
+            <Paperclip className="h-3.5 w-3.5 shrink-0" />
+            <span className="min-w-0 truncate">{attachment.name}</span>
           </a>
         ))}
       </div>

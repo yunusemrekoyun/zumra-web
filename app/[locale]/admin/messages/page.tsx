@@ -1,20 +1,15 @@
-import { MessageSquare } from 'lucide-react';
 import { useTranslations } from 'next-intl';
-import { EmptyState, Button } from '@/components/ui';
+import { PageHeader } from '@/components/ui';
 import { withWorkspacePage } from '@/lib/server/workspace-page';
+import { AdminMessagesClient } from './admin-messages-client';
 
 function MessagesPage() {
-  const t = useTranslations('admin.empty.messages');
-  const common = useTranslations('common.actions');
+  const t = useTranslations('admin.messages');
 
   return (
     <div className="admin-page">
-      <EmptyState
-        icon={MessageSquare}
-        title={t('title')}
-        description={t('description')}
-        action={<Button variant="secondary" disabled>{common('soon')}</Button>}
-      />
+      <PageHeader title={t('title')} description={t('description')} />
+      <AdminMessagesClient />
     </div>
   );
 }

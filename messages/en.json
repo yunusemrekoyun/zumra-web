@@ -55,12 +55,12 @@
       "absent": "Absent",
       "excused": "Excused"
     },
-      "status": {
-        "active": "Active",
-        "paused": "Paused",
-        "graduated": "Graduated",
-        "cancelled": "Cancelled",
-        "candidate": "Candidate",
+    "status": {
+      "active": "Active",
+      "paused": "Paused",
+      "graduated": "Graduated",
+      "cancelled": "Cancelled",
+      "candidate": "Candidate",
       "paid": "Paid",
       "pending": "Pending",
       "failed": "Failed",
@@ -217,7 +217,11 @@
       "description": "Move at your own pace in our safe women-only online environment; focus on your goals and build your language skills with confidence. Flexible schedules and expert instructors create a fresh learning experience.",
       "primaryCta": "Find Your Level",
       "secondaryCta": "Explore Programs",
-      "stats": ["3500+ Students", "100% Online", "Women Only"],
+      "stats": [
+        "3500+ Students",
+        "100% Online",
+        "Women Only"
+      ],
       "imageAlt": "Confident woman learning a language",
       "quote": "Speak your mind.",
       "quoteDescription": "A purely supportive, women-exclusive space designed to amplify your voice.",
@@ -249,11 +253,31 @@
       "description": "From day one, you know exactly what to expect. No surprises, only focused steps toward your goal.",
       "cta": "Start Your Journey",
       "steps": [
-        { "num": "01", "title": "Pre-Registration & First Contact", "desc": "Fill out the form. We will contact you within 24 hours to plan the next step." },
-        { "num": "02", "title": "Free Level Assessment", "desc": "A short, relaxed 15-minute evaluation to understand your current level." },
-        { "num": "03", "title": "Your Personalized Program", "desc": "Together, we define the roadmap that fits your level and your goals." },
-        { "num": "04", "title": "Start Live Lessons", "desc": "Join live classes on safe platforms with flexible scheduling." },
-        { "num": "05", "title": "Progress Tracking", "desc": "Stay motivated with monthly progress reports and clear feedback." }
+        {
+          "num": "01",
+          "title": "Pre-Registration & First Contact",
+          "desc": "Fill out the form. We will contact you within 24 hours to plan the next step."
+        },
+        {
+          "num": "02",
+          "title": "Free Level Assessment",
+          "desc": "A short, relaxed 15-minute evaluation to understand your current level."
+        },
+        {
+          "num": "03",
+          "title": "Your Personalized Program",
+          "desc": "Together, we define the roadmap that fits your level and your goals."
+        },
+        {
+          "num": "04",
+          "title": "Start Live Lessons",
+          "desc": "Join live classes on safe platforms with flexible scheduling."
+        },
+        {
+          "num": "05",
+          "title": "Progress Tracking",
+          "desc": "Stay motivated with monthly progress reports and clear feedback."
+        }
       ]
     },
     "languages": {
@@ -261,14 +285,46 @@
       "description": "One-to-one and group options across 8 languages.",
       "viewAll": "View All Programs",
       "items": [
-        { "name": "English", "subtitle": "General & Academic", "symbol": "A" },
-        { "name": "Arabic", "subtitle": "Modern & Practical", "symbol": "ع" },
-        { "name": "French", "subtitle": "European Languages", "symbol": "Fr" },
-        { "name": "German", "subtitle": "Career & Education", "symbol": "De" },
-        { "name": "Persian", "subtitle": "Cultural Depth", "symbol": "ف" },
-        { "name": "Japanese", "subtitle": "Far East", "symbol": "あ" },
-        { "name": "Korean", "subtitle": "New Trend", "symbol": "가" },
-        { "name": "Russian", "subtitle": "Strategic Communication", "symbol": "Ж" }
+        {
+          "name": "English",
+          "subtitle": "General & Academic",
+          "symbol": "A"
+        },
+        {
+          "name": "Arabic",
+          "subtitle": "Modern & Practical",
+          "symbol": "ع"
+        },
+        {
+          "name": "French",
+          "subtitle": "European Languages",
+          "symbol": "Fr"
+        },
+        {
+          "name": "German",
+          "subtitle": "Career & Education",
+          "symbol": "De"
+        },
+        {
+          "name": "Persian",
+          "subtitle": "Cultural Depth",
+          "symbol": "ف"
+        },
+        {
+          "name": "Japanese",
+          "subtitle": "Far East",
+          "symbol": "あ"
+        },
+        {
+          "name": "Korean",
+          "subtitle": "New Trend",
+          "symbol": "가"
+        },
+        {
+          "name": "Russian",
+          "subtitle": "Strategic Communication",
+          "symbol": "Ж"
+        }
       ]
     },
     "programs": {
@@ -276,10 +332,34 @@
       "popular": "Popular",
       "allLevels": "All Levels",
       "items": [
-        { "title": "General English", "level": "A1 - C1 Levels", "desc": "Designed for women who want to speak confidently in everyday life. Practice-first and goal-oriented.", "icon": "message", "popular": true },
-        { "title": "Academic English", "level": "IELTS / TOEFL Preparation", "desc": "Academic writing, presentation and exam skills for university and professional goals.", "icon": "book", "popular": false },
-        { "title": "English Speaking Club", "level": "Weekly Practice", "desc": "Keep your speaking skills active through a supportive and social practice environment.", "icon": "headset", "popular": false },
-        { "title": "Business English", "level": "Professional Communication", "desc": "Improve email writing, presentations and meeting communication for work life.", "icon": "briefcase", "popular": false }
+        {
+          "title": "General English",
+          "level": "A1 - C1 Levels",
+          "desc": "Designed for women who want to speak confidently in everyday life. Practice-first and goal-oriented.",
+          "icon": "message",
+          "popular": true
+        },
+        {
+          "title": "Academic English",
+          "level": "IELTS / TOEFL Preparation",
+          "desc": "Academic writing, presentation and exam skills for university and professional goals.",
+          "icon": "book",
+          "popular": false
+        },
+        {
+          "title": "English Speaking Club",
+          "level": "Weekly Practice",
+          "desc": "Keep your speaking skills active through a supportive and social practice environment.",
+          "icon": "headset",
+          "popular": false
+        },
+        {
+          "title": "Business English",
+          "level": "Professional Communication",
+          "desc": "Improve email writing, presentations and meeting communication for work life.",
+          "icon": "briefcase",
+          "popular": false
+        }
       ]
     },
     "cta": {
@@ -341,20 +421,52 @@
     "testimonials": {
       "title": "What Our Students Say",
       "items": [
-        { "name": "Elif A.", "program": "Speaking Program", "image": 1, "text": "Being able to feel comfortable without turning on the camera mattered a lot to me. I genuinely found the courage to speak in class." },
-        { "name": "Selin K.", "program": "General English", "image": 2, "text": "Everything is planned and I get clear feedback every month. Knowing what I am doing keeps my motivation high." },
-        { "name": "Hande N.", "program": "Exam Preparation", "image": 3, "text": "My instructor noticed my gaps very quickly. The practice analysis system helped me feel stronger and closer to my goal." },
-        { "name": "Nil T.", "program": "Arabic Speaking", "image": 4, "text": "The lessons are very smooth. The content matched my goal, and I built a speaking habit in a short time. Zümra is the best." }
+        {
+          "name": "Elif A.",
+          "program": "Speaking Program",
+          "image": 1,
+          "text": "Being able to feel comfortable without turning on the camera mattered a lot to me. I genuinely found the courage to speak in class."
+        },
+        {
+          "name": "Selin K.",
+          "program": "General English",
+          "image": 2,
+          "text": "Everything is planned and I get clear feedback every month. Knowing what I am doing keeps my motivation high."
+        },
+        {
+          "name": "Hande N.",
+          "program": "Exam Preparation",
+          "image": 3,
+          "text": "My instructor noticed my gaps very quickly. The practice analysis system helped me feel stronger and closer to my goal."
+        },
+        {
+          "name": "Nil T.",
+          "program": "Arabic Speaking",
+          "image": 4,
+          "text": "The lessons are very smooth. The content matched my goal, and I built a speaking habit in a short time. Zümra is the best."
+        }
       ]
     },
     "faq": {
       "title": "Let's clarify what you are wondering.",
       "description": "For more questions, feel free to reach us through our WhatsApp line.",
       "items": [
-        { "q": "Do you offer free lessons?", "a": "Yes. Every month, we offer free demo lessons for those who want to try our group classes. We also organize seminars to support motivation." },
-        { "q": "How are lesson materials provided?", "a": "All materials are provided on our online platform. We support your learning with practical and interactive content for daily and professional life." },
-        { "q": "Which platform are lessons held on?", "a": "Lessons are held live and interactively on Zoom or Google Meet. A computer or tablet is enough." },
-        { "q": "Can I join without a camera?", "a": "Absolutely. To help women feel fully comfortable, students may join lessons with audio only if they prefer." }
+        {
+          "q": "Do you offer free lessons?",
+          "a": "Yes. Every month, we offer free demo lessons for those who want to try our group classes. We also organize seminars to support motivation."
+        },
+        {
+          "q": "How are lesson materials provided?",
+          "a": "All materials are provided on our online platform. We support your learning with practical and interactive content for daily and professional life."
+        },
+        {
+          "q": "Which platform are lessons held on?",
+          "a": "Lessons are held live and interactively on Zoom or Google Meet. A computer or tablet is enough."
+        },
+        {
+          "q": "Can I join without a camera?",
+          "a": "Absolutely. To help women feel fully comfortable, students may join lessons with audio only if they prefer."
+        }
       ]
     },
     "footer": {
@@ -476,7 +588,7 @@
       "agendaTitle": "Monthly flow",
       "monthView": "Month view",
       "detailView": "Detail list",
-      "hoverHint": "Hover over days on the calendar to see details.",
+      "hoverHint": "Tap or hover over days on the calendar to see details.",
       "previousMonth": "Previous month",
       "nextMonth": "Next month",
       "joinLesson": "Join lesson",
@@ -1297,11 +1409,26 @@
       "reviewSummary": "{parties} contract parties and {documents} documents will be linked to the enrollment."
     },
     "empty": {
-      "calendar": { "title": "Calendar", "description": "Track lesson schedules, consultation appointments and events from this calendar." },
-      "instructors": { "title": "Instructors", "description": "Manage your instructor team and assign lesson schedules from this module." },
-      "programs": { "title": "Programs", "description": "Create and manage your education programs from this module. It will be active soon." },
-      "messages": { "title": "Messages", "description": "Student and instructor communication will live here with notifications and messaging support." },
-      "settings": { "title": "Settings", "description": "General settings, notification preferences and account management will live here." }
+      "calendar": {
+        "title": "Calendar",
+        "description": "Track lesson schedules, consultation appointments and events from this calendar."
+      },
+      "instructors": {
+        "title": "Instructors",
+        "description": "Manage your instructor team and assign lesson schedules from this module."
+      },
+      "programs": {
+        "title": "Programs",
+        "description": "Create and manage your education programs from this module. It will be active soon."
+      },
+      "messages": {
+        "title": "Messages",
+        "description": "Student and instructor communication will live here with notifications and messaging support."
+      },
+      "settings": {
+        "title": "Settings",
+        "description": "General settings, notification preferences and account management will live here."
+      }
     },
     "payments": {
       "title": "Payments",
@@ -1357,6 +1484,30 @@
         "german": "German",
         "french": "French"
       }
+    },
+    "messages": {
+      "title": "Messages",
+      "description": "Monitor student–teacher conversations read-only. Read receipts are untouched and participants can't tell you're viewing.",
+      "readOnly": "Read-only",
+      "searchPlaceholder": "Search by student or teacher name...",
+      "searchNoResults": "No conversations match your search.",
+      "emptyDescription": "No conversations yet. They will appear here as students and teachers message each other.",
+      "selectTitle": "Select a conversation",
+      "selectDescription": "Pick a student–teacher conversation from the list to view its contents.",
+      "emptyThread": "No messages in this conversation yet.",
+      "noMessages": "No messages yet",
+      "attachmentOnly": "Attachment",
+      "messageCount": "{count, plural, one {# message} other {# messages}}",
+      "loadOlder": "Load older messages",
+      "listTruncated": "Showing the most recent conversations — search by name to find others.",
+      "studentRole": "Student",
+      "teacherRole": "Teacher",
+      "assignment": "Assignment",
+      "material": "Material",
+      "refresh": "Refresh",
+      "back": "Back",
+      "loading": "Loading...",
+      "error": "Conversations could not be loaded. Try again."
     }
   },
   "notifications": {
@@ -1406,7 +1557,10 @@
       "description": "Track the assignments and materials your teacher shares with you.",
       "emptyTitle": "No assignments yet",
       "emptyDescription": "When your teacher shares an assignment or material, it will appear here.",
-      "type": { "assignment": "Assignment", "material": "Material" },
+      "type": {
+        "assignment": "Assignment",
+        "material": "Material"
+      },
       "status": {
         "material": "Material",
         "not_submitted": "To submit",
@@ -1462,7 +1616,7 @@
       "agendaTitle": "Your lesson calendar",
       "monthView": "Month view",
       "detailView": "Detail list",
-      "hoverHint": "Hover over days to see lesson details.",
+      "hoverHint": "Tap or hover over days to see lesson details.",
       "previousMonth": "Previous month",
       "nextMonth": "Next month",
       "joinLesson": "Join lesson",
@@ -1536,10 +1690,19 @@
         "reading": "Reading",
         "writing": "Writing"
       },
-      "badgeLabels": ["12-Day Streak", "Complete 10 Lessons", "Learn 50 Words", "First Presentation", "B2 Level"]
+      "badgeLabels": [
+        "12-Day Streak",
+        "Complete 10 Lessons",
+        "Learn 50 Words",
+        "First Presentation",
+        "B2 Level"
+      ]
     },
     "empty": {
-      "messages": { "title": "Messages", "description": "Advisor and instructor messages will appear here." }
+      "messages": {
+        "title": "Messages",
+        "description": "Advisor and instructor messages will appear here."
+      }
     },
     "profilePage": {
       "activeStudent": "Active Student",
@@ -1548,7 +1711,10 @@
       "phone": "Phone",
       "branch": "Branch",
       "courseMode": "Course Type",
-      "courseModes": { "group": "Group lesson", "private": "Private lesson" },
+      "courseModes": {
+        "group": "Group lesson",
+        "private": "Private lesson"
+      },
       "programValue": "English • General Training",
       "level": "Level",
       "enrollmentDate": "Enrollment Date",
@@ -1591,12 +1757,30 @@
       "offers": "Offers"
     },
     "empty": {
-      "leads": { "title": "My Candidates", "description": "The candidate pool assigned to this advisor will be managed here with the CRM flow." },
-      "students": { "title": "My Students", "description": "Student profiles, offers, meetings and follow-up flow for this advisor will live here." },
-      "meetings": { "title": "Meetings", "description": "Links, QR codes, reminders and meeting statuses will be managed in this module." },
-      "offers": { "title": "Offers", "description": "The offer flow sent to students through email and WhatsApp will be prepared here." },
-      "messages": { "title": "Messages", "description": "Student and candidate communication history will be collected here in a single flow." },
-      "settings": { "title": "Advisor Settings", "description": "Notification preferences, working hours and profile settings will be managed here." }
+      "leads": {
+        "title": "My Candidates",
+        "description": "The candidate pool assigned to this advisor will be managed here with the CRM flow."
+      },
+      "students": {
+        "title": "My Students",
+        "description": "Student profiles, offers, meetings and follow-up flow for this advisor will live here."
+      },
+      "meetings": {
+        "title": "Meetings",
+        "description": "Links, QR codes, reminders and meeting statuses will be managed in this module."
+      },
+      "offers": {
+        "title": "Offers",
+        "description": "The offer flow sent to students through email and WhatsApp will be prepared here."
+      },
+      "messages": {
+        "title": "Messages",
+        "description": "Student and candidate communication history will be collected here in a single flow."
+      },
+      "settings": {
+        "title": "Advisor Settings",
+        "description": "Notification preferences, working hours and profile settings will be managed here."
+      }
     }
   },
   "teacher": {
@@ -1636,7 +1820,10 @@
       "emptyTitle": "No assignments yet",
       "emptyDescription": "Tap New assignment to create your first assignment or material.",
       "optional": "optional",
-      "type": { "assignment": "Assignment", "material": "Material" },
+      "type": {
+        "assignment": "Assignment",
+        "material": "Material"
+      },
       "submittedCount": "{submitted}/{expected} submitted",
       "gradedCount": "{graded} graded",
       "attachments": {
@@ -1754,7 +1941,7 @@
       "agendaTitle": "Lesson flow",
       "monthView": "Month view",
       "detailView": "Detail list",
-      "hoverHint": "Hover over days to see lesson details.",
+      "hoverHint": "Tap or hover over days to see lesson details.",
       "previousMonth": "Previous month",
       "nextMonth": "Next month",
       "joinLesson": "Join lesson",
@@ -1828,11 +2015,26 @@
       "unmatchedTitle": "Unmatched participants"
     },
     "empty": {
-      "students": { "title": "Students", "description": "Students assigned to the teacher and lesson progress notes will appear here." },
-      "calendar": { "title": "Calendar", "description": "The teacher's lesson schedule, availability and meetings will be managed here." },
-      "messages": { "title": "Messages", "description": "Student messages, lesson notes and notification flows will live here." },
-      "profile": { "title": "Profile", "description": "Teacher specialties, lesson settings and profile details will be edited here." },
-      "settings": { "title": "Teacher Settings", "description": "Notification, calendar and account preferences will be managed here." }
+      "students": {
+        "title": "Students",
+        "description": "Students assigned to the teacher and lesson progress notes will appear here."
+      },
+      "calendar": {
+        "title": "Calendar",
+        "description": "The teacher's lesson schedule, availability and meetings will be managed here."
+      },
+      "messages": {
+        "title": "Messages",
+        "description": "Student messages, lesson notes and notification flows will live here."
+      },
+      "profile": {
+        "title": "Profile",
+        "description": "Teacher specialties, lesson settings and profile details will be edited here."
+      },
+      "settings": {
+        "title": "Teacher Settings",
+        "description": "Notification, calendar and account preferences will be managed here."
+      }
     }
   },
   "auth": {

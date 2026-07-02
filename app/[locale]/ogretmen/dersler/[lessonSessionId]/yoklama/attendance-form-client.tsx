@@ -163,9 +163,9 @@ export function AttendanceFormClient({
           <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
             <div className="flex items-center gap-3">
               <Avatar name={row.fullName} size="md" />
-              <div>
+              <div className="min-w-0">
                 <h2 className="font-bold text-[#2E286C]">{row.fullName}</h2>
-                <p className="mt-0.5 text-xs font-medium text-[#2E286C]/45">
+                <p className="mt-0.5 break-all text-xs font-medium text-[#2E286C]/45">
                   {row.email}
                 </p>
               </div>
@@ -199,7 +199,7 @@ export function AttendanceFormClient({
                 type="button"
                 onClick={() => setStatus(row.studentProfileId, status)}
                 className={cn(
-                  'rounded-xl border px-3 py-2 text-xs font-bold uppercase tracking-wider transition-colors',
+                  'min-h-11 rounded-xl border px-4 py-2 text-xs font-bold uppercase tracking-wider transition-colors',
                   row.selected === status
                     ? activeButton[status]
                     : 'border-black/[0.06] bg-white text-[#2E286C]/45 hover:bg-black/[0.02]',

@@ -158,25 +158,27 @@ export function CalendarBoard({
           </div>
         </div>
 
-        <div className="mt-6 grid grid-cols-7 gap-2 text-center text-[10px] font-bold uppercase tracking-wider text-[#2E286C]/35">
+        <div className="mt-6 grid grid-cols-7 gap-1 text-center text-[10px] font-bold uppercase tracking-wider text-[#2E286C]/35 sm:gap-2">
           {weekdayLabels(locale).map((day) => (
             <div key={day}>{day}</div>
           ))}
         </div>
-        <div className="mt-2 grid grid-cols-7 gap-2">
+        <div className="mt-2 grid grid-cols-7 gap-1 sm:gap-2">
           {days.map((day, index) => {
             const dateKey = serializeDate(day);
             const dayEvents = eventsByDate.get(dateKey) ?? [];
             const inMonth = day.getMonth() === monthStart.getMonth();
             const hasEvents = dayEvents.length > 0;
-            const align = index % 7 >= 5 ? 'right' : 'left';
+            const column = index % 7;
+            const align =
+              column >= 5 ? 'right' : column >= 2 ? 'center' : 'left';
 
             return (
               <div
                 key={dateKey}
                 tabIndex={hasEvents ? 0 : undefined}
                 className={cn(
-                  'group/day relative min-h-24 rounded-2xl border p-2 outline-none transition-[background,border-color,box-shadow,transform] duration-150 ease-out sm:min-h-28',
+                  'group/day relative min-h-16 rounded-2xl border p-1.5 outline-none transition-[background,border-color,box-shadow,transform] duration-150 ease-out sm:min-h-28 sm:p-2',
                   inMonth
                     ? 'border-black/[0.04] bg-[#F8F9FC]'
                     : 'border-transparent bg-[#F8F9FC]/45 text-[#2E286C]/25',
@@ -212,11 +214,11 @@ export function CalendarBoard({
                 </div>
 
                 {hasEvents && (
-                  <div className="mt-5 flex items-end justify-between gap-2">
-                    <span className="rounded-full bg-white px-2 py-1 text-[10px] font-bold text-[#2E286C]/45 shadow-sm">
+                  <div className="mt-2 flex items-end justify-between gap-1 sm:mt-5 sm:gap-2">
+                    <span className="rounded-full bg-white px-1.5 py-0.5 text-[10px] font-bold text-[#2E286C]/45 shadow-sm sm:px-2 sm:py-1">
                       {dayEvents.length}
                     </span>
-                    <span className="truncate text-[10px] font-bold text-[#533089]/70">
+                    <span className="hidden truncate text-[10px] font-bold text-[#533089]/70 sm:inline">
                       {dayEvents[0]?.startTime}
                     </span>
                   </div>
@@ -299,7 +301,7 @@ function MonthNavLink({
   return (
     <Link
       aria-label={label}
-      className="inline-flex h-8 w-8 items-center justify-center rounded-full text-[#533089] transition-[background,transform,color] duration-150 ease-out hover:bg-white hover:text-[#2E286C] active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#533089]/20"
+      className="inline-flex h-10 w-10 items-center justify-center rounded-full text-[#533089] transition-[background,transform,color] duration-150 ease-out hover:bg-white hover:text-[#2E286C] active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#533089]/20"
       href={href}
       title={label}
     >
@@ -338,7 +340,7 @@ function CalendarDayPopover({
   labels,
   locale,
 }: {
-  align: 'left' | 'right';
+  align: 'left' | 'center' | 'right';
   date: string;
   events: CalendarEventView[];
   labels: CalendarBoardLabels;
@@ -347,8 +349,10 @@ function CalendarDayPopover({
   return (
     <div
       className={cn(
-        'pointer-events-none absolute top-full z-30 mt-2 w-72 max-w-[calc(100vw-3rem)] translate-y-1 rounded-3xl border border-black/[0.04] bg-white p-3 text-left opacity-0 shadow-2xl transition-[opacity,transform] duration-150 ease-out group-hover/day:pointer-events-auto group-hover/day:translate-y-0 group-hover/day:opacity-100 group-focus/day:pointer-events-auto group-focus/day:translate-y-0 group-focus/day:opacity-100',
-        align === 'right' ? 'right-0' : 'left-0',
+        'pointer-events-none absolute top-full z-30 mt-2 w-64 max-w-[calc(100vw-3rem)] translate-y-1 rounded-3xl border border-black/[0.04] bg-white p-3 text-left opacity-0 shadow-2xl transition-[opacity,transform] duration-150 ease-out group-hover/day:pointer-events-auto group-hover/day:translate-y-0 group-hover/day:opacity-100 group-focus/day:pointer-events-auto group-focus/day:translate-y-0 group-focus/day:opacity-100 sm:w-72',
+        align === 'right' && 'right-0',
+        align === 'left' && 'left-0',
+        align === 'center' && 'left-1/2 -translate-x-1/2',
       )}
     >
       <div className="flex items-center justify-between gap-3 border-b border-black/[0.04] pb-3">
@@ -664,9 +668,16 @@ function getDisplayMonth(events: CalendarEventView[], requestedMonthKey?: string
   );
   if (hasCurrentMonthEvent) return currentMonth;
 
-  const first = events[0]?.date;
-  if (!first) return currentMonth;
-  const parsed = new Date(`${first}T12:00:00`);
+  // No events this month: open at the nearest event in time — the next
+  // upcoming one if any, otherwise the most recent past one (events are
+  // sorted ascending). Falling back to events[0] would jump a year back on
+  // accounts whose history starts long ago.
+  const todayKey = serializeDate(now);
+  const nearest =
+    events.find((event) => event.date >= todayKey)?.date ??
+    events[events.length - 1]?.date;
+  if (!nearest) return currentMonth;
+  const parsed = new Date(`${nearest}T12:00:00`);
   return new Date(parsed.getFullYear(), parsed.getMonth(), 1);
 }
 

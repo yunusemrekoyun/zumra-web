@@ -452,10 +452,10 @@ function CandidateProfile({
             <div className="mt-5 grid gap-5 sm:grid-cols-2">
               {candidate.attribution &&
                 Object.entries(candidate.attribution).map(([key, value]) => (
-                  <InfoField key={key} label={key} value={String(value)} />
+                  <InfoField key={key} label={key} value={String(value)} valueClassName="break-all" />
                 ))}
               {candidate.referrer && (
-                <InfoField label={t('referrer')} value={candidate.referrer} />
+                <InfoField label={t('referrer')} value={candidate.referrer} valueClassName="break-all" />
               )}
             </div>
           </div>
@@ -631,9 +631,9 @@ function ContactRow({
       <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#533089]/7 text-[#533089]">
         <Icon className="h-4 w-4" />
       </div>
-      <div>
+      <div className="min-w-0 flex-1">
         <div className="text-[10px] font-bold uppercase tracking-wider text-[#2E286C]/35">{label}</div>
-        <div className={`mt-1 text-sm font-bold ${muted ? 'text-amber-600' : 'text-[#2E286C]'}`}>{value}</div>
+        <div className={`mt-1 truncate text-sm font-bold ${muted ? 'text-amber-600' : 'text-[#2E286C]'}`}>{value}</div>
       </div>
     </div>
   );

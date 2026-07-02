@@ -124,7 +124,7 @@ export function NotificationBell() {
       </button>
 
       {open && (
-        <div className="absolute right-0 z-50 mt-2 w-80 max-w-[90vw] rounded-2xl border border-black/[0.06] bg-white p-2 shadow-xl">
+        <div className="absolute right-0 z-50 mt-2 w-80 max-w-[calc(100vw-6rem)] rounded-2xl border border-black/[0.06] bg-white p-2 shadow-xl">
           <p className="px-3 py-2 text-[10px] font-bold uppercase tracking-wider text-[#2E286C]/40">
             {t('title')}
           </p>

@@ -226,8 +226,8 @@ function TrendBars({
   points: StudentProgress['gradeTrend'];
 }) {
   return (
-    <div className="flex h-32 items-end gap-1.5">
-      {points.map((point, index) => (
+    <div className="flex h-32 items-end gap-0.5 sm:gap-1.5">
+      {points.slice(-24).map((point, index) => (
         <div
           key={index}
           className="flex-1 rounded-t bg-[#533089]/80"

@@ -367,7 +367,7 @@ export function InstructorProfileClient({
               )}
             </div>
             <div className="mt-6 space-y-4 border-t border-black/[0.04] pt-5 text-left">
-              <InfoField label={t('fields.email')} value={profile.email} />
+              <InfoField label={t('fields.email')} value={profile.email} valueClassName="break-all" />
               <InfoField label={t('fields.phone')} value={profile.phone} />
               <InfoField
                 label={t('panelAccount')}
