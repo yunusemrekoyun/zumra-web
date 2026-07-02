@@ -313,7 +313,7 @@ function StepList({
               {complete ? <Check className="h-4 w-4" /> : index + 1}
             </div>
             <span
-              className={`${compact ? 'mt-1 block text-[9px]' : 'text-xs'} font-bold uppercase tracking-wider ${
+              className={`${compact ? 'mt-1 block break-words px-0.5 text-[9px] leading-tight' : 'text-xs'} font-bold uppercase tracking-wider ${
                 active || complete
                   ? compact
                     ? 'text-[#2E286C]'

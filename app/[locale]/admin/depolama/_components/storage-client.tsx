@@ -195,7 +195,7 @@ export function StorageClient({ overview }: { overview: StorageOverview }) {
             return (
               <div key={row.kind} className="flex items-center gap-3">
                 <meta.icon className="h-4 w-4 shrink-0" style={{ color: meta.color }} />
-                <div className="w-24 shrink-0 text-sm font-bold text-[#2E286C]">
+                <div className="w-20 sm:w-24 shrink-0 text-sm font-bold text-[#2E286C]">
                   {t(`kinds.${row.kind}`)}
                 </div>
                 <div className="h-2.5 flex-1 overflow-hidden rounded-full bg-[#F1F0F7]">
@@ -207,7 +207,7 @@ export function StorageClient({ overview }: { overview: StorageOverview }) {
                     }}
                   />
                 </div>
-                <div className="w-28 shrink-0 text-right text-xs font-semibold text-[#2E286C]/55">
+                <div className="w-20 sm:w-28 shrink-0 text-right text-xs font-semibold text-[#2E286C]/55">
                   {formatBytes(row.bytes)} · {row.count}
                 </div>
               </div>
@@ -254,7 +254,7 @@ export function StorageClient({ overview }: { overview: StorageOverview }) {
                 disabled={!row.userId}
                 className="flex w-full items-center gap-3 rounded-2xl p-2 text-left transition-colors hover:bg-[#F8F7FB] disabled:cursor-default disabled:hover:bg-transparent"
               >
-                <div className="w-44 shrink-0 truncate text-sm font-bold text-[#2E286C]">
+                <div className="w-24 sm:w-44 shrink-0 truncate text-sm font-bold text-[#2E286C]">
                   {row.name ?? t('unknownUser')}
                   {row.role && (
                     <span className="ml-1.5 text-[10px] font-semibold uppercase tracking-wide text-[#2E286C]/35">
@@ -268,7 +268,7 @@ export function StorageClient({ overview }: { overview: StorageOverview }) {
                     style={{ width: `${(row.bytes / max) * 100}%` }}
                   />
                 </div>
-                <div className="w-28 shrink-0 text-right text-xs font-semibold text-[#2E286C]/55">
+                <div className="w-20 sm:w-28 shrink-0 text-right text-xs font-semibold text-[#2E286C]/55">
                   {formatBytes(row.bytes)} · {row.count}
                 </div>
               </button>

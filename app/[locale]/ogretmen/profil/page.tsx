@@ -181,7 +181,7 @@ function InfoRow({
       <div className="w-9 h-9 rounded-xl bg-[#533089]/5 flex items-center justify-center shrink-0">
         <Icon className="w-4 h-4 text-[#533089]" />
       </div>
-      <InfoField label={label} value={value} />
+      <InfoField className="min-w-0 flex-1" valueClassName="break-all" label={label} value={value} />
     </div>
   );
 }

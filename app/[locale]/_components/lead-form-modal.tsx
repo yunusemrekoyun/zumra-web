@@ -42,7 +42,7 @@ function ChipRow({
             type="button"
             onClick={() => onChange(value === key ? '' : key)}
             className={cn(
-              'rounded-full border px-3 py-1.5 text-xs font-semibold transition-colors',
+              'min-h-10 rounded-full border px-3.5 py-2 text-xs font-semibold transition-colors',
               value === key
                 ? 'border-brand-primary bg-brand-primary text-white'
                 : 'border-black/10 text-brand-dark/60 hover:border-brand-primary/40',
@@ -195,7 +195,7 @@ function LeadFormModal({
       onClick={onClose}
     >
       <div
-        className="w-full max-w-md rounded-t-3xl bg-white p-6 shadow-2xl sm:rounded-3xl"
+        className="max-h-[calc(100dvh-2rem)] w-full max-w-md overflow-y-auto rounded-t-3xl bg-white p-6 shadow-2xl sm:rounded-3xl"
         onClick={(event) => event.stopPropagation()}
       >
         <div className="mb-5 flex items-start justify-between gap-3">
@@ -216,7 +216,7 @@ function LeadFormModal({
             type="button"
             onClick={onClose}
             aria-label={t('close')}
-            className="rounded-full p-1.5 text-brand-dark/40 transition-colors hover:bg-black/5 hover:text-brand-dark"
+            className="rounded-full p-2.5 text-brand-dark/40 transition-colors hover:bg-black/5 hover:text-brand-dark"
           >
             <X className="h-5 w-5" />
           </button>

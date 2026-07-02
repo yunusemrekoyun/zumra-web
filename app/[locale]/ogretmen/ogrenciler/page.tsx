@@ -89,9 +89,9 @@ export default async function TeacherStudentsPage({
               </div>
 
               <div className="mt-5 flex flex-col gap-2 rounded-2xl bg-[#F8F9FC] p-4 text-sm font-semibold text-[#2E286C]/65">
-                <span className="inline-flex items-center gap-2">
-                  <Mail className="h-4 w-4 text-[#533089]" />
-                  {student.email}
+                <span className="inline-flex min-w-0 items-center gap-2">
+                  <Mail className="h-4 w-4 shrink-0 text-[#533089]" />
+                  <span className="break-all">{student.email}</span>
                 </span>
                 {student.phone && (
                   <span className="inline-flex items-center gap-2">

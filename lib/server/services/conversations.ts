@@ -149,7 +149,7 @@ async function assertMediaOwnedAndReady(
   }
 }
 
-async function loadMessageAttachments(
+export async function loadMessageAttachments(
   messageIds: string[],
 ): Promise<Map<string, ChatAttachment[]>> {
   const result = new Map<string, ChatAttachment[]>();
@@ -178,7 +178,7 @@ async function loadMessageAttachments(
   return result;
 }
 
-async function loadAssignmentRefs(
+export async function loadAssignmentRefs(
   assignmentIds: string[],
 ): Promise<Map<string, ChatAssignmentRef>> {
   const result = new Map<string, ChatAssignmentRef>();

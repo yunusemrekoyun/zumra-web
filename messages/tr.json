@@ -55,12 +55,12 @@
       "absent": "Gelmedi",
       "excused": "İzinli"
     },
-      "status": {
-        "active": "Aktif",
-        "paused": "Dondurdu",
-        "graduated": "Mezun",
-        "cancelled": "İptal",
-        "candidate": "Aday",
+    "status": {
+      "active": "Aktif",
+      "paused": "Dondurdu",
+      "graduated": "Mezun",
+      "cancelled": "İptal",
+      "candidate": "Aday",
       "paid": "Ödendi",
       "pending": "Beklemede",
       "failed": "Başarısız",
@@ -217,7 +217,11 @@
       "description": "Kadınlara özel güvenli online ortamımızda, kendi hızınızda ilerleyin; hedeflerinize odaklanarak dil becerilerinizi cesurca geliştirin. Esnek saatler ve uzman eğitmenlerle yepyeni bir deneyim.",
       "primaryCta": "Seviyeni Belirle",
       "secondaryCta": "Programları İncele",
-      "stats": ["3500+ Öğrenci", "%100 Online", "Sadece Kadınlar"],
+      "stats": [
+        "3500+ Öğrenci",
+        "%100 Online",
+        "Sadece Kadınlar"
+      ],
       "imageAlt": "Dil eğitimi alan özgüvenli kadın",
       "quote": "Speak your mind.",
       "quoteDescription": "Sesinizi güçlendirmek için tasarlanmış, tamamen destekleyici ve kadınlara özel bir alan.",
@@ -249,11 +253,31 @@
       "description": "İlk günden itibaren ne beklemeniz gerektiğini bilirsiniz. Sürpriz yok, sadece hedefe yönelik adımlar.",
       "cta": "Hemen Maceraya Başla",
       "steps": [
-        { "num": "01", "title": "Ön Kayıt & İlk Temas", "desc": "Formu doldurun. En geç 24 saat içerisinde size ulaşıp süreci planlayalım." },
-        { "num": "02", "title": "Ücretsiz Seviye Tespiti", "desc": "Mevcut durumunuzu analiz etmek için 15 dakikalık kısa, stressiz bir değerlendirme." },
-        { "num": "03", "title": "Size Özel Program", "desc": "Hedefinize ve seviyenize en uygun yol haritasını birlikte belirliyoruz." },
-        { "num": "04", "title": "Derslere Başlayın", "desc": "Esnek saatlerde, güvenli platformlar üzerinden canlı derslere katılın." },
-        { "num": "05", "title": "İlerleme Takibi", "desc": "Her ay gelişim raporu alarak motivasyonunuzu yüksek tutuyoruz." }
+        {
+          "num": "01",
+          "title": "Ön Kayıt & İlk Temas",
+          "desc": "Formu doldurun. En geç 24 saat içerisinde size ulaşıp süreci planlayalım."
+        },
+        {
+          "num": "02",
+          "title": "Ücretsiz Seviye Tespiti",
+          "desc": "Mevcut durumunuzu analiz etmek için 15 dakikalık kısa, stressiz bir değerlendirme."
+        },
+        {
+          "num": "03",
+          "title": "Size Özel Program",
+          "desc": "Hedefinize ve seviyenize en uygun yol haritasını birlikte belirliyoruz."
+        },
+        {
+          "num": "04",
+          "title": "Derslere Başlayın",
+          "desc": "Esnek saatlerde, güvenli platformlar üzerinden canlı derslere katılın."
+        },
+        {
+          "num": "05",
+          "title": "İlerleme Takibi",
+          "desc": "Her ay gelişim raporu alarak motivasyonunuzu yüksek tutuyoruz."
+        }
       ]
     },
     "languages": {
@@ -261,14 +285,46 @@
       "description": "8 farklı dilde, birebir ve grup katılım seçenekleriyle.",
       "viewAll": "Tüm Programları Gör",
       "items": [
-        { "name": "İngilizce", "subtitle": "Genel & Akademik", "symbol": "A" },
-        { "name": "Arapça", "subtitle": "Modern & Pratik", "symbol": "ع" },
-        { "name": "Fransızca", "subtitle": "Avrupa Dilleri", "symbol": "Fr" },
-        { "name": "Almanca", "subtitle": "Kariyer & Eğitim", "symbol": "De" },
-        { "name": "Farsça", "subtitle": "Kültürel Derinlik", "symbol": "ف" },
-        { "name": "Japonca", "subtitle": "Uzak Doğu", "symbol": "あ" },
-        { "name": "Korece", "subtitle": "Yeni Trend", "symbol": "가" },
-        { "name": "Rusça", "subtitle": "Stratejik İletişim", "symbol": "Ж" }
+        {
+          "name": "İngilizce",
+          "subtitle": "Genel & Akademik",
+          "symbol": "A"
+        },
+        {
+          "name": "Arapça",
+          "subtitle": "Modern & Pratik",
+          "symbol": "ع"
+        },
+        {
+          "name": "Fransızca",
+          "subtitle": "Avrupa Dilleri",
+          "symbol": "Fr"
+        },
+        {
+          "name": "Almanca",
+          "subtitle": "Kariyer & Eğitim",
+          "symbol": "De"
+        },
+        {
+          "name": "Farsça",
+          "subtitle": "Kültürel Derinlik",
+          "symbol": "ف"
+        },
+        {
+          "name": "Japonca",
+          "subtitle": "Uzak Doğu",
+          "symbol": "あ"
+        },
+        {
+          "name": "Korece",
+          "subtitle": "Yeni Trend",
+          "symbol": "가"
+        },
+        {
+          "name": "Rusça",
+          "subtitle": "Stratejik İletişim",
+          "symbol": "Ж"
+        }
       ]
     },
     "programs": {
@@ -276,10 +332,34 @@
       "popular": "Popüler",
       "allLevels": "Tüm Seviyeler",
       "items": [
-        { "title": "Genel İngilizce", "level": "A1 - C1 Seviyeleri", "desc": "Günlük hayatta özgüvenle konuşmak isteyenler için tasarlandı. Pratik odaklı.", "icon": "message", "popular": true },
-        { "title": "Akademik İngilizce", "level": "IELTS / TOEFL Hazırlık", "desc": "Üniversite hayatı ve sınavlar için akademik makale ve sunum teknikleri.", "icon": "book", "popular": false },
-        { "title": "İngilizce Konuşma Kulübü", "level": "Haftalık Pratik", "desc": "Sosyal bir ortamda aktif pratik yaparak dil becerinizin körelmesini engelleyin.", "icon": "headset", "popular": false },
-        { "title": "Mesleki İngilizce", "level": "Profesyonel İletişim", "desc": "İş hayatında e-posta yazımı, sunum ve toplantı yönetimi becerilerini geliştir.", "icon": "briefcase", "popular": false }
+        {
+          "title": "Genel İngilizce",
+          "level": "A1 - C1 Seviyeleri",
+          "desc": "Günlük hayatta özgüvenle konuşmak isteyenler için tasarlandı. Pratik odaklı.",
+          "icon": "message",
+          "popular": true
+        },
+        {
+          "title": "Akademik İngilizce",
+          "level": "IELTS / TOEFL Hazırlık",
+          "desc": "Üniversite hayatı ve sınavlar için akademik makale ve sunum teknikleri.",
+          "icon": "book",
+          "popular": false
+        },
+        {
+          "title": "İngilizce Konuşma Kulübü",
+          "level": "Haftalık Pratik",
+          "desc": "Sosyal bir ortamda aktif pratik yaparak dil becerinizin körelmesini engelleyin.",
+          "icon": "headset",
+          "popular": false
+        },
+        {
+          "title": "Mesleki İngilizce",
+          "level": "Profesyonel İletişim",
+          "desc": "İş hayatında e-posta yazımı, sunum ve toplantı yönetimi becerilerini geliştir.",
+          "icon": "briefcase",
+          "popular": false
+        }
       ]
     },
     "cta": {
@@ -341,20 +421,52 @@
     "testimonials": {
       "title": "Öğrencilerimiz Neler Diyor?",
       "items": [
-        { "name": "Elif A.", "program": "Speaking Programı", "image": 1, "text": "Kamerayı açmadan rahat hissetmem benim için çok önemliydi. Derslerde konuşmaya gerçekten cesaretim geldi ve özgüvenim arttı." },
-        { "name": "Selin K.", "program": "Genel İngilizce", "image": 2, "text": "Planlı ilerliyoruz, her ay net geri bildirim alıyorum. Ne yaptığımı bildiğim için motivasyonum hiç düşmüyor." },
-        { "name": "Hande N.", "program": "Sınav Hazırlık", "image": 3, "text": "Hocam eksiklerimi çok hızlı fark etti. Deneme analiz sistemi sayesinde hedefime daha yakın ve güçlü hissediyorum." },
-        { "name": "Nil T.", "program": "Arapça Konuşma", "image": 4, "text": "Dersler çok akıcı. Hedefime göre içerik verildi, kısa sürede konuşma alışkanlığı kazandım. En iyisi Zümra." }
+        {
+          "name": "Elif A.",
+          "program": "Speaking Programı",
+          "image": 1,
+          "text": "Kamerayı açmadan rahat hissetmem benim için çok önemliydi. Derslerde konuşmaya gerçekten cesaretim geldi ve özgüvenim arttı."
+        },
+        {
+          "name": "Selin K.",
+          "program": "Genel İngilizce",
+          "image": 2,
+          "text": "Planlı ilerliyoruz, her ay net geri bildirim alıyorum. Ne yaptığımı bildiğim için motivasyonum hiç düşmüyor."
+        },
+        {
+          "name": "Hande N.",
+          "program": "Sınav Hazırlık",
+          "image": 3,
+          "text": "Hocam eksiklerimi çok hızlı fark etti. Deneme analiz sistemi sayesinde hedefime daha yakın ve güçlü hissediyorum."
+        },
+        {
+          "name": "Nil T.",
+          "program": "Arapça Konuşma",
+          "image": 4,
+          "text": "Dersler çok akıcı. Hedefime göre içerik verildi, kısa sürede konuşma alışkanlığı kazandım. En iyisi Zümra."
+        }
       ]
     },
     "faq": {
       "title": "Aklınıza takılanları netleştirelim.",
       "description": "Daha fazla soru için WhatsApp iletişim hattımızdan çekinmeden bize yazabilirsiniz.",
       "items": [
-        { "q": "Ücretsiz dersleriniz var mı?", "a": "Evet, var. Her ay, grup derslerimizi denemek isteyenler için ücretsiz demo dersler sunuyoruz. Ayrıca motivasyonu artırmak için seminerler düzenliyoruz." },
-        { "q": "Ders materyalleri nasıl sağlanıyor?", "a": "Tüm materyaller online platformumuzda sunulur. Günlük yaşam ve iş hayatına uygun, pratik ve interaktif içeriklerle öğrenme sürecinizi destekleriz." },
-        { "q": "Dersler hangi platformda yapılıyor?", "a": "Dersler Zoom veya Google Meet üzerinden canlı ve etkileşimli olarak gerçekleşir. Sadece bilgisayar veya tablet yeterlidir." },
-        { "q": "Kamerasız katılım mümkün mü?", "a": "Kesinlikle! Kadınların tamamen rahat hissetmesi adına, dileyen öğrencilerimiz derslere sadece sesli olarak katılabilirler." }
+        {
+          "q": "Ücretsiz dersleriniz var mı?",
+          "a": "Evet, var. Her ay, grup derslerimizi denemek isteyenler için ücretsiz demo dersler sunuyoruz. Ayrıca motivasyonu artırmak için seminerler düzenliyoruz."
+        },
+        {
+          "q": "Ders materyalleri nasıl sağlanıyor?",
+          "a": "Tüm materyaller online platformumuzda sunulur. Günlük yaşam ve iş hayatına uygun, pratik ve interaktif içeriklerle öğrenme sürecinizi destekleriz."
+        },
+        {
+          "q": "Dersler hangi platformda yapılıyor?",
+          "a": "Dersler Zoom veya Google Meet üzerinden canlı ve etkileşimli olarak gerçekleşir. Sadece bilgisayar veya tablet yeterlidir."
+        },
+        {
+          "q": "Kamerasız katılım mümkün mü?",
+          "a": "Kesinlikle! Kadınların tamamen rahat hissetmesi adına, dileyen öğrencilerimiz derslere sadece sesli olarak katılabilirler."
+        }
       ]
     },
     "footer": {
@@ -476,7 +588,7 @@
       "agendaTitle": "Aylık akış",
       "monthView": "Ay görünümü",
       "detailView": "Detay listesi",
-      "hoverHint": "Detayları görmek için takvimde günlerin üzerine gelin.",
+      "hoverHint": "Detayları görmek için takvimde günlere dokunun veya üzerine gelin.",
       "previousMonth": "Önceki ay",
       "nextMonth": "Sonraki ay",
       "joinLesson": "Derse katıl",
@@ -1297,11 +1409,26 @@
       "reviewSummary": "{parties} sözleşme tarafı ve {documents} evrak kayıtla ilişkilendirilecek."
     },
     "empty": {
-      "calendar": { "title": "Takvim", "description": "Ders programları, görüşme randevuları ve etkinlikleri bu takvimden takip edebilirsiniz." },
-      "instructors": { "title": "Eğitmenler", "description": "Eğitmen kadronuzu bu modülden yönetebilir, ders programlarını atayabilirsiniz." },
-      "programs": { "title": "Programlar", "description": "Eğitim programlarınızı bu modülden oluşturup yönetebilirsiniz. Yakında aktif olacak." },
-      "messages": { "title": "Mesajlar", "description": "Öğrenci ve eğitmenlerle iletişim modülü burada olacak. Bildirimler ve anlık mesajlaşma desteği." },
-      "settings": { "title": "Ayarlar", "description": "Genel ayarlar, bildirim tercihleri ve hesap yönetimi burada olacak." }
+      "calendar": {
+        "title": "Takvim",
+        "description": "Ders programları, görüşme randevuları ve etkinlikleri bu takvimden takip edebilirsiniz."
+      },
+      "instructors": {
+        "title": "Eğitmenler",
+        "description": "Eğitmen kadronuzu bu modülden yönetebilir, ders programlarını atayabilirsiniz."
+      },
+      "programs": {
+        "title": "Programlar",
+        "description": "Eğitim programlarınızı bu modülden oluşturup yönetebilirsiniz. Yakında aktif olacak."
+      },
+      "messages": {
+        "title": "Mesajlar",
+        "description": "Öğrenci ve eğitmenlerle iletişim modülü burada olacak. Bildirimler ve anlık mesajlaşma desteği."
+      },
+      "settings": {
+        "title": "Ayarlar",
+        "description": "Genel ayarlar, bildirim tercihleri ve hesap yönetimi burada olacak."
+      }
     },
     "payments": {
       "title": "Ödemeler",
@@ -1357,6 +1484,30 @@
         "german": "Almanca",
         "french": "Fransızca"
       }
+    },
+    "messages": {
+      "title": "Mesajlar",
+      "description": "Öğrenci–öğretmen yazışmalarını salt okunur olarak izleyin. Okundu bilgileri etkilenmez, taraflar görüntülediğinizi görmez.",
+      "readOnly": "Salt okunur",
+      "searchPlaceholder": "Öğrenci veya öğretmen adı ara...",
+      "searchNoResults": "Aramanızla eşleşen yazışma yok.",
+      "emptyDescription": "Henüz yazışma yok. Öğrenciler ve öğretmenler mesajlaştıkça burada listelenir.",
+      "selectTitle": "Bir yazışma seçin",
+      "selectDescription": "Soldaki listeden bir öğrenci–öğretmen yazışması seçerek içeriğini görüntüleyin.",
+      "emptyThread": "Bu yazışmada henüz mesaj yok.",
+      "noMessages": "Henüz mesaj yok",
+      "attachmentOnly": "Ek dosya",
+      "messageCount": "{count} mesaj",
+      "loadOlder": "Daha eski mesajları yükle",
+      "listTruncated": "En güncel yazışmalar gösteriliyor — diğerleri için isimle arama yapın.",
+      "studentRole": "Öğrenci",
+      "teacherRole": "Öğretmen",
+      "assignment": "Ödev",
+      "material": "Materyal",
+      "refresh": "Yenile",
+      "back": "Geri",
+      "loading": "Yükleniyor...",
+      "error": "Yazışmalar yüklenemedi. Tekrar deneyin."
     }
   },
   "notifications": {
@@ -1406,7 +1557,10 @@
       "description": "Sana atanan ödev ve materyalleri buradan takip et.",
       "emptyTitle": "Henüz ödev yok",
       "emptyDescription": "Öğretmenin ödev veya materyal paylaştığında burada görünecek.",
-      "type": { "assignment": "Ödev", "material": "Materyal" },
+      "type": {
+        "assignment": "Ödev",
+        "material": "Materyal"
+      },
       "status": {
         "material": "Materyal",
         "not_submitted": "Teslim bekliyor",
@@ -1462,7 +1616,7 @@
       "agendaTitle": "Ders takvimin",
       "monthView": "Ay görünümü",
       "detailView": "Detay listesi",
-      "hoverHint": "Ders detaylarını görmek için günlerin üzerine gel.",
+      "hoverHint": "Ders detayları için günlere dokun veya üzerine gel.",
       "previousMonth": "Önceki ay",
       "nextMonth": "Sonraki ay",
       "joinLesson": "Derse katıl",
@@ -1536,10 +1690,19 @@
         "reading": "Reading",
         "writing": "Writing"
       },
-      "badgeLabels": ["12 Gün Seri", "10 Ders Tamamla", "50 Kelime Öğren", "İlk Sunum", "B2 Seviyesi"]
+      "badgeLabels": [
+        "12 Gün Seri",
+        "10 Ders Tamamla",
+        "50 Kelime Öğren",
+        "İlk Sunum",
+        "B2 Seviyesi"
+      ]
     },
     "empty": {
-      "messages": { "title": "Mesajlar", "description": "Danışman ve eğitmen mesajları burada görünecek." }
+      "messages": {
+        "title": "Mesajlar",
+        "description": "Danışman ve eğitmen mesajları burada görünecek."
+      }
     },
     "profilePage": {
       "activeStudent": "Aktif Öğrenci",
@@ -1548,7 +1711,10 @@
       "phone": "Telefon",
       "branch": "Şube",
       "courseMode": "Ders Türü",
-      "courseModes": { "group": "Grup dersi", "private": "Özel ders" },
+      "courseModes": {
+        "group": "Grup dersi",
+        "private": "Özel ders"
+      },
       "programValue": "İngilizce • Genel Eğitim",
       "level": "Seviye",
       "enrollmentDate": "Kayıt Tarihi",
@@ -1591,12 +1757,30 @@
       "offers": "Teklifler"
     },
     "empty": {
-      "leads": { "title": "Adaylarım", "description": "Danışmana atanmış aday havuzu burada CRM akışıyla yönetilecek." },
-      "students": { "title": "Öğrencilerim", "description": "Danışmana bağlı öğrencilerin profil, teklif, görüşme ve takip akışı burada olacak." },
-      "meetings": { "title": "Görüşmeler", "description": "Link, QR, hatırlatma ve görüşme durumları bu modülde yönetilecek." },
-      "offers": { "title": "Teklifler", "description": "Öğrenciye mail ve WhatsApp üzerinden gönderilecek teklif akışı burada hazırlanacak." },
-      "messages": { "title": "Mesajlar", "description": "Öğrenci ve aday iletişim geçmişi burada tek akışta toplanacak." },
-      "settings": { "title": "Danışman Ayarları", "description": "Bildirim tercihleri, çalışma saatleri ve profil ayarları burada yönetilecek." }
+      "leads": {
+        "title": "Adaylarım",
+        "description": "Danışmana atanmış aday havuzu burada CRM akışıyla yönetilecek."
+      },
+      "students": {
+        "title": "Öğrencilerim",
+        "description": "Danışmana bağlı öğrencilerin profil, teklif, görüşme ve takip akışı burada olacak."
+      },
+      "meetings": {
+        "title": "Görüşmeler",
+        "description": "Link, QR, hatırlatma ve görüşme durumları bu modülde yönetilecek."
+      },
+      "offers": {
+        "title": "Teklifler",
+        "description": "Öğrenciye mail ve WhatsApp üzerinden gönderilecek teklif akışı burada hazırlanacak."
+      },
+      "messages": {
+        "title": "Mesajlar",
+        "description": "Öğrenci ve aday iletişim geçmişi burada tek akışta toplanacak."
+      },
+      "settings": {
+        "title": "Danışman Ayarları",
+        "description": "Bildirim tercihleri, çalışma saatleri ve profil ayarları burada yönetilecek."
+      }
     }
   },
   "teacher": {
@@ -1636,7 +1820,10 @@
       "emptyTitle": "Henüz ödev yok",
       "emptyDescription": "İlk ödevini veya materyalini oluşturmak için Yeni ödev'e dokun.",
       "optional": "opsiyonel",
-      "type": { "assignment": "Ödev", "material": "Materyal" },
+      "type": {
+        "assignment": "Ödev",
+        "material": "Materyal"
+      },
       "submittedCount": "{submitted}/{expected} teslim",
       "gradedCount": "{graded} notlandı",
       "attachments": {
@@ -1754,7 +1941,7 @@
       "agendaTitle": "Ders akışı",
       "monthView": "Ay görünümü",
       "detailView": "Detay listesi",
-      "hoverHint": "Ders detaylarını görmek için günlerin üzerine gelin.",
+      "hoverHint": "Ders detayları için günlere dokunun veya üzerine gelin.",
       "previousMonth": "Önceki ay",
       "nextMonth": "Sonraki ay",
       "joinLesson": "Derse katıl",
@@ -1828,11 +2015,26 @@
       "unmatchedTitle": "Eşleşmeyen katılımcılar"
     },
     "empty": {
-      "students": { "title": "Öğrenciler", "description": "Öğretmene atanmış öğrenciler ve ders ilerleme notları burada görünecek." },
-      "calendar": { "title": "Takvim", "description": "Öğretmenin ders programı, müsaitlikleri ve görüşmeleri burada yönetilecek." },
-      "messages": { "title": "Mesajlar", "description": "Öğrenci mesajları, ders notları ve bildirim akışları burada olacak." },
-      "profile": { "title": "Profil", "description": "Öğretmen uzmanlıkları, ders ayarları ve profil bilgileri burada düzenlenecek." },
-      "settings": { "title": "Öğretmen Ayarları", "description": "Bildirim, takvim ve hesap tercihleri burada yönetilecek." }
+      "students": {
+        "title": "Öğrenciler",
+        "description": "Öğretmene atanmış öğrenciler ve ders ilerleme notları burada görünecek."
+      },
+      "calendar": {
+        "title": "Takvim",
+        "description": "Öğretmenin ders programı, müsaitlikleri ve görüşmeleri burada yönetilecek."
+      },
+      "messages": {
+        "title": "Mesajlar",
+        "description": "Öğrenci mesajları, ders notları ve bildirim akışları burada olacak."
+      },
+      "profile": {
+        "title": "Profil",
+        "description": "Öğretmen uzmanlıkları, ders ayarları ve profil bilgileri burada düzenlenecek."
+      },
+      "settings": {
+        "title": "Öğretmen Ayarları",
+        "description": "Bildirim, takvim ve hesap tercihleri burada yönetilecek."
+      }
     }
   },
   "auth": {

@@ -50,11 +50,11 @@ export default async function StudentAssignmentsPage({
             >
               <ModulePanel className="rounded-3xl transition-shadow hover:shadow-md">
                 <div className="flex items-start justify-between gap-3">
-                  <div className="flex items-center gap-3">
-                    <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-[#533089]/8">
+                  <div className="flex min-w-0 items-center gap-3">
+                    <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-[#533089]/8">
                       <ClipboardList className="h-5 w-5 text-[#533089]" />
                     </div>
-                    <div>
+                    <div className="min-w-0">
                       <h2 className="font-bold text-[#2E286C]">
                         {assignment.title}
                       </h2>
@@ -64,7 +64,7 @@ export default async function StudentAssignmentsPage({
                       </p>
                     </div>
                   </div>
-                  <StatusChip tone={statusTone[assignment.status]}>
+                  <StatusChip className="shrink-0" tone={statusTone[assignment.status]}>
                     {assignment.status === 'graded' && assignment.score != null
                       ? t('status.gradedScore', {
                           score: assignment.score,

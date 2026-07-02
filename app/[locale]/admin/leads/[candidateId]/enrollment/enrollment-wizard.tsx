@@ -1721,8 +1721,8 @@ function DocumentsStep({
             key={document.id}
             className="flex items-center justify-between gap-4 rounded-2xl border border-black/[0.05] p-4"
           >
-            <div>
-              <div className="text-sm font-bold text-[#2E286C]">
+            <div className="min-w-0 flex-1">
+              <div className="truncate text-sm font-bold text-[#2E286C]">
                 {document.label}
               </div>
               <div className="mt-1 text-xs font-medium text-[#2E286C]/40">
@@ -1734,7 +1734,7 @@ function DocumentsStep({
               type="button"
               aria-label={t('removeDocument')}
               onClick={() => onRemove(document.id)}
-              className="flex h-9 w-9 items-center justify-center rounded-xl text-red-500 hover:bg-red-50"
+              className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl text-red-500 hover:bg-red-50"
             >
               <Trash2 className="h-4 w-4" />
             </button>

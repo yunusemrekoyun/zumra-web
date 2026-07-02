@@ -159,7 +159,7 @@ export function ChatThreadClient({
         )}
       >
         {message.body && (
-          <p className="whitespace-pre-wrap text-sm font-medium leading-6">
+          <p className="whitespace-pre-wrap break-words text-sm font-medium leading-6">
             {message.body}
           </p>
         )}
