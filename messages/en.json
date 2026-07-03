@@ -198,6 +198,15 @@
     "header": {
       "messages": "Messages",
       "notifications": "Notifications"
+    },
+    "search": {
+      "loading": "Searching...",
+      "noResults": "No results found.",
+      "types": {
+        "student": "Student",
+        "instructor": "Teacher",
+        "candidate": "Lead"
+      }
     }
   },
   "public": {
@@ -656,7 +665,7 @@
           "label": "Test (Mailpit)",
           "hint": "Not delivered; captured in the Mailpit inbox. Read verification codes and invites there."
         },
-        "note": "In test mode mail goes to Mailpit. Read it from the protected Mailpit UI on the server, or at http://localhost:8025 locally.",
+        "note": "In test mode mail is never delivered to real recipients; it is captured in the Mailpit inbox (served at /mail/ on the live server).",
         "success": "Mail mode updated.",
         "error": "Could not update mail mode. Try again."
       },
@@ -996,13 +1005,14 @@
       "progress": "Progress",
       "toAssign": "To assign",
       "emptyTitle": "No students yet",
-      "emptyDescription": "Students will appear here after a candidate enrollment is completed."
+      "emptyDescription": "Students will appear here after a candidate enrollment is completed.",
+      "noMatches": "No students match your search."
     },
     "studentDetail": {
       "studentId": "Student ID",
       "backToStudents": "Back to student list",
       "email": "Email",
-      "sendMessage": "Send Message",
+      "sendMessage": "View Conversations",
       "activeStudent": "Active Student",
       "registeredProgram": "Registered Program",
       "currentLevel": "Current Level",
@@ -1018,7 +1028,6 @@
       "contact": "Contact",
       "nextLesson": "Next lesson",
       "openCalendar": "Open calendar",
-      "liveDataNote": "This section is now connected to the real student record. Lesson notes, homework and progress metrics will become a live timeline once the lesson tracking module is completed.",
       "completedLessons": "Completed Lessons",
       "attendance": "100% Attendance",
       "developmentScore": "Development Score",
@@ -1037,7 +1046,14 @@
       "lesson12Note": "The student was highly successful in everyday speaking practice. Vocabulary variety is improving noticeably. There are still small mistakes with past tense usage, which will be reinforced.",
       "lesson11Title": "Lesson 11: Grammar Focus - Perfect Tenses",
       "lesson11Date": "March 15, 14:00",
-      "lesson11Note": "The student understood the grammar structure, but had some difficulty turning it into speech. An additional reading passage was sent."
+      "lesson11Note": "The student understood the grammar structure, but had some difficulty turning it into speech. An additional reading passage was sent.",
+      "recentLessons": "Recent Lessons",
+      "recentSubmissions": "Recent Submissions",
+      "noLessons": "No attendance records yet.",
+      "noSubmissions": "No submissions yet.",
+      "noActivity": "No lessons or assignments recorded for this student yet.",
+      "privateLesson": "Private Lesson",
+      "awaitingGrade": "Awaiting grade"
     },
     "leads": {
       "title": "Candidates",

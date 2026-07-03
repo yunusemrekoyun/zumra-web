@@ -77,6 +77,193 @@ function emptyProgress(level: string): StudentProgress {
   };
 }
 
+// Batch development scores for the admin directory: same three components and
+// weights as getStudentProgress, computed with grouped queries instead of one
+// round-trip per student. Homework attribution is hybrid: active/paused
+// enrollments count everything targeted at them (matching the student panel),
+// while ended (completed/cancelled) enrollments count only assignments the
+// student actually submitted — enrollments carry no end timestamp, and
+// counting a still-running branch's newer homework against someone who left
+// would silently erode their score over time.
+export async function getDevelopmentScores(
+  studentProfileIds: string[],
+): Promise<Map<string, number>> {
+  const ids = Array.from(new Set(studentProfileIds));
+  const scores = new Map<string, number>();
+  if (!ids.length) return scores;
+
+  const enr = await database
+    .select({
+      id: enrollments.id,
+      studentId: enrollments.studentId,
+      branchId: enrollments.branchId,
+      status: enrollments.status,
+    })
+    .from(enrollments)
+    .where(inArray(enrollments.studentId, ids));
+
+  const isCurrent = (status: string) =>
+    (activeEnrollmentStatuses as readonly string[]).includes(status);
+
+  // Branches from ALL enrollments feed the homework fetch (so historical
+  // submissions stay resolvable), but only current enrollments attribute
+  // unsubmitted homework to a student.
+  const branchIds = Array.from(
+    new Set(
+      enr.map((e) => e.branchId).filter((v): v is string => Boolean(v)),
+    ),
+  );
+  const studentsByBranch = new Map<string, Set<string>>();
+  for (const e of enr) {
+    if (!e.branchId || !isCurrent(e.status)) continue;
+    const set = studentsByBranch.get(e.branchId) ?? new Set<string>();
+    set.add(e.studentId);
+    studentsByBranch.set(e.branchId, set);
+  }
+  const studentByEnrollment = new Map(
+    enr.filter((e) => isCurrent(e.status)).map((e) => [e.id, e.studentId]),
+  );
+
+  const targetConditions = [];
+  if (branchIds.length) {
+    targetConditions.push(
+      and(
+        eq(assignments.targetType, 'branch'),
+        inArray(assignments.targetBranchId, branchIds),
+      ),
+    );
+  }
+  if (enr.length) {
+    targetConditions.push(
+      and(
+        eq(assignments.targetType, 'student'),
+        inArray(
+          assignments.targetEnrollmentId,
+          enr.map((e) => e.id),
+        ),
+      ),
+    );
+  }
+
+  const hwRows = targetConditions.length
+    ? await database
+        .select({
+          id: assignments.id,
+          maxScore: assignments.maxScore,
+          targetType: assignments.targetType,
+          targetBranchId: assignments.targetBranchId,
+          targetEnrollmentId: assignments.targetEnrollmentId,
+        })
+        .from(assignments)
+        .where(
+          and(eq(assignments.requiresSubmission, true), or(...targetConditions)),
+        )
+    : [];
+  const maxById = new Map(hwRows.map((r) => [r.id, r.maxScore ?? 100]));
+
+  const assignedByStudent = new Map<string, Set<string>>();
+  const addAssigned = (studentId: string, assignmentId: string) => {
+    const set = assignedByStudent.get(studentId) ?? new Set<string>();
+    set.add(assignmentId);
+    assignedByStudent.set(studentId, set);
+  };
+  for (const hw of hwRows) {
+    if (hw.targetType === 'branch' && hw.targetBranchId) {
+      for (const studentId of studentsByBranch.get(hw.targetBranchId) ?? []) {
+        addAssigned(studentId, hw.id);
+      }
+    } else if (hw.targetEnrollmentId) {
+      const studentId = studentByEnrollment.get(hw.targetEnrollmentId);
+      if (studentId) addAssigned(studentId, hw.id);
+    }
+  }
+
+  const subs = hwRows.length
+    ? await database
+        .select({
+          studentProfileId: assignmentSubmissions.studentProfileId,
+          assignmentId: assignmentSubmissions.assignmentId,
+          status: assignmentSubmissions.status,
+          score: assignmentSubmissions.score,
+        })
+        .from(assignmentSubmissions)
+        .where(
+          and(
+            inArray(assignmentSubmissions.studentProfileId, ids),
+            inArray(
+              assignmentSubmissions.assignmentId,
+              hwRows.map((r) => r.id),
+            ),
+          ),
+        )
+    : [];
+  const subsByStudent = new Map<string, typeof subs>();
+  for (const sub of subs) {
+    const list = subsByStudent.get(sub.studentProfileId) ?? [];
+    list.push(sub);
+    subsByStudent.set(sub.studentProfileId, list);
+  }
+
+  const att = await database
+    .select({
+      studentProfileId: lessonAttendanceRecords.studentProfileId,
+      status: lessonAttendanceRecords.status,
+    })
+    .from(lessonAttendanceRecords)
+    .where(inArray(lessonAttendanceRecords.studentProfileId, ids));
+  const attByStudent = new Map<string, typeof att>();
+  for (const record of att) {
+    const list = attByStudent.get(record.studentProfileId) ?? [];
+    list.push(record);
+    attByStudent.set(record.studentProfileId, list);
+  }
+
+  for (const studentId of ids) {
+    // Assigned = homework targeted at current enrollments ∪ anything the
+    // student ever submitted (historical participation from ended enrollments
+    // counts as completed work, not as an open obligation).
+    const assignedSet = new Set(assignedByStudent.get(studentId) ?? []);
+    const mySubs = subsByStudent.get(studentId) ?? [];
+    for (const sub of mySubs) assignedSet.add(sub.assignmentId);
+    const assigned = assignedSet.size;
+    const graded = mySubs.filter((s) => s.status === 'graded' && s.score != null);
+    const myAtt = attByStudent.get(studentId) ?? [];
+    const present = myAtt.filter((a) => a.status === 'present').length;
+    const late = myAtt.filter((a) => a.status === 'late').length;
+    const absent = myAtt.filter((a) => a.status === 'absent').length;
+    const counted = present + late + absent;
+
+    const completionPercent = assigned
+      ? Math.round((Math.min(mySubs.length, assigned) / assigned) * 100)
+      : 0;
+    const gradePercent = graded.length
+      ? Math.round(
+          (graded.reduce(
+            (sum, g) =>
+              sum + (g.score as number) / (maxById.get(g.assignmentId) ?? 100),
+            0,
+          ) /
+            graded.length) *
+            100,
+        )
+      : 0;
+    const attendancePercent = counted
+      ? Math.round(((present + late) / counted) * 100)
+      : 0;
+
+    scores.set(
+      studentId,
+      Math.round(
+        WEIGHTS.grade * gradePercent +
+          WEIGHTS.completion * completionPercent +
+          WEIGHTS.attendance * attendancePercent,
+      ),
+    );
+  }
+
+  return scores;
+}
+
 export async function getStudentProgress(
   principal: WorkspacePrincipal,
 ): Promise<StudentProgress> {

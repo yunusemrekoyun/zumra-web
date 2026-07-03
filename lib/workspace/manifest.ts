@@ -145,7 +145,6 @@ export const workspaceExtraRoutes = [
   '/yetkisiz',
   '/admin/students/[studentId]',
   '/admin/instructors/[instructorId]',
-  '/admin/students/1',
   '/admin/leads/[candidateId]/enrollment',
   '/ogrenci/dersler',
   '/ogretmen/odevler/yeni',

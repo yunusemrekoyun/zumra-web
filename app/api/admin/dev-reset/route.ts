@@ -14,6 +14,7 @@ import {
   AuthorizationDeniedError,
   PublicFlowError,
 } from '@/lib/server/http/errors';
+import { getRuntimeEnv } from '@/lib/server/env';
 import { getMeetQueue } from '@/lib/server/queues/meet';
 import { getMediaQueue } from '@/lib/server/queues/media';
 import { getNotificationQueue } from '@/lib/server/queues/notifications';
@@ -35,6 +36,10 @@ export const runtime = 'nodejs';
 
 export async function POST(request: Request) {
   const id = requestId(request);
+
+  if (!getRuntimeEnv().DEV_RESET_ENABLED) {
+    return apiResponse({ error: 'forbidden' }, 403, id);
+  }
 
   if (!isTrustedRequestOrigin(request.headers)) {
     return apiResponse({ error: 'forbidden' }, 403, id);

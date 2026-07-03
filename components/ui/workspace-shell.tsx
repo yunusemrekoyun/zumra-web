@@ -3,10 +3,8 @@
 import React, { useMemo, useState } from 'react';
 import { useLocale, useTranslations } from 'next-intl';
 import {
-  HelpCircle,
   LogOut,
   MessageSquare,
-  Search,
   Settings,
   Zap,
 } from 'lucide-react';
@@ -21,6 +19,7 @@ import { MobileMoreSheet } from './mobile-more-sheet';
 import { MobileTabBar } from './mobile-tab-bar';
 import { NavCountBadge } from './nav-count-badge';
 import { NotificationBell } from './notification-bell';
+import { WorkspaceGlobalSearch } from './workspace-global-search';
 
 type WorkspaceShellProps = {
   badges?: Record<string, number>;
@@ -73,6 +72,9 @@ export function WorkspaceShell({
   const searchPlaceholder = config.searchPlaceholderKey
     ? t(config.searchPlaceholderKey)
     : undefined;
+  const messagesPath = config.navItems.find((item) =>
+    item.labelKey.endsWith('nav.messages'),
+  )?.path;
 
   const sheetLabels = useMemo(
     () => ({
@@ -80,7 +82,6 @@ export function WorkspaceShell({
       close: t('workspace.more.close'),
       logout: t('workspace.more.logout'),
       modules: t('workspace.more.modules'),
-      support: t('workspace.more.support'),
     }),
     [t],
   );
@@ -145,23 +146,8 @@ export function WorkspaceShell({
               <span className="font-rosmatika font-bold text-lg text-[#2E286C] tracking-tight">Zümra</span>
             </div>
 
-            {searchPlaceholder ? (
-              <div className="relative group hidden md:block w-full max-w-sm lg:w-96">
-                <Search className="w-4 h-4 absolute left-4 top-1/2 -translate-y-1/2 text-[#2E286C]/40 group-focus-within:text-[#533089] transition-colors" />
-                <input
-                  type="text"
-                  placeholder={searchPlaceholder}
-                  className="w-full h-11 bg-white rounded-2xl pl-11 pr-4 outline-none text-sm placeholder:text-[#2E286C]/30 text-[#2E286C] shadow-sm border border-transparent focus:border-[#533089]/20 focus:shadow-md transition-all font-medium"
-                />
-                <div className="absolute right-3 top-1/2 -translate-y-1/2 flex gap-1">
-                  <kbd className="hidden sm:inline-flex items-center justify-center px-2 py-1 text-[10px] font-bold text-[#2E286C]/30 bg-black/5 rounded">
-                    ⌘
-                  </kbd>
-                  <kbd className="hidden sm:inline-flex items-center justify-center px-2 py-1 text-[10px] font-bold text-[#2E286C]/30 bg-black/5 rounded">
-                    K
-                  </kbd>
-                </div>
-              </div>
+            {searchPlaceholder && config.scope === 'admin' ? (
+              <WorkspaceGlobalSearch placeholder={searchPlaceholder} />
             ) : (
               <div className="hidden lg:block">
                 <span className="font-rosmatika text-xl font-medium text-[#2E286C]">
@@ -172,14 +158,14 @@ export function WorkspaceShell({
 
             <div className="flex items-center gap-2 lg:gap-6 ml-auto">
               <LanguageSwitcher variant="workspace" className="hidden sm:inline-flex" />
-              {config.desktopNav === 'wide' && (
-                <button
-                  type="button"
+              {config.desktopNav === 'wide' && messagesPath && (
+                <Link
+                  href={messagesPath as never}
                   aria-label={t('workspace.header.messages')}
                   className="relative w-9 h-9 lg:w-10 lg:h-10 rounded-full bg-white flex items-center justify-center shadow-sm text-[#2E286C]/40 hover:text-[#533089] transition-colors"
                 >
                   <MessageSquare className="w-4 h-4" />
-                </button>
+                </Link>
               )}
               <NotificationBell />
 
@@ -288,9 +274,6 @@ function WorkspaceSidebar({
             fallbackIcon={Settings}
           />
         ))}
-        <button className="flex items-center gap-3 w-full px-4 py-3 rounded-2xl transition-all font-medium text-[14px] text-[#2E286C]/60 hover:bg-black/[0.02]">
-          <HelpCircle className="w-5 h-5 text-[#2E286C]/40" /> {t('workspace.more.support')}
-        </button>
         <LogoutButton className="flex items-center gap-3 w-full px-4 py-3 rounded-2xl transition-all font-medium text-[14px] text-red-500/70 hover:bg-red-50 hover:text-red-600">
           <LogOut className="w-5 h-5 text-red-400" /> {t('workspace.more.logout')}
         </LogoutButton>

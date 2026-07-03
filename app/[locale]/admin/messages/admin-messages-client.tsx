@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { useLocale, useTranslations } from 'next-intl';
 import {
   ArrowLeft,
@@ -57,7 +58,8 @@ export function AdminMessagesClient() {
   const [listTruncated, setListTruncated] = useState(false);
   const [listLoading, setListLoading] = useState(true);
   const [listError, setListError] = useState(false);
-  const [query, setQuery] = useState('');
+  const searchParams = useSearchParams();
+  const [query, setQuery] = useState(() => searchParams.get('q') ?? '');
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [transcript, setTranscript] = useState<Transcript | null>(null);
   const [threadLoading, setThreadLoading] = useState(false);

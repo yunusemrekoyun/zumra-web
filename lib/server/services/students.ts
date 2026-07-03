@@ -4,8 +4,11 @@ import { and, asc, desc, eq, gt, inArray, or } from 'drizzle-orm';
 import type { WorkspacePrincipal } from '@/lib/domain';
 import { database } from '@/lib/server/db/client';
 import {
+  assignments,
+  assignmentSubmissions,
   contacts,
   enrollments,
+  lessonAttendanceRecords,
   lessonSessions,
   programs,
   programBranches,
@@ -16,6 +19,7 @@ import {
   users,
 } from '@/lib/server/db/schema';
 import { AuthorizationDeniedError } from '@/lib/server/http/errors';
+import { getDevelopmentScores } from './student-progress';
 
 type EnrollmentStatus = 'active' | 'cancelled' | 'completed' | 'paused';
 type AdminStudentStatus = 'active' | 'cancelled' | 'graduated' | 'paused';
@@ -140,9 +144,10 @@ async function hydrateStudentRows(
   rows: StudentRow[],
 ): Promise<AdminStudentListItem[]> {
   const studentIds = rows.map((row) => row.studentId);
-  const [nextSessions, invitations] = await Promise.all([
+  const [nextSessions, invitations, progressScores] = await Promise.all([
     loadNextSessions(rows),
     loadLatestInvitations(studentIds),
+    getDevelopmentScores(studentIds),
   ]);
 
   return rows.map((row) => {
@@ -168,12 +173,89 @@ async function hydrateStudentRows(
       nextSessionAt: nextSessions.get(row.enrollmentId)?.toISOString(),
       phone: row.phone ?? undefined,
       programName: row.programName ?? snapshot.label,
-      progress: 0,
+      progress: progressScores.get(row.studentId) ?? 0,
       status: mapEnrollmentStatus(row.enrollmentStatus),
       studentId: row.studentId,
       username: row.username ?? invitation?.username,
     };
   });
+}
+
+export type AdminStudentActivity = {
+  lessons: Array<{
+    id: string;
+    label: string | null;
+    startsAt: string;
+    status: string;
+  }>;
+  submissions: Array<{
+    id: string;
+    title: string;
+    submittedAt: string;
+    score: number | null;
+    maxScore: number;
+    graded: boolean;
+  }>;
+};
+
+export async function getAdminStudentActivity(
+  principal: WorkspacePrincipal,
+  studentId: string,
+): Promise<AdminStudentActivity> {
+  assertAdmin(principal);
+
+  const [lessonRows, submissionRows] = await Promise.all([
+    database
+      .select({
+        id: lessonAttendanceRecords.id,
+        status: lessonAttendanceRecords.status,
+        startsAt: lessonSessions.startsAt,
+        branchName: programBranches.name,
+      })
+      .from(lessonAttendanceRecords)
+      .innerJoin(
+        lessonSessions,
+        eq(lessonSessions.id, lessonAttendanceRecords.lessonSessionId),
+      )
+      .leftJoin(programBranches, eq(programBranches.id, lessonSessions.branchId))
+      .where(eq(lessonAttendanceRecords.studentProfileId, studentId))
+      .orderBy(desc(lessonSessions.startsAt))
+      .limit(8),
+    database
+      .select({
+        id: assignmentSubmissions.id,
+        title: assignments.title,
+        submittedAt: assignmentSubmissions.submittedAt,
+        score: assignmentSubmissions.score,
+        maxScore: assignments.maxScore,
+        status: assignmentSubmissions.status,
+      })
+      .from(assignmentSubmissions)
+      .innerJoin(
+        assignments,
+        eq(assignments.id, assignmentSubmissions.assignmentId),
+      )
+      .where(eq(assignmentSubmissions.studentProfileId, studentId))
+      .orderBy(desc(assignmentSubmissions.submittedAt))
+      .limit(6),
+  ]);
+
+  return {
+    lessons: lessonRows.map((row) => ({
+      id: row.id,
+      label: row.branchName,
+      startsAt: row.startsAt.toISOString(),
+      status: row.status,
+    })),
+    submissions: submissionRows.map((row) => ({
+      id: row.id,
+      title: row.title,
+      submittedAt: row.submittedAt.toISOString(),
+      score: row.score,
+      maxScore: row.maxScore ?? 100,
+      graded: row.status === 'graded' && row.score != null,
+    })),
+  };
 }
 
 async function loadNextSessions(rows: StudentRow[]) {

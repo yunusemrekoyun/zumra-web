@@ -1,6 +1,7 @@
 import {
   CalendarDays,
   ChevronLeft,
+  ClipboardList,
   Mail,
   MessageSquare,
   UserRoundCheck,
@@ -10,14 +11,16 @@ import { notFound } from 'next/navigation';
 import { Link } from '@/i18n/navigation';
 import {
   ActionBar,
-  Button,
   Card,
   InfoField,
   ModulePanel,
   StatusChip,
 } from '@/components/ui';
 import { requireWorkspaceRole } from '@/lib/server/authorization';
-import { getAdminStudentDetail } from '@/lib/server/services/students';
+import {
+  getAdminStudentActivity,
+  getAdminStudentDetail,
+} from '@/lib/server/services/students';
 
 type StudentDetailPageProps = {
   params: Promise<{ locale: string; studentId: string }>;
@@ -28,13 +31,16 @@ export default async function StudentDetailPage({
 }: StudentDetailPageProps) {
   const { locale, studentId } = await params;
   const principal = await requireWorkspaceRole('admin', locale);
-  const [detail, t, studentsT, status, domain] = await Promise.all([
-    getAdminStudentDetail(principal, studentId),
-    getTranslations('admin.studentDetail'),
-    getTranslations('admin.students'),
-    getTranslations('common.status'),
-    getTranslations('domain'),
-  ]);
+  const [detail, activity, t, studentsT, status, attendance, domain] =
+    await Promise.all([
+      getAdminStudentDetail(principal, studentId),
+      getAdminStudentActivity(principal, studentId),
+      getTranslations('admin.studentDetail'),
+      getTranslations('admin.students'),
+      getTranslations('common.status'),
+      getTranslations('common.attendance'),
+      getTranslations('domain'),
+    ]);
 
   if (!detail) {
     notFound();
@@ -71,12 +77,18 @@ export default async function StudentDetailPage({
           </div>
         </div>
         <ActionBar>
-          <Button variant="secondary" size="sm">
+          <a
+            href={`mailto:${detail.email}`}
+            className="inline-flex min-h-9 items-center justify-center gap-2 rounded-2xl border border-black/10 bg-white px-3 text-[11px] font-bold uppercase tracking-wider text-[#2E286C] transition-all hover:bg-black/[0.03]"
+          >
             <Mail className="h-4 w-4" /> {t('email')}
-          </Button>
-          <Button size="sm" className="hover:scale-105">
+          </a>
+          <Link
+            href={`/admin/messages?q=${encodeURIComponent(detail.fullName)}`}
+            className="inline-flex min-h-9 items-center justify-center gap-2 rounded-2xl bg-[#533089] px-3 text-[11px] font-bold uppercase tracking-wider text-white shadow-md shadow-[#533089]/20 transition-all hover:scale-105 hover:bg-[#462878]"
+          >
             <MessageSquare className="h-4 w-4" /> {t('sendMessage')}
-          </Button>
+          </Link>
         </ActionBar>
       </div>
 
@@ -164,19 +176,106 @@ export default async function StudentDetailPage({
           </div>
 
           <ModulePanel className="flex-1 p-5 lg:rounded-[2.5rem] lg:p-8">
-            <div className="mb-8 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <h3 className="text-xl font-bold text-[#2E286C]">
                 {t('courseHistory')}
               </h3>
-              <Button variant="ghost" size="sm">
+              <Link
+                href="/admin/calendar"
+                className="inline-flex min-h-9 items-center justify-center gap-2 rounded-2xl px-3 text-[11px] font-bold uppercase tracking-wider text-[#2E286C]/60 transition-all hover:bg-black/[0.03] hover:text-[#2E286C]"
+              >
                 {t('openCalendar')}
-              </Button>
+              </Link>
             </div>
-            <div className="rounded-3xl border border-dashed border-[#533089]/20 bg-[#533089]/5 p-8 text-center">
-              <p className="text-sm font-medium leading-relaxed text-[#2E286C]/55">
-                {t('liveDataNote')}
-              </p>
-            </div>
+
+            {activity.lessons.length === 0 &&
+            activity.submissions.length === 0 ? (
+              <div className="rounded-3xl border border-dashed border-[#533089]/20 bg-[#533089]/5 p-8 text-center">
+                <p className="text-sm font-medium leading-relaxed text-[#2E286C]/55">
+                  {t('noActivity')}
+                </p>
+              </div>
+            ) : (
+              <div className="grid gap-6 xl:grid-cols-2">
+                <div>
+                  <div className="mb-3 text-xs font-bold uppercase tracking-widest text-[#2E286C]/50">
+                    {t('recentLessons')}
+                  </div>
+                  {activity.lessons.length ? (
+                    <div className="space-y-2">
+                      {activity.lessons.map((lesson) => (
+                        <div
+                          key={lesson.id}
+                          className="flex items-center gap-3 rounded-2xl bg-[#F8F9FC] p-3"
+                        >
+                          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-white text-[#533089] shadow-sm">
+                            <CalendarDays className="h-4 w-4" />
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <div className="truncate text-sm font-bold text-[#2E286C]">
+                              {lesson.label ?? t('privateLesson')}
+                            </div>
+                            <div className="text-xs font-medium text-[#2E286C]/45">
+                              {formatDateTime(lesson.startsAt, dateLocale)}
+                            </div>
+                          </div>
+                          <StatusChip
+                            tone={attendanceTone(lesson.status)}
+                            className="shrink-0"
+                          >
+                            {attendanceLabel(lesson.status, attendance)}
+                          </StatusChip>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="text-sm font-medium text-[#2E286C]/45">
+                      {t('noLessons')}
+                    </p>
+                  )}
+                </div>
+
+                <div>
+                  <div className="mb-3 text-xs font-bold uppercase tracking-widest text-[#2E286C]/50">
+                    {t('recentSubmissions')}
+                  </div>
+                  {activity.submissions.length ? (
+                    <div className="space-y-2">
+                      {activity.submissions.map((submission) => (
+                        <div
+                          key={submission.id}
+                          className="flex items-center gap-3 rounded-2xl bg-[#F8F9FC] p-3"
+                        >
+                          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-white text-[#533089] shadow-sm">
+                            <ClipboardList className="h-4 w-4" />
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <div className="truncate text-sm font-bold text-[#2E286C]">
+                              {submission.title}
+                            </div>
+                            <div className="text-xs font-medium text-[#2E286C]/45">
+                              {formatDateTime(submission.submittedAt, dateLocale)}
+                            </div>
+                          </div>
+                          <StatusChip
+                            tone={submission.graded ? 'emerald' : 'amber'}
+                            className="shrink-0"
+                          >
+                            {submission.graded
+                              ? `${submission.score}/${submission.maxScore}`
+                              : t('awaitingGrade')}
+                          </StatusChip>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="text-sm font-medium text-[#2E286C]/45">
+                      {t('noSubmissions')}
+                    </p>
+                  )}
+                </div>
+              </div>
+            )}
           </ModulePanel>
         </div>
       </div>
@@ -227,6 +326,23 @@ function formatDateTime(value: string | undefined, locale: string) {
     minute: '2-digit',
     month: 'long',
   }).format(new Date(value));
+}
+
+function attendanceTone(status: string) {
+  if (status === 'present') return 'emerald' as const;
+  if (status === 'late') return 'amber' as const;
+  if (status === 'absent') return 'red' as const;
+  return 'gray' as const;
+}
+
+function attendanceLabel(
+  status: string,
+  attendance: Awaited<ReturnType<typeof getTranslations>>,
+) {
+  if (['present', 'late', 'absent', 'excused'].includes(status)) {
+    return attendance(status);
+  }
+  return '—';
 }
 
 function getInitials(name: string) {

@@ -59,6 +59,9 @@ const runtimeEnvSchema = z.object({
   MEDIA_JOB_ROOT: z.string().min(1).default('.data/media-jobs'),
   WORKER_CONCURRENCY: z.coerce.number().int().min(1).max(4).default(1),
   RELEASE_ID: z.string().min(1).default('development'),
+  // Gates the destructive admin "SIFIRLA" data-reset card + API. Keep unset
+  // (false) anywhere real data lives; enable only in local development.
+  DEV_RESET_ENABLED: booleanString.default(false),
 });
 
 const authEnvSchema = z

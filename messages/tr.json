@@ -198,6 +198,15 @@
     "header": {
       "messages": "Mesajlar",
       "notifications": "Bildirimler"
+    },
+    "search": {
+      "loading": "Aranıyor...",
+      "noResults": "Sonuç bulunamadı.",
+      "types": {
+        "student": "Öğrenci",
+        "instructor": "Öğretmen",
+        "candidate": "Aday"
+      }
     }
   },
   "public": {
@@ -656,7 +665,7 @@
           "label": "Test (Mailpit)",
           "hint": "Mail gönderilmez; Mailpit kutusunda toplanır. Doğrulama kodlarını ve davetleri oradan okursunuz."
         },
-        "note": "Test modunda mailler Mailpit'e düşer; sunucuda korumalı Mailpit arayüzünden, yerelde http://localhost:8025 adresinden okuyabilirsiniz.",
+        "note": "Test modunda mailler gerçek alıcılara gönderilmez; Mailpit gelen kutusunda toplanır (canlı sunucuda /mail/ adresi).",
         "success": "Mail modu güncellendi.",
         "error": "Mail modu güncellenemedi. Tekrar deneyin."
       },
@@ -996,13 +1005,14 @@
       "progress": "İlerleme",
       "toAssign": "Atanacak",
       "emptyTitle": "Henüz öğrenci yok",
-      "emptyDescription": "Aday kaydı tamamlanıp öğrenciye dönüştüğünde burada görünecek."
+      "emptyDescription": "Aday kaydı tamamlanıp öğrenciye dönüştüğünde burada görünecek.",
+      "noMatches": "Aramanızla eşleşen öğrenci bulunamadı."
     },
     "studentDetail": {
       "studentId": "Öğrenci ID",
       "backToStudents": "Öğrenci listesine dön",
       "email": "E-posta",
-      "sendMessage": "Mesaj Gönder",
+      "sendMessage": "Yazışmaları Gör",
       "activeStudent": "Aktif Öğrenci",
       "registeredProgram": "Kayıtlı Program",
       "currentLevel": "Güncel Seviye",
@@ -1018,7 +1028,6 @@
       "contact": "İletişim",
       "nextLesson": "Sonraki ders",
       "openCalendar": "Takvimi aç",
-      "liveDataNote": "Bu bölüm artık gerçek öğrenci kaydına bağlı. Ders notları, ödevler ve gelişim metrikleri ders takip modülü tamamlandığında burada canlı akışa dönüşecek.",
       "completedLessons": "Tamamlanan Ders",
       "attendance": "%100 Devamlılık",
       "developmentScore": "Gelişim Puanı",
@@ -1037,7 +1046,14 @@
       "lesson12Note": "Öğrenci günlük konuşma pratiklerinde oldukça başarılıydı. Özellikle kelime çeşitliliği konusunda ilerleme var. Sadece past tense kullanımlarında küçük hatalar yapılıyor, üzerine gidilecek.",
       "lesson11Title": "Ders 11: Grammar Focus - Perfect Tenses",
       "lesson11Date": "15 Mart, 14:00",
-      "lesson11Note": "Gramer yapısını anladı ancak konuşmaya dökmekte biraz zorlandı. Ekstra okuma parçası gönderildi."
+      "lesson11Note": "Gramer yapısını anladı ancak konuşmaya dökmekte biraz zorlandı. Ekstra okuma parçası gönderildi.",
+      "recentLessons": "Son Dersler",
+      "recentSubmissions": "Son Ödev Teslimleri",
+      "noLessons": "Henüz yoklama kaydı yok.",
+      "noSubmissions": "Henüz ödev teslimi yok.",
+      "noActivity": "Bu öğrenci için henüz ders veya ödev kaydı oluşmadı.",
+      "privateLesson": "Özel Ders",
+      "awaitingGrade": "Notlandırılacak"
     },
     "leads": {
       "title": "Adaylar",

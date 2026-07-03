@@ -1,5 +1,6 @@
 import { useTranslations } from 'next-intl';
 import { PageHeader } from '@/components/ui';
+import { getRuntimeEnv } from '@/lib/server/env';
 import { withWorkspacePage } from '@/lib/server/workspace-page';
 import { BackgroundJobsCard } from './background-jobs-card';
 import { DevResetCard } from './dev-reset-card';
@@ -8,6 +9,7 @@ import { RuntimeSettingsCard } from './runtime-settings-card';
 
 function SettingsPage() {
   const t = useTranslations('admin.settings');
+  const devResetEnabled = getRuntimeEnv().DEV_RESET_ENABLED;
 
   return (
     <div className="admin-page">
@@ -19,7 +21,7 @@ function SettingsPage() {
         <RuntimeSettingsCard />
         <MailModeCard />
         <BackgroundJobsCard />
-        <DevResetCard enabled />
+        {devResetEnabled && <DevResetCard enabled />}
       </div>
     </div>
   );

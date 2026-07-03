@@ -3,7 +3,6 @@
 import React, { useCallback, useEffect, useRef } from 'react';
 import type { LucideIcon } from 'lucide-react';
 import {
-  HelpCircle,
   LogOut,
   ChevronRight,
   X,
@@ -37,7 +36,6 @@ type MobileMoreSheetProps = {
     close: string;
     logout: string;
     modules: string;
-    support: string;
   };
   warmRoute: (targetPath: string) => void;
 };
@@ -56,7 +54,6 @@ export function MobileMoreSheet({
     close: 'Close menu',
     logout: 'Log Out',
     modules: 'Modules',
-    support: 'Support',
   },
   warmRoute,
 }: MobileMoreSheetProps) {
@@ -198,16 +195,6 @@ export function MobileMoreSheet({
             </p>
             <div className="space-y-0.5">
               {accountItems.map(renderItem)}
-
-              {/* Support — not a Link, just a button */}
-              <button
-                type="button"
-                className="flex w-full items-center gap-4 px-5 py-3.5 rounded-2xl text-[#2E286C] transition-colors duration-200 active:bg-black/[0.04] hover:bg-black/[0.02]"
-              >
-                <HelpCircle className="w-5 h-5 text-[#2E286C]/40 shrink-0" />
-                <span className="flex-1 text-left text-[15px] font-medium">{labels.support}</span>
-                <ChevronRight className="w-4 h-4 text-[#2E286C]/20 shrink-0" />
-              </button>
 
               {/* Logout */}
               <LogoutButton
