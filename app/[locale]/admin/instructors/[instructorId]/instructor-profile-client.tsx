@@ -23,6 +23,7 @@ import {
   StatusChip,
 } from '@/components/ui';
 import { Link, useRouter } from '@/i18n/navigation';
+import { waitForMediaReady } from '@/lib/media-upload-client';
 import type { InstructorProfileView } from '@/lib/server/services/instructors';
 import {
   editorPayload,
@@ -635,7 +636,7 @@ async function uploadMedia(
     body: file,
     credentials: 'same-origin',
     headers: {
-      'x-file-name': file.name,
+      'x-file-name': encodeURIComponent(file.name),
       'x-media-kind': kind,
       'x-media-visibility': 'private',
     },
@@ -643,6 +644,8 @@ async function uploadMedia(
   });
   const body = await response.json().catch(() => ({}));
   if (!response.ok || !body.id) throw new Error('upload_failed');
+  // Images finish as 'processing'; the photo/document endpoints need 'ready'.
+  await waitForMediaReady(body.id, kind);
   return body.id;
 }
 

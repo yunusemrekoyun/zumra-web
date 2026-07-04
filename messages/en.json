@@ -419,7 +419,11 @@
       "successText": "Our advisor will contact you shortly.",
       "errorText": "Could not send. Please try again.",
       "whatsappAlt": "Message on WhatsApp",
-      "close": "Close"
+      "close": "Close",
+      "errors": {
+        "invalidPhone": "The phone number looks invalid. Please check it.",
+        "rateLimited": "Too many attempts. Please try again later."
+      }
     },
     "instructors": {
       "title": "An inspiring team of strong women educators.",
@@ -634,7 +638,8 @@
       },
       "joinOpensAt": "Opens at {time}",
       "endLesson": "End lesson",
-      "endLessonConfirm": "Are you sure you want to end this lesson? The join link will close."
+      "endLessonConfirm": "Are you sure you want to end this lesson? The join link will close.",
+      "endLessonError": "Could not end the lesson. Try again."
     },
     "settings": {
       "title": "Settings",
@@ -893,7 +898,12 @@
       },
       "branchTeacherHint": "Only teachers holding a competency for the program's language covering all of its levels can be assigned. Competencies are managed on the Teachers page.",
       "branchTeacherIncompatible": "competency mismatch",
-      "branchTeacherNoneCompatible": "No teacher has a competency matching this program. Add the language/levels on the Teachers page; you can save the branch without a teacher for now."
+      "branchTeacherNoneCompatible": "No teacher has a competency matching this program. Add the language/levels on the Teachers page; you can save the branch without a teacher for now.",
+      "rateLanguageHint": "Rates can only be set for teachers with a competency in the selected language.",
+      "rateErrors": {
+        "languageMismatch": "The selected teacher has no active competency for this language. Add it on the Teachers page.",
+        "invalidRate": "The rate is invalid. Check the hourly amount."
+      }
     },
     "instructors": {
       "title": "Instructors",
@@ -1153,6 +1163,16 @@
         "offer_pending": "Offer pending",
         "enrolled": "Enrolled",
         "lost": "Lost"
+      },
+      "updateError": "Update could not be completed. Try again.",
+      "noteError": "The note could not be added. Try again.",
+      "goals": {
+        "daily_life": "Daily life",
+        "career": "Work / career",
+        "academic": "Academic",
+        "exam": "Exam",
+        "travel": "Travel",
+        "other": "Other"
       }
     },
     "enrollment": {
@@ -1431,7 +1451,8 @@
         "contract_party": "contract party",
         "guardian": "guardian"
       },
-      "reviewSummary": "{parties} contract parties and {documents} documents will be linked to the enrollment."
+      "reviewSummary": "{parties} contract parties and {documents} documents will be linked to the enrollment.",
+      "documentProcessing": "The document is still processing, try again in a few seconds."
     },
     "empty": {
       "calendar": {
@@ -1614,7 +1635,9 @@
         "error": "Could not save your submission. Try again.",
         "saving": "Saving...",
         "update": "Update submission",
-        "submit": "Submit"
+        "submit": "Submit",
+        "attachmentProcessing": "The file is still processing, try again in a few seconds.",
+        "locked": "Submission is closed because the assignment has been graded."
       }
     },
     "dashboard": {
@@ -1897,7 +1920,9 @@
         "error": "Could not save",
         "shareInChat": "Share in chat",
         "shared": "Shared",
-        "awaitingSubmission": "Not submitted yet."
+        "awaitingSubmission": "Not submitted yet.",
+        "scoreRange": "Score must be a whole number between 0 and {max}.",
+        "shareError": "Could not share in chat. Try again."
       }
     },
     "dashboard": {
@@ -2012,7 +2037,8 @@
       "takeAttendance": "Take attendance",
       "joinOpensAt": "Opens at {time}",
       "endLesson": "End lesson",
-      "endLessonConfirm": "Are you sure you want to end this lesson? The join link will close."
+      "endLessonConfirm": "Are you sure you want to end this lesson? The join link will close.",
+      "endLessonError": "Could not end the lesson. Try again."
     },
     "attendance": {
       "title": "Attendance",
@@ -2120,7 +2146,10 @@
       "description": "Enter the six-digit code sent to your email. This device will remain trusted for 30 days.",
       "code": "Verification code",
       "submit": "Verify device",
-      "error": "The code is invalid or has expired."
+      "error": "The code is invalid or has expired.",
+      "rateLimited": "Too many attempts. Please try again in a few minutes.",
+      "sessionExpired": "Your session expired. Please sign in again.",
+      "restart": "Verification could not start. Restart sign-in on this device."
     },
     "mfa": {
       "title": "Two-step verification",

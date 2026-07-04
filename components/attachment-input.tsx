@@ -17,7 +17,7 @@ async function uploadMedia(file: File): Promise<string> {
     body: file,
     credentials: 'same-origin',
     headers: {
-      'x-file-name': file.name,
+      'x-file-name': encodeURIComponent(file.name),
       'x-media-kind': mediaKind(file),
       'x-media-visibility': 'private',
     },

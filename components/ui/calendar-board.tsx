@@ -50,6 +50,7 @@ type CalendarBoardLabels = {
   joinOpensAt?: (time: string) => string;
   endLesson?: string;
   endLessonConfirm?: string;
+  endLessonError?: string;
 };
 
 type CalendarBoardProps = {
@@ -584,6 +585,7 @@ function CalendarEventActions({
       {showEndLesson && labels.endLesson ? (
         <EndLessonButton
           confirmText={labels.endLessonConfirm ?? labels.endLesson}
+          errorText={labels.endLessonError ?? labels.endLesson}
           label={labels.endLesson}
           lessonSessionId={event.id}
         />

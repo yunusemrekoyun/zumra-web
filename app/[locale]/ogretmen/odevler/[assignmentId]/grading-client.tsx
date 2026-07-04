@@ -13,8 +13,10 @@ type Row = AssignmentForGrading['roster'][number] & {
   busy: boolean;
   saved: boolean;
   failed: boolean;
+  errorMsg?: string;
   sharing: boolean;
   sharedOk: boolean;
+  sharedFailed: boolean;
 };
 
 export function GradingClient({
@@ -37,6 +39,7 @@ export function GradingClient({
       failed: false,
       sharing: false,
       sharedOk: false,
+      sharedFailed: false,
     })),
   );
 
@@ -49,13 +52,23 @@ export function GradingClient({
   async function grade(index: number) {
     const row = rows[index];
     if (!row.submission) return;
-    patch(index, { busy: true, saved: false, failed: false });
+    // Validate before sending: score must be a whole number within [0, max].
+    const score = Number(row.scoreInput);
+    const max = assignment.maxScore ?? 100;
+    if (!Number.isInteger(score) || score < 0 || score > max) {
+      patch(index, {
+        failed: true,
+        errorMsg: t('grading.scoreRange', { max }),
+      });
+      return;
+    }
+    patch(index, { busy: true, saved: false, failed: false, errorMsg: undefined });
     try {
       const response = await fetch(
         `/api/submissions/${row.submission.id}/grade`,
         {
           body: JSON.stringify({
-            score: Number(row.scoreInput),
+            score,
             feedback: row.feedbackInput.trim() || undefined,
           }),
           credentials: 'same-origin',
@@ -63,25 +76,34 @@ export function GradingClient({
           method: 'POST',
         },
       );
-      if (!response.ok) throw new Error('grade_failed');
+      const body = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(String(body.error ?? 'grade_failed'));
       patch(index, {
         busy: false,
         saved: true,
         submission: {
           ...row.submission,
           status: 'graded',
-          score: Number(row.scoreInput),
+          score,
           feedback: row.feedbackInput.trim() || undefined,
         },
       });
       router.refresh();
-    } catch {
-      patch(index, { busy: false, failed: true });
+    } catch (error) {
+      const code = error instanceof Error ? error.message : '';
+      patch(index, {
+        busy: false,
+        failed: true,
+        errorMsg:
+          code === 'grade_score_invalid'
+            ? t('grading.scoreRange', { max })
+            : undefined,
+      });
     }
   }
 
   async function share(index: number) {
-    patch(index, { sharing: true });
+    patch(index, { sharing: true, sharedFailed: false });
     try {
       const response = await fetch(`/api/assignments/${assignment.id}/share`, {
         body: JSON.stringify({ studentProfileId: rows[index].studentProfileId }),
@@ -92,7 +114,7 @@ export function GradingClient({
       if (!response.ok) throw new Error('share_failed');
       patch(index, { sharing: false, sharedOk: true });
     } catch {
-      patch(index, { sharing: false });
+      patch(index, { sharing: false, sharedFailed: true });
     }
   }
 
@@ -164,6 +186,11 @@ export function GradingClient({
               <MessageSquare className="h-3.5 w-3.5" />
               {row.sharedOk ? t('grading.shared') : t('grading.shareInChat')}
             </button>
+            {row.sharedFailed && (
+              <span className="ml-2 text-xs font-semibold text-[#B42318]">
+                {t('grading.shareError')}
+              </span>
+            )}
 
             {row.submission ? (
               <div className="mt-4 space-y-4">
@@ -245,7 +272,7 @@ export function GradingClient({
                   )}
                   {row.failed && (
                     <span className="text-xs font-semibold text-[#B42318]">
-                      {t('grading.error')}
+                      {row.errorMsg ?? t('grading.error')}
                     </span>
                   )}
                 </div>

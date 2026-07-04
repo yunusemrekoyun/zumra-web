@@ -145,6 +145,12 @@ export function ProgramsClient({
   const compatibleTeacherExists = initial.instructors.some((instructor) =>
     isInstructorCompatible(instructor, branchProgram),
   );
+  const rateInstructor = initial.instructors.find(
+    (instructor) => instructor.id === instructorProfileId,
+  );
+  const rateLanguageSupported = (language: string) =>
+    !rateInstructor ||
+    rateInstructor.competencies.some((c) => c.language === language);
   const [scheduleDraft, setScheduleDraft] = useState<ScheduleDraft>(
     emptyScheduleDraft(),
   );
@@ -339,7 +345,9 @@ export function ProgramsClient({
         method: 'POST',
       });
       const body = await response.json().catch(() => ({}));
-      if (!response.ok || !body.id) throw new Error('save_failed');
+      if (!response.ok || !body.id) {
+        throw new Error(String(body.error ?? 'save_failed'));
+      }
       const instructor = initial.instructors.find(
         (item) => item.id === instructorProfileId,
       );
@@ -363,8 +371,15 @@ export function ProgramsClient({
       ]);
       setHourlyPriceCents(0);
       setMessage(t('rateSaved'));
-    } catch {
-      setMessage(t('saveError'));
+    } catch (error) {
+      const code = error instanceof Error ? error.message : '';
+      if (code === 'instructor_language_not_supported') {
+        setMessage(t('rateErrors.languageMismatch'));
+      } else if (code === 'invalid_private_lesson_rate') {
+        setMessage(t('rateErrors.invalidRate'));
+      } else {
+        setMessage(t('saveError'));
+      }
     } finally {
       setBusy(false);
     }
@@ -1499,7 +1514,20 @@ export function ProgramsClient({
                 <FormField label={t('fields.teacher')}>
                   <Select
                     value={instructorProfileId}
-                    onChange={setInstructorProfileId}
+                    onChange={(nextId) => {
+                      setInstructorProfileId(nextId);
+                      // Keep the language selection valid for the new teacher.
+                      const next = initial.instructors.find(
+                        (i) => i.id === nextId,
+                      );
+                      if (
+                        next &&
+                        !next.competencies.some((c) => c.language === rateLanguage)
+                      ) {
+                        const firstLang = next.competencies[0]?.language;
+                        if (firstLang) setRateLanguage(firstLang as ProgramLanguage);
+                      }
+                    }}
                     options={initial.instructors.map((instructor) => [
                       instructor.id,
                       instructor.name,
@@ -1512,11 +1540,20 @@ export function ProgramsClient({
                     onChange={(value) =>
                       setRateLanguage(value as ProgramLanguage)
                     }
-                    options={languages.map((language) => [
-                      language,
-                      t(`languages.${language}`),
-                    ])}
+                    options={languages.map((language) => {
+                      const supported = rateLanguageSupported(language);
+                      return [
+                        language,
+                        supported
+                          ? t(`languages.${language}`)
+                          : `${t(`languages.${language}`)} — ${t('branchTeacherIncompatible')}`,
+                        !supported,
+                      ] as const;
+                    })}
                   />
+                  <p className="mt-2 text-xs font-medium leading-5 text-[#2E286C]/45">
+                    {t('rateLanguageHint')}
+                  </p>
                 </FormField>
                 <FormField label={t('fields.hourlyStudentPrice')}>
                   <MoneyInput

@@ -28,6 +28,9 @@ export default async function DeviceVerificationPage({
         labels={{
           code: t('code'),
           error: t('error'),
+          rateLimited: t('rateLimited'),
+          sessionExpired: t('sessionExpired'),
+          restart: t('restart'),
           submit: t('submit'),
         }}
       />

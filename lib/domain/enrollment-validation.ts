@@ -1,5 +1,5 @@
 import { isValidIdentityDocument } from './identity';
-import { phoneNumberIsValid } from './phone';
+import { normalizePhoneNumber, phoneNumberIsValid } from './phone';
 
 export type EnrollmentFieldErrors = Record<string, string>;
 
@@ -143,7 +143,8 @@ export function validateEnrollmentStep(
   }
 
   if (step === 2) {
-    if (!phoneNumberIsValid(draft.primaryPhone)) {
+    // Accept national format (05xx…) — the server normalizes to E.164 on save.
+    if (!phoneNumberIsValid(normalizePhoneNumber(draft.primaryPhone))) {
       errors.primaryPhone = messages.phone;
     }
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(draft.email.trim())) {

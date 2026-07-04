@@ -45,6 +45,12 @@ import {
 } from '@/lib/server/services/programs';
 import { notificationService } from './notifications';
 
+// Legacy contacts may hold national-format phones; normalize on read so the
+// enrollment wizard prefills a value that passes its own E.164 validation.
+function prefillPhone(value: string | null | undefined) {
+  return value ? normalizePhoneNumber(value) : '';
+}
+
 type IdentityDocumentType = 'national_id' | 'passport';
 type GenderIdentity =
   | 'female'
@@ -307,7 +313,11 @@ export async function beginEnrollmentDraft(
         email: candidate.email,
         firstName: candidate.firstName,
         lastName: candidate.lastName,
-        primaryPhone: candidate.phone,
+        // Normalize legacy national-format contact phones to E.164 so step 2
+        // opens with a value that passes the wizard's own validation.
+        primaryPhone: candidate.phone
+          ? normalizePhoneNumber(candidate.phone)
+          : candidate.phone,
       })
       .returning({ id: enrollmentDrafts.id });
 
@@ -498,7 +508,7 @@ export async function getEnrollmentDraftForAdmin(
       lastSavedAt: row.lastSavedAt.toISOString(),
       listPriceCents: row.listPriceCents ?? undefined,
       paymentMethod: row.paymentMethod ?? undefined,
-      primaryPhone: row.draftPrimaryPhone ?? row.phone ?? '',
+      primaryPhone: prefillPhone(row.draftPrimaryPhone ?? row.phone),
       privateLessonHours: row.privateLessonHours ?? undefined,
       privateLessonLanguage:
         (row.privateLessonLanguage as ProgramLanguage | null) ?? undefined,

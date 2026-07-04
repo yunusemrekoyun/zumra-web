@@ -49,11 +49,21 @@ export function SubmissionClient({
         headers: { 'content-type': 'application/json' },
         method: 'POST',
       });
-      if (!response.ok) throw new Error('submit_failed');
+      const responseBody = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        throw new Error(String(responseBody.error ?? 'submit_failed'));
+      }
       setMessage({ type: 'success', text: t('submit.saved') });
       router.refresh();
-    } catch {
-      setMessage({ type: 'error', text: t('submit.error') });
+    } catch (error) {
+      const code = error instanceof Error ? error.message : '';
+      const text =
+        code === 'attachment_not_ready'
+          ? t('submit.attachmentProcessing')
+          : code === 'submission_locked'
+            ? t('submit.locked')
+            : t('submit.error');
+      setMessage({ type: 'error', text });
     } finally {
       setBusy(false);
     }

@@ -48,7 +48,18 @@ export async function POST(request: NextRequest) {
   }
 
   try {
-    const input = leadSchema.parse(await request.json());
+    const parsed = leadSchema.safeParse(await request.json().catch(() => null));
+    if (!parsed.success) {
+      // A malformed public submission is a client problem, not a server error
+      // — return a mapped 400 (e.g. too-short phone) instead of a 500.
+      const isPhone = parsed.error.issues.some((i) => i.path[0] === 'phone');
+      return apiResponse(
+        { error: isPhone ? 'invalid_phone' : 'invalid_request' },
+        400,
+        id,
+      );
+    }
+    const input = parsed.data;
 
     if (Date.now() - input.formStartedAt < 800) {
       throw new PublicFlowError('invalid_request');

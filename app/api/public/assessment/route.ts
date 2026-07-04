@@ -76,7 +76,16 @@ export async function POST(request: NextRequest) {
   }
 
   try {
-    const input = startSchema.parse(await request.json());
+    const parsed = startSchema.safeParse(await request.json().catch(() => null));
+    if (!parsed.success) {
+      const isPhone = parsed.error.issues.some((i) => i.path[0] === 'phone');
+      return apiResponse(
+        { error: isPhone ? 'invalid_phone' : 'invalid_request' },
+        400,
+        id,
+      );
+    }
+    const input = parsed.data;
 
     if (Date.now() - input.formStartedAt < 800) {
       throw new PublicFlowError('invalid_request');

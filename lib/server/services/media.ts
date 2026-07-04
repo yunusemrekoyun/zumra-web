@@ -219,6 +219,25 @@ export async function receiveMediaUpload(input: {
   }
 }
 
+// Lightweight status probe for the client to poll after upload — image/video
+// assets are 'processing' until the media worker finishes, and the attach
+// endpoints require 'ready'. Only the owner (or admin) may read it.
+export async function getOwnedAssetStatus(
+  mediaId: string,
+  principal: WorkspacePrincipal,
+): Promise<{ status: string } | null> {
+  const [asset] = await database
+    .select({ status: mediaAssets.status, ownerUserId: mediaAssets.ownerUserId })
+    .from(mediaAssets)
+    .where(eq(mediaAssets.id, mediaId))
+    .limit(1);
+  if (!asset) return null;
+  if (asset.ownerUserId !== principal.id && principal.role !== 'admin') {
+    return null;
+  }
+  return { status: asset.status };
+}
+
 export async function getReadyAsset(
   mediaId: string,
   principal: WorkspacePrincipal | null,

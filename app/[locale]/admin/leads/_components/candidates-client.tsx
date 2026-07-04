@@ -202,20 +202,27 @@ function CandidateProfile({
   const [enrollmentError, setEnrollmentError] = useState(false);
   const [noteBody, setNoteBody] = useState('');
   const [savingNote, setSavingNote] = useState(false);
+  const [actionError, setActionError] = useState('');
 
   async function patchCandidate(payload: {
     advisorId?: string | null;
     stage?: string;
   }) {
+    setActionError('');
     try {
-      await fetch(`/api/admin/candidates/${candidate.id}`, {
+      const response = await fetch(`/api/admin/candidates/${candidate.id}`, {
         body: JSON.stringify(payload),
         credentials: 'same-origin',
         headers: { 'content-type': 'application/json' },
         method: 'PATCH',
       });
-    } finally {
+      if (!response.ok) {
+        setActionError(t('updateError'));
+        return;
+      }
       router.refresh();
+    } catch {
+      setActionError(t('updateError'));
     }
   }
 
@@ -223,6 +230,7 @@ function CandidateProfile({
     const body = noteBody.trim();
     if (!body || savingNote) return;
     setSavingNote(true);
+    setActionError('');
     try {
       const response = await fetch(
         `/api/admin/candidates/${candidate.id}/notes`,
@@ -236,6 +244,8 @@ function CandidateProfile({
       if (!response.ok) throw new Error('note_failed');
       setNoteBody('');
       router.refresh();
+    } catch {
+      setActionError(t('noteError'));
     } finally {
       setSavingNote(false);
     }
@@ -390,7 +400,7 @@ function CandidateProfile({
             <InfoField label={t('locale')} value={(candidate.locale ?? '-').toUpperCase()} />
             <InfoField
               label={t('learningGoal')}
-              value={candidate.learningGoal ?? '-'}
+              value={learningGoalLabel(candidate.learningGoal, t)}
             />
             <InfoField
               label={t('preferredContact')}
@@ -557,8 +567,14 @@ function CandidateProfile({
               value={noteBody}
               onChange={(event) => setNoteBody(event.target.value)}
               placeholder={t('notePlaceholder')}
+              maxLength={2000}
               className="min-h-20 w-full resize-y rounded-2xl border border-black/[0.06] bg-[#F8F7FB] px-4 py-3 text-sm text-[#2E286C] outline-none focus:border-[#533089]/30"
             />
+            {actionError && (
+              <p className="text-xs font-semibold text-[#B42318]">
+                {actionError}
+              </p>
+            )}
             <Button
               size="sm"
               onClick={submitNote}
@@ -693,6 +709,22 @@ function lessonModelLabel(
   const supported = ['one_to_one', 'group', 'undecided'];
   if (!model) return '-';
   return supported.includes(model) ? t(`lessonModels.${model}`) : model;
+}
+
+function learningGoalLabel(
+  goal: string | undefined | null,
+  t: ReturnType<typeof useTranslations>,
+) {
+  const supported = [
+    'daily_life',
+    'career',
+    'academic',
+    'exam',
+    'travel',
+    'other',
+  ];
+  if (!goal) return '-';
+  return supported.includes(goal) ? t(`goals.${goal}`) : goal;
 }
 
 function consentTypeLabel(

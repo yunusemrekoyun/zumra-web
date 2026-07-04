@@ -10,6 +10,9 @@ type DeviceVerificationFormProps = {
   labels: {
     code: string;
     error: string;
+    rateLimited: string;
+    sessionExpired: string;
+    restart: string;
     submit: string;
   };
 };
@@ -35,7 +38,18 @@ export function DeviceVerificationForm({
     });
 
     if (!response.ok) {
-      setError(labels.error);
+      const body = (await response.json().catch(() => ({}))) as {
+        error?: string;
+      };
+      if (response.status === 429 || body.error === 'rate_limited') {
+        setError(labels.rateLimited);
+      } else if (response.status === 401 || body.error === 'unauthorized') {
+        setError(labels.sessionExpired);
+      } else if (body.error === 'invalid_request') {
+        setError(labels.restart);
+      } else {
+        setError(labels.error);
+      }
       setPending(false);
       return;
     }

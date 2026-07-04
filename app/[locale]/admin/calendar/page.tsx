@@ -71,6 +71,7 @@ export default async function AdminCalendarPage({
           joinOpensAt: (time) => t('joinOpensAt', { time }),
           endLesson: t('endLesson'),
           endLessonConfirm: t('endLessonConfirm'),
+          endLessonError: t('endLessonError'),
         }}
       />
     </div>

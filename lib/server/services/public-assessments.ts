@@ -28,6 +28,7 @@ import {
   programs,
   type LocalizedText,
 } from '@/lib/server/db/schema';
+import { normalizePhoneNumber, phoneNumberIsValid } from '@/lib/domain/phone';
 import { PublicFlowError } from '@/lib/server/http/errors';
 import { createOpaqueToken, hashToken } from '@/lib/server/security/tokens';
 import { notifyLeadReceived } from './notify-events';
@@ -129,14 +130,13 @@ function normalizeEmail(value: string) {
 }
 
 function normalizePhone(value: string) {
-  const trimmed = value.trim();
-  const digits = trimmed.replace(/\D/g, '');
-
-  if (digits.length < 7 || digits.length > 15) {
+  // Store E.164 (default region TR) so contacts stay valid when the enrollment
+  // wizard and admin edits later re-validate the same number.
+  const normalized = normalizePhoneNumber(value, 'TR');
+  if (!phoneNumberIsValid(normalized)) {
     throw new PublicFlowError('invalid_phone');
   }
-
-  return `${trimmed.startsWith('+') ? '+' : ''}${digits}`;
+  return normalized;
 }
 
 function localized(value: LocalizedText, locale: PublicAssessmentLocale) {

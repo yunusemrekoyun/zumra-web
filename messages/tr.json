@@ -419,7 +419,11 @@
       "successText": "Danışmanımız en kısa sürede sizinle iletişime geçecek.",
       "errorText": "Gönderilemedi. Lütfen tekrar deneyin.",
       "whatsappAlt": "WhatsApp'tan yaz",
-      "close": "Kapat"
+      "close": "Kapat",
+      "errors": {
+        "invalidPhone": "Telefon numarası geçersiz görünüyor. Lütfen kontrol edin.",
+        "rateLimited": "Çok fazla deneme yapıldı. Lütfen daha sonra tekrar deneyin."
+      }
     },
     "instructors": {
       "title": "İlham veren, güçlü kadınlardan oluşan eğitim kadrosu.",
@@ -634,7 +638,8 @@
       },
       "joinOpensAt": "{time}'de açılır",
       "endLesson": "Dersi sonlandır",
-      "endLessonConfirm": "Dersi sonlandırmak istediğinize emin misiniz? Katılım linki kapanacak."
+      "endLessonConfirm": "Dersi sonlandırmak istediğinize emin misiniz? Katılım linki kapanacak.",
+      "endLessonError": "Ders kapatılamadı. Tekrar deneyin."
     },
     "settings": {
       "title": "Ayarlar",
@@ -893,7 +898,12 @@
       },
       "branchTeacherHint": "Yalnızca programın dilinde ve programın tüm seviyelerini kapsayan yetkinliğe sahip eğitmenler atanabilir. Yetkinlikler Eğitmenler sayfasından düzenlenir.",
       "branchTeacherIncompatible": "yetkinlik uyumsuz",
-      "branchTeacherNoneCompatible": "Bu programla uyumlu yetkinliğe sahip eğitmen yok. Eğitmenler sayfasından ilgili hocaya bu dilin ve seviyelerin yetkinliğini ekleyin; şubeyi şimdilik eğitmensiz kaydedebilirsiniz."
+      "branchTeacherNoneCompatible": "Bu programla uyumlu yetkinliğe sahip eğitmen yok. Eğitmenler sayfasından ilgili hocaya bu dilin ve seviyelerin yetkinliğini ekleyin; şubeyi şimdilik eğitmensiz kaydedebilirsiniz.",
+      "rateLanguageHint": "Yalnızca seçilen dilde yetkinliği olan eğitmenler için ücret tanımlanabilir.",
+      "rateErrors": {
+        "languageMismatch": "Seçilen eğitmenin bu dil için aktif yetkinliği yok. Eğitmenler sayfasından ekleyin.",
+        "invalidRate": "Ücret geçersiz. Saatlik tutarı kontrol edin."
+      }
     },
     "instructors": {
       "title": "Eğitmenler",
@@ -1153,6 +1163,16 @@
         "offer_pending": "Teklif bekliyor",
         "enrolled": "Kayıt oldu",
         "lost": "Kaybedildi"
+      },
+      "updateError": "Güncelleme tamamlanamadı. Tekrar deneyin.",
+      "noteError": "Not eklenemedi. Tekrar deneyin.",
+      "goals": {
+        "daily_life": "Günlük hayat",
+        "career": "İş / kariyer",
+        "academic": "Akademik",
+        "exam": "Sınav",
+        "travel": "Seyahat",
+        "other": "Diğer"
       }
     },
     "enrollment": {
@@ -1431,7 +1451,8 @@
         "contract_party": "sözleşme tarafı",
         "guardian": "veli"
       },
-      "reviewSummary": "{parties} sözleşme tarafı ve {documents} evrak kayıtla ilişkilendirilecek."
+      "reviewSummary": "{parties} sözleşme tarafı ve {documents} evrak kayıtla ilişkilendirilecek.",
+      "documentProcessing": "Belge işleniyor, birkaç saniye sonra tekrar deneyin."
     },
     "empty": {
       "calendar": {
@@ -1614,7 +1635,9 @@
         "error": "Teslim kaydedilemedi. Tekrar dene.",
         "saving": "Kaydediliyor...",
         "update": "Teslimi güncelle",
-        "submit": "Teslim et"
+        "submit": "Teslim et",
+        "attachmentProcessing": "Dosya hâlâ işleniyor, birkaç saniye sonra tekrar deneyin.",
+        "locked": "Ödev notlandırıldığı için teslim kapandı."
       }
     },
     "dashboard": {
@@ -1897,7 +1920,9 @@
         "error": "Kaydedilemedi",
         "shareInChat": "Sohbette paylaş",
         "shared": "Paylaşıldı",
-        "awaitingSubmission": "Henüz teslim edilmedi."
+        "awaitingSubmission": "Henüz teslim edilmedi.",
+        "scoreRange": "Puan 0 ile {max} arasında tam sayı olmalı.",
+        "shareError": "Sohbette paylaşılamadı. Tekrar deneyin."
       }
     },
     "dashboard": {
@@ -2012,7 +2037,8 @@
       "takeAttendance": "Yoklama al",
       "joinOpensAt": "{time}'de açılır",
       "endLesson": "Dersi sonlandır",
-      "endLessonConfirm": "Dersi sonlandırmak istediğinize emin misiniz? Katılım linki kapanacak."
+      "endLessonConfirm": "Dersi sonlandırmak istediğinize emin misiniz? Katılım linki kapanacak.",
+      "endLessonError": "Ders kapatılamadı. Tekrar deneyin."
     },
     "attendance": {
       "title": "Yoklama",
@@ -2120,7 +2146,10 @@
       "description": "E-posta adresinize gönderilen altı haneli kodu girin. Bu cihaz 30 gün güvenilir kalır.",
       "code": "Doğrulama kodu",
       "submit": "Cihazı doğrula",
-      "error": "Kod geçersiz veya süresi dolmuş."
+      "error": "Kod geçersiz veya süresi dolmuş.",
+      "rateLimited": "Çok fazla deneme yapıldı. Birkaç dakika sonra tekrar deneyin.",
+      "sessionExpired": "Oturumunuz düştü. Lütfen tekrar giriş yapın.",
+      "restart": "Doğrulama başlatılamadı. Bu cihazda girişi yeniden başlatın."
     },
     "mfa": {
       "title": "İki adımlı doğrulama",

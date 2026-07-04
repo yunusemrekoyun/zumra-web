@@ -40,8 +40,16 @@ export async function POST(request: Request) {
       request.headers.get('x-media-visibility') ?? 'private',
     );
     // Strip path separators and control chars (keep Unicode/Turkish letters).
-    const originalName = request.headers
-      .get('x-file-name')
+    const rawFileName = request.headers.get('x-file-name')?.trim();
+    let decodedName = rawFileName;
+    if (rawFileName) {
+      try {
+        decodedName = decodeURIComponent(rawFileName);
+      } catch {
+        decodedName = rawFileName;
+      }
+    }
+    const originalName = decodedName
       ?.trim()
       .replace(/[/\\\u0000-\u001f]/g, '_');
     const contentLength = Number(request.headers.get('content-length') ?? 0);

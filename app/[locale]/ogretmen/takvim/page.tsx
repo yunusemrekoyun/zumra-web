@@ -79,6 +79,7 @@ export default async function TeacherCalendarPage({
           joinOpensAt: (time) => t('joinOpensAt', { time }),
           endLesson: t('endLesson'),
           endLessonConfirm: t('endLessonConfirm'),
+          endLessonError: t('endLessonError'),
         }}
       />
     </div>

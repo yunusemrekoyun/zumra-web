@@ -27,11 +27,15 @@ import {
   instructorProfiles,
   lessonAttendanceRecords,
   lessonSessions,
+  privateLessonStudentRates,
   programBranches,
   programs,
   studentProfiles,
   users,
 } from '@/lib/server/db/schema';
+
+// Contact learningGoal is an enum slug on real write paths — cycle valid slugs.
+const LEARNING_GOALS = ['career', 'academic', 'daily_life', 'exam', 'travel'];
 
 const DEMO_PASSWORD = process.env.DEMO_SEED_PASSWORD ?? '';
 const TZ = 'Europe/Istanbul';
@@ -204,6 +208,16 @@ void (async () => {
         language: t.competencyLanguage,
         levels: t.competencyLevels,
       });
+      // Active private-lesson rate for the teacher's language so the private
+      // ("Özel Ders") enrollment path can be demoed end to end.
+      await tx.insert(privateLessonStudentRates).values({
+        instructorProfileId: prof.id,
+        language: t.competencyLanguage,
+        hourlyPriceCents: t.competencyLanguage === 'german' ? 90_000 : 80_000,
+        currency: 'TRY',
+        active: true,
+        createdByUserId: adminId,
+      });
       teacherUserIds.push(uid);
       instructorProfileIds.push(prof.id);
     }
@@ -290,6 +304,25 @@ void (async () => {
         lessonTotal += 1;
       }
 
+      // upcoming scheduled lessons so calendars / "next lesson" cards aren't
+      // empty in a fresh demo (kept within plannedEndDate = now + 8 weeks).
+      for (let w = 1; w <= 6; w += 1) {
+        const startsAt = weeksAgo(-w);
+        const endsAt = new Date(startsAt.getTime() + 50 * 60 * 1000);
+        await tx.insert(lessonSessions).values({
+          source: 'branch',
+          branchId: branch.id,
+          instructorProfileId,
+          startsAt,
+          endsAt,
+          timezone: TZ,
+          status: 'scheduled',
+          changeNote: '[seed-demo]',
+          createdByUserId: adminId,
+        });
+        lessonTotal += 1;
+      }
+
       // homework (~ every 3 weeks) + a few materials
       const homework: BranchData['homework'] = [];
       const slotCount = Math.min(HOMEWORK_TITLES.length, Math.floor(b.weeks / 3));
@@ -361,9 +394,10 @@ void (async () => {
           lastName,
           email,
           normalizedEmail: email.toLowerCase(),
-          phone: `0532222${String(1000 + s).slice(-4)}`,
+          phone: `+90532222${String(1000 + s).slice(-4)}`,
+          normalizedPhone: `+90532222${String(1000 + s).slice(-4)}`,
           city: 'İstanbul',
-          learningGoal: PROGRAMS[branch.program].languageLabel,
+          learningGoal: LEARNING_GOALS[s % LEARNING_GOALS.length],
           lessonModel: 'group',
           marketingConsent: true,
         })

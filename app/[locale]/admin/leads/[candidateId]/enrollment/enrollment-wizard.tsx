@@ -42,6 +42,7 @@ import {
   getTurkeyDistrictOptions,
   getTurkeyProvinceOptions,
 } from '@/lib/domain/locations';
+import { waitForMediaReady } from '@/lib/media-upload-client';
 import type {
   EnrollmentDraftPatch,
   EnrollmentDraftView,
@@ -320,14 +321,13 @@ export function EnrollmentWizard({
     setMessage('');
 
     try {
+      const kind = file.type.startsWith('image/') ? 'image' : 'document';
       const mediaResponse = await fetch('/api/media', {
         body: file,
         credentials: 'same-origin',
         headers: {
-          'x-file-name': file.name,
-          'x-media-kind': file.type.startsWith('image/')
-            ? 'image'
-            : 'document',
+          'x-file-name': encodeURIComponent(file.name),
+          'x-media-kind': kind,
           'x-media-visibility': 'private',
         },
         method: 'POST',
@@ -336,6 +336,9 @@ export function EnrollmentWizard({
       if (!mediaResponse.ok || !media.id) {
         throw new Error('upload_failed');
       }
+
+      // Images finish as 'processing'; the attach endpoint needs 'ready'.
+      await waitForMediaReady(media.id, kind);
 
       const attachResponse = await fetch(
         `/api/admin/enrollment-drafts/${draft.id}/documents`,
@@ -365,8 +368,13 @@ export function EnrollmentWizard({
         },
       ]);
       setMessage(t('documentUploaded'));
-    } catch {
-      setMessage(t('documentError'));
+    } catch (error) {
+      const code = error instanceof Error ? error.message : '';
+      setMessage(
+        code === 'media_not_ready' || code === 'media_processing_failed'
+          ? t('documentProcessing')
+          : t('documentError'),
+      );
     } finally {
       event.target.value = '';
       setBusy(false);

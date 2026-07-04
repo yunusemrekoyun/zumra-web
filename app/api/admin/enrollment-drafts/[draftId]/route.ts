@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { phoneNumberIsValid } from '@/lib/domain/phone';
+import { normalizePhoneNumber, phoneNumberIsValid } from '@/lib/domain/phone';
 import { requireAdminSession } from '@/lib/server/authorization';
 import {
   apiErrorResponse,
@@ -35,6 +35,7 @@ const party = z.object({
     .string()
     .trim()
     .max(32)
+    .transform((value) => (value ? normalizePhoneNumber(value) : value))
     .refine((value) => !value || phoneNumberIsValid(value))
     .optional()
     .or(z.literal('')),
@@ -81,12 +82,14 @@ const patchSchema = z.discriminatedUnion('step', [
         .trim()
         .min(7)
         .max(32)
+        .transform((value) => normalizePhoneNumber(value))
         .refine(phoneNumberIsValid),
       residenceAddress: z.string().trim().min(8).max(500),
       secondaryPhone: z
         .string()
         .trim()
         .max(32)
+        .transform((value) => (value ? normalizePhoneNumber(value) : value))
         .refine((value) => !value || phoneNumberIsValid(value))
         .optional()
         .or(z.literal('')),

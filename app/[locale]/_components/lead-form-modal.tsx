@@ -113,7 +113,9 @@ function LeadFormModal({
   onClose: () => void;
 }) {
   const t = useTranslations('public.leadForm');
+  const cta = useTranslations('public.cta');
   const locale = useLocale();
+  const [errorMessage, setErrorMessage] = useState('');
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
   const [email, setEmail] = useState('');
@@ -136,6 +138,7 @@ function LeadFormModal({
     event.preventDefault();
     if (!consent || status === 'busy') return;
     setStatus('busy');
+    setErrorMessage('');
 
     try {
       const params = new URLSearchParams(window.location.search);
@@ -179,9 +182,18 @@ function LeadFormModal({
         headers: { 'content-type': 'application/json' },
         method: 'POST',
       });
-      if (!response.ok) throw new Error('lead_failed');
+      const body = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(String(body.error ?? 'lead_failed'));
       setStatus('success');
-    } catch {
+    } catch (error) {
+      const code = error instanceof Error ? error.message : '';
+      if (code === 'invalid_phone') {
+        setErrorMessage(t('errors.invalidPhone'));
+      } else if (code === 'rate_limited') {
+        setErrorMessage(t('errors.rateLimited'));
+      } else {
+        setErrorMessage(t('errorText'));
+      }
       setStatus('error');
     }
   }
@@ -234,7 +246,7 @@ function LeadFormModal({
               </p>
             </div>
             <a
-              href={whatsappHref(t('whatsappMessage'))}
+              href={whatsappHref(cta('whatsappMessage'))}
               target="_blank"
               rel="noreferrer"
               className="inline-flex items-center justify-center gap-2 rounded-2xl bg-[#25D366] px-5 py-3 text-xs font-bold uppercase tracking-wider text-white"
@@ -267,6 +279,7 @@ function LeadFormModal({
                 placeholder={t('firstName')}
                 value={firstName}
                 onChange={(event) => setFirstName(event.target.value)}
+                minLength={2}
                 required
               />
               <input
@@ -274,6 +287,7 @@ function LeadFormModal({
                 placeholder={t('lastName')}
                 value={lastName}
                 onChange={(event) => setLastName(event.target.value)}
+                minLength={2}
                 required
               />
             </div>
@@ -288,9 +302,11 @@ function LeadFormModal({
             <input
               className={inputClass}
               type="tel"
+              inputMode="tel"
               placeholder={t('phone')}
               value={phone}
               onChange={(event) => setPhone(event.target.value)}
+              minLength={7}
               required
             />
             {config.kind === 'callback' && (
@@ -351,7 +367,7 @@ function LeadFormModal({
             </label>
             {status === 'error' && (
               <p className="text-xs font-semibold text-red-600">
-                {t('errorText')}
+                {errorMessage || t('errorText')}
               </p>
             )}
             <button

@@ -162,6 +162,7 @@ function Navbar() {
           <a href="#neden-biz" onClick={() => setIsOpen(false)} className="rounded-2xl px-4 py-3 hover:bg-brand-primary/5 hover:text-brand-primary transition-colors">{t('why')}</a>
           <a href="#nasil-calisiyoruz" onClick={() => setIsOpen(false)} className="rounded-2xl px-4 py-3 hover:bg-brand-primary/5 hover:text-brand-primary transition-colors">{t('process')}</a>
           <a href="#programlar" onClick={() => setIsOpen(false)} className="rounded-2xl px-4 py-3 hover:bg-brand-primary/5 hover:text-brand-primary transition-colors">{t('programs')}</a>
+          <Link href="/giris" onClick={() => setIsOpen(false)} className="rounded-2xl px-4 py-3 hover:bg-brand-primary/5 hover:text-brand-primary transition-colors">{t('login')}</Link>
           <Link href="/level-test" onClick={() => setIsOpen(false)} className="mt-2 rounded-2xl bg-brand-primary px-4 py-3 text-left text-white shadow-lg shadow-brand-primary/20">{t('levelTest')}</Link>
         </nav>
       </div>

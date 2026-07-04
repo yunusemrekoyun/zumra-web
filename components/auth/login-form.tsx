@@ -56,7 +56,14 @@ export function LoginForm({
       });
 
       if (result.error) {
-        setError(labels.error);
+        // Rate limit / account lockout returns 429 (or code RATE_LIMITED) —
+        // tell the user to wait rather than implying wrong credentials, so a
+        // correct password entered during a lockout isn't misread as invalid.
+        const rateLimited =
+          result.error.status === 429 ||
+          result.error.code === 'RATE_LIMITED' ||
+          result.error.code === 'TOO_MANY_REQUESTS';
+        setError(rateLimited ? labels.rateLimited : labels.error);
         return;
       }
 

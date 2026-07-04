@@ -1,6 +1,6 @@
 import 'server-only';
 
-import { and, asc, desc, eq, gt, inArray, or } from 'drizzle-orm';
+import { and, asc, desc, eq, gt, inArray, or, sql } from 'drizzle-orm';
 import type { WorkspacePrincipal } from '@/lib/domain';
 import { database } from '@/lib/server/db/client';
 import {
@@ -8,6 +8,7 @@ import {
   assignmentSubmissions,
   contacts,
   enrollments,
+  instructorProfiles,
   lessonAttendanceRecords,
   lessonSessions,
   programs,
@@ -56,6 +57,8 @@ export type AdminStudentDetail = AdminStudentListItem & {
 type StudentRow = {
   branchId: string | null;
   branchName: string | null;
+  branchInstructorFirstName: string | null;
+  branchInstructorLastName: string | null;
   courseMode: 'group' | 'private';
   currentLevel: string | null;
   email: string;
@@ -125,12 +128,18 @@ async function loadStudentRows(studentId?: string) {
       studentId: studentProfiles.id,
       userId: studentProfiles.userId,
       username: users.username,
+      branchInstructorFirstName: instructorProfiles.firstName,
+      branchInstructorLastName: instructorProfiles.lastName,
     })
     .from(enrollments)
     .innerJoin(studentProfiles, eq(studentProfiles.id, enrollments.studentId))
     .innerJoin(contacts, eq(contacts.id, studentProfiles.contactId))
     .leftJoin(programs, eq(programs.id, enrollments.programId))
     .leftJoin(programBranches, eq(programBranches.id, enrollments.branchId))
+    .leftJoin(
+      instructorProfiles,
+      sql`${instructorProfiles.id} = coalesce(${enrollments.selectedInstructorProfileId}, ${programBranches.instructorProfileId})`,
+    )
     .leftJoin(users, eq(users.id, studentProfiles.userId));
 
   const scoped = studentId
@@ -168,7 +177,11 @@ async function hydrateStudentRows(
       enrolledAt: row.enrolledAt.toISOString(),
       enrollmentId: row.enrollmentId,
       fullName: fullName(row.firstName, row.lastName),
-      instructorName: snapshot.teacherName,
+      instructorName:
+        snapshot.teacherName ??
+        (row.branchInstructorFirstName
+          ? fullName(row.branchInstructorFirstName, row.branchInstructorLastName ?? '')
+          : undefined),
       language: row.language ?? snapshot.language,
       nextSessionAt: nextSessions.get(row.enrollmentId)?.toISOString(),
       phone: row.phone ?? undefined,
