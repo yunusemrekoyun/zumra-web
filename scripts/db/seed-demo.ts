@@ -23,6 +23,7 @@ import {
   contacts,
   enrollmentDrafts,
   enrollments,
+  instructorLanguageCompetencies,
   instructorProfiles,
   lessonAttendanceRecords,
   lessonSessions,
@@ -78,16 +79,19 @@ const MATERIAL_TITLES = [
 ];
 
 const TEACHERS = [
-  { name: 'Elif Demir', username: 'elifhoca', email: 'elif@zumra.local', phone: '05321110001', specialty: 'İngilizce' },
-  { name: 'Zeynep Kaya', username: 'zeynephoca', email: 'zeynep@zumra.local', phone: '05321110002', specialty: 'İngilizce' },
-  { name: 'Merve Şahin', username: 'mervehoca', email: 'merve@zumra.local', phone: '05321110003', specialty: 'Almanca' },
+  { name: 'Elif Demir', username: 'elifhoca', email: 'elif@zumra.local', phone: '05321110001', specialty: 'İngilizce', competencyLanguage: 'english', competencyLevels: ['A1', 'A2', 'B1', 'B2'] },
+  { name: 'Zeynep Kaya', username: 'zeynephoca', email: 'zeynep@zumra.local', phone: '05321110002', specialty: 'İngilizce', competencyLanguage: 'english', competencyLevels: ['A1', 'A2', 'B1', 'B2'] },
+  { name: 'Merve Şahin', username: 'mervehoca', email: 'merve@zumra.local', phone: '05321110003', specialty: 'Almanca', competencyLanguage: 'german', competencyLevels: ['A1', 'A2', 'B1'] },
 ];
 
+// language = slug (programs.language must match instructor competency slugs;
+// the admin UI writes 'english'/'german' style values). languageLabel = the
+// Turkish display text used in free-text fields (description, learningGoal).
 const PROGRAMS = [
-  { name: 'İngilizce Başlangıç (A1–A2)', language: 'İngilizce', levels: ['A1', 'A2'], price: 1_200_000, popular: true },
-  { name: 'İngilizce Orta (B1–B2)', language: 'İngilizce', levels: ['B1', 'B2'], price: 1_500_000, popular: false },
-  { name: 'Almanca Başlangıç (A1)', language: 'Almanca', levels: ['A1'], price: 1_300_000, popular: false },
-  { name: 'İngilizce Konuşma Kulübü', language: 'İngilizce', levels: ['B1', 'B2'], price: 800_000, popular: true },
+  { name: 'İngilizce Başlangıç (A1–A2)', language: 'english', languageLabel: 'İngilizce', levels: ['A1', 'A2'], price: 1_200_000, popular: true },
+  { name: 'İngilizce Orta (B1–B2)', language: 'english', languageLabel: 'İngilizce', levels: ['B1', 'B2'], price: 1_500_000, popular: false },
+  { name: 'Almanca Başlangıç (A1)', language: 'german', languageLabel: 'Almanca', levels: ['A1'], price: 1_300_000, popular: false },
+  { name: 'İngilizce Konuşma Kulübü', language: 'english', languageLabel: 'İngilizce', levels: ['B1', 'B2'], price: 800_000, popular: true },
 ];
 
 // program index, branch name, teacher index, lesson weeks
@@ -191,6 +195,13 @@ void (async () => {
           createdByUserId: adminId,
         })
         .returning({ id: instructorProfiles.id });
+      // Language competency drives branch assignment validation — without it a
+      // teacher can never be attached to a branch from the admin UI.
+      await tx.insert(instructorLanguageCompetencies).values({
+        instructorId: prof.id,
+        language: t.competencyLanguage,
+        levels: t.competencyLevels,
+      });
       teacherUserIds.push(uid);
       instructorProfileIds.push(prof.id);
     }
@@ -203,7 +214,7 @@ void (async () => {
         .insert(programs)
         .values({
           name: p.name,
-          description: `${p.language} ${p.levels.join('–')} seviyesi grup programı.`,
+          description: `${p.languageLabel} ${p.levels.join('–')} seviyesi grup programı.`,
           kind: 'group',
           language: p.language,
           levels: p.levels,
@@ -350,7 +361,7 @@ void (async () => {
           normalizedEmail: email.toLowerCase(),
           phone: `0532222${String(1000 + s).slice(-4)}`,
           city: 'İstanbul',
-          learningGoal: PROGRAMS[branch.program].language,
+          learningGoal: PROGRAMS[branch.program].languageLabel,
           lessonModel: 'group',
           marketingConsent: true,
         })

@@ -139,6 +139,12 @@ export function ProgramsClient({
   const [branchDraft, setBranchDraft] = useState<BranchDraft>(
     emptyBranch(groupPrograms[0]?.id),
   );
+  const branchProgram = groupPrograms.find(
+    (program) => program.id === branchDraft.programId,
+  );
+  const compatibleTeacherExists = initial.instructors.some((instructor) =>
+    isInstructorCompatible(instructor, branchProgram),
+  );
   const [scheduleDraft, setScheduleDraft] = useState<ScheduleDraft>(
     emptyScheduleDraft(),
   );
@@ -377,7 +383,9 @@ export function ProgramsClient({
         method: branchDraft.id ? 'PATCH' : 'POST',
       });
       const body = await response.json().catch(() => ({}));
-      if (!response.ok || !body.id) throw new Error('save_failed');
+      if (!response.ok || !body.id) {
+        throw new Error(String(body.error ?? 'save_failed'));
+      }
 
       const program = programs.find(
         (item) => item.id === branchDraft.programId,
@@ -420,11 +428,26 @@ export function ProgramsClient({
       setBranchDraft(branchDraftFromView(next));
       setScheduleDraft(scheduleDraftFromBranch(next));
       setMessage(t('branchSaved'));
-    } catch {
-      setMessage(t('saveError'));
+    } catch (error) {
+      setMessage(
+        branchSaveErrorText(error instanceof Error ? error.message : ''),
+      );
     } finally {
       setBusy(false);
     }
+  }
+
+  function branchSaveErrorText(code: string) {
+    if (code === 'instructor_program_mismatch') {
+      return t('branchErrors.instructorMismatch');
+    }
+    if (code === 'group_program_not_found') {
+      return t('branchErrors.groupProgramOnly');
+    }
+    if (code === 'invalid_program_branch') {
+      return t('branchErrors.invalidFields');
+    }
+    return t('saveError');
   }
 
   async function saveBranchLessonSchedule(event?: FormEvent) {
@@ -1216,10 +1239,27 @@ export function ProgramsClient({
                     <Select
                       value={branchDraft.programId}
                       onChange={(programId) =>
-                        setBranchDraft((current) => ({
-                          ...current,
-                          programId,
-                        }))
+                        setBranchDraft((current) => {
+                          const nextProgram = groupPrograms.find(
+                            (program) => program.id === programId,
+                          );
+                          const currentInstructor = initial.instructors.find(
+                            (instructor) =>
+                              instructor.id === current.instructorProfileId,
+                          );
+                          return {
+                            ...current,
+                            programId,
+                            // Drop a teacher that isn't qualified for the
+                            // newly selected program's language/levels.
+                            instructorProfileId: isInstructorCompatible(
+                              currentInstructor,
+                              nextProgram,
+                            )
+                              ? current.instructorProfileId
+                              : '',
+                          };
+                        })
                       }
                       options={groupPrograms.map(
                         (program) =>
@@ -1331,12 +1371,32 @@ export function ProgramsClient({
                       }
                       options={[
                         ['', t('teacherAssignmentPending')],
-                        ...initial.instructors.map(
-                          (instructor) =>
-                            [instructor.id, instructor.name] as const,
-                        ),
+                        ...initial.instructors.map((instructor) => {
+                          const compatible = isInstructorCompatible(
+                            instructor,
+                            branchProgram,
+                          );
+                          return [
+                            instructor.id,
+                            compatible
+                              ? instructor.name
+                              : `${instructor.name} — ${t('branchTeacherIncompatible')}`,
+                            !compatible,
+                          ] as const;
+                        }),
                       ]}
                     />
+                    <p
+                      className={
+                        compatibleTeacherExists
+                          ? 'mt-2 text-xs font-medium leading-5 text-[#2E286C]/45'
+                          : 'mt-2 rounded-xl bg-amber-50 px-3 py-2 text-xs font-semibold leading-5 text-amber-700'
+                      }
+                    >
+                      {compatibleTeacherExists
+                        ? t('branchTeacherHint')
+                        : t('branchTeacherNoneCompatible')}
+                    </p>
                   </FormField>
                   <FormField label={t('branchFields.notes')}>
                     <textarea
@@ -2054,7 +2114,7 @@ function Select({
   value,
 }: {
   onChange: (value: string) => void;
-  options: Array<readonly [string, string]>;
+  options: Array<readonly [string, string] | readonly [string, string, boolean]>;
   value: string;
 }) {
   return (
@@ -2063,12 +2123,30 @@ function Select({
       onChange={(event) => onChange(event.target.value)}
       className="h-10 w-full rounded-xl border border-transparent bg-[#F8F9FC] px-4 text-sm font-medium text-[#2E286C] outline-none focus:border-[#533089]/30"
     >
-      {options.map(([optionValue, label]) => (
-        <option key={optionValue} value={optionValue}>
+      {options.map(([optionValue, label, disabled]) => (
+        <option key={optionValue} value={optionValue} disabled={disabled}>
           {label}
         </option>
       ))}
     </select>
+  );
+}
+
+// A teacher can only be attached to a branch when they hold a competency for
+// the program's language covering ALL of the program's levels (mirrors
+// validateBranchInput on the server).
+function isInstructorCompatible(
+  instructor:
+    | { competencies: Array<{ language: string; levels: string[] }> }
+    | undefined,
+  program: { language?: string; levels: string[] } | undefined,
+) {
+  if (!instructor) return false;
+  if (!program?.language || !program.levels.length) return true;
+  return instructor.competencies.some(
+    (competency) =>
+      competency.language === program.language &&
+      program.levels.every((level) => competency.levels.includes(level)),
   );
 }
 

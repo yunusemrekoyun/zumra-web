@@ -120,9 +120,18 @@ export type ProgramBranchView = {
   timezone: string;
 };
 
+export type InstructorCompetencySummary = {
+  language: string;
+  levels: string[];
+};
+
 export type ProgramManagementData = {
   branches: ProgramBranchView[];
-  instructors: Array<{ id: string; name: string }>;
+  instructors: Array<{
+    id: string;
+    name: string;
+    competencies: InstructorCompetencySummary[];
+  }>;
   programs: ProgramCatalogItem[];
   rates: PrivateLessonRateView[];
 };
@@ -184,7 +193,14 @@ export async function getProgramManagementData(
 ): Promise<ProgramManagementData> {
   assertAdmin(principal);
 
-  const [programRows, branchRows, branchCounts, instructorRows, rateRows] =
+  const [
+    programRows,
+    branchRows,
+    branchCounts,
+    instructorRows,
+    rateRows,
+    competencyRows,
+  ] =
     await Promise.all([
       database
         .select()
@@ -288,6 +304,13 @@ export async function getProgramManagementData(
         asc(instructorProfiles.firstName),
         asc(privateLessonStudentRates.language),
       ),
+    database
+      .select({
+        instructorId: instructorLanguageCompetencies.instructorId,
+        language: instructorLanguageCompetencies.language,
+        levels: instructorLanguageCompetencies.levels,
+      })
+      .from(instructorLanguageCompetencies),
     ]);
 
   const [
@@ -377,6 +400,12 @@ export async function getProgramManagementData(
     instructors: instructorRows.map((instructor) => ({
       id: instructor.id,
       name: fullName(instructor.firstName, instructor.lastName),
+      competencies: competencyRows
+        .filter((row) => row.instructorId === instructor.id)
+        .map((row) => ({
+          language: row.language,
+          levels: (row.levels as string[]) ?? [],
+        })),
     })),
     programs: programRows.map((program) => ({
       ...mapProgram(program),

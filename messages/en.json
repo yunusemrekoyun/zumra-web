@@ -885,7 +885,15 @@
         "5": "Friday",
         "6": "Saturday",
         "7": "Sunday"
-      }
+      },
+      "branchErrors": {
+        "instructorMismatch": "The selected teacher has no active language competency covering this program's language and all of its levels. Add the competency on the teacher's profile, or save the branch without a teacher for now.",
+        "groupProgramOnly": "Branches can only be created for group programs; the selected program is a one-to-one program.",
+        "invalidFields": "Invalid dates or capacity: the end date can't be before the start date and maximum capacity can't be below the minimum."
+      },
+      "branchTeacherHint": "Only teachers holding a competency for the program's language covering all of its levels can be assigned. Competencies are managed on the Teachers page.",
+      "branchTeacherIncompatible": "competency mismatch",
+      "branchTeacherNoneCompatible": "No teacher has a competency matching this program. Add the language/levels on the Teachers page; you can save the branch without a teacher for now."
     },
     "instructors": {
       "title": "Instructors",

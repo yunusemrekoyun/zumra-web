@@ -885,7 +885,15 @@
         "5": "Cuma",
         "6": "Cumartesi",
         "7": "Pazar"
-      }
+      },
+      "branchErrors": {
+        "instructorMismatch": "Seçilen eğitmenin bu programın dili ve tüm seviyeleri için aktif dil yetkinliği yok. Eğitmen profilinden yetkinlik ekleyin ya da şubeyi şimdilik eğitmensiz kaydedin.",
+        "groupProgramOnly": "Şube yalnızca grup programlarına açılabilir; seçilen program birebir ders programı.",
+        "invalidFields": "Tarih veya kapasite geçersiz: bitiş tarihi başlangıçtan önce, maksimum kapasite minimumdan küçük olamaz."
+      },
+      "branchTeacherHint": "Yalnızca programın dilinde ve programın tüm seviyelerini kapsayan yetkinliğe sahip eğitmenler atanabilir. Yetkinlikler Eğitmenler sayfasından düzenlenir.",
+      "branchTeacherIncompatible": "yetkinlik uyumsuz",
+      "branchTeacherNoneCompatible": "Bu programla uyumlu yetkinliğe sahip eğitmen yok. Eğitmenler sayfasından ilgili hocaya bu dilin ve seviyelerin yetkinliğini ekleyin; şubeyi şimdilik eğitmensiz kaydedebilirsiniz."
     },
     "instructors": {
       "title": "Eğitmenler",
