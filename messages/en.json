@@ -996,7 +996,8 @@
         "identity": "Identity document",
         "contract": "Contract",
         "other": "Other"
-      }
+      },
+      "saveInvalid": "Some fields are invalid. Check the phone (05xx…), email and at least one language competency."
     },
     "students": {
       "title": "Students",

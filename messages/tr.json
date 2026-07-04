@@ -996,7 +996,8 @@
         "identity": "Kimlik belgesi",
         "contract": "Sözleşme",
         "other": "Diğer"
-      }
+      },
+      "saveInvalid": "Bilgiler geçersiz. Telefon (05xx…), e-posta ve en az bir dil yetkinliği alanlarını kontrol edin."
     },
     "students": {
       "title": "Öğrenciler",

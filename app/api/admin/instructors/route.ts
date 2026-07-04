@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { phoneNumberIsValid } from '@/lib/domain/phone';
+import { normalizePhoneNumber, phoneNumberIsValid } from '@/lib/domain/phone';
 import { requireAdminSession } from '@/lib/server/authorization';
 import {
   apiErrorResponse,
@@ -34,7 +34,13 @@ const instructorSchema = z.object({
   firstName: z.string().trim().min(2).max(80),
   internalNotes: z.string().trim().max(4000).optional().or(z.literal('')),
   lastName: z.string().trim().min(2).max(80),
-  phone: z.string().trim().min(7).max(32).refine(phoneNumberIsValid),
+  phone: z
+    .string()
+    .trim()
+    .min(7)
+    .max(32)
+    .transform((value) => normalizePhoneNumber(value))
+    .refine(phoneNumberIsValid),
   specialties: z.array(z.string().trim().min(1).max(100)).max(30),
   status: z.enum(['draft', 'active', 'on_leave', 'inactive', 'archived']),
   allowArchivedDuplicate: z.boolean().optional(),

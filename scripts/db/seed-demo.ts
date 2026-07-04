@@ -78,10 +78,12 @@ const MATERIAL_TITLES = [
   'Telaffuz rehberi',
 ];
 
+// phones in E.164 (the format the admin API stores after normalization) so the
+// seeded instructors are editable from the UI without a re-save.
 const TEACHERS = [
-  { name: 'Elif Demir', username: 'elifhoca', email: 'elif@zumra.local', phone: '05321110001', specialty: 'İngilizce', competencyLanguage: 'english', competencyLevels: ['A1', 'A2', 'B1', 'B2'] },
-  { name: 'Zeynep Kaya', username: 'zeynephoca', email: 'zeynep@zumra.local', phone: '05321110002', specialty: 'İngilizce', competencyLanguage: 'english', competencyLevels: ['A1', 'A2', 'B1', 'B2'] },
-  { name: 'Merve Şahin', username: 'mervehoca', email: 'merve@zumra.local', phone: '05321110003', specialty: 'Almanca', competencyLanguage: 'german', competencyLevels: ['A1', 'A2', 'B1'] },
+  { name: 'Elif Demir', username: 'elifhoca', email: 'elif@zumra.local', phone: '+905321110001', specialty: 'İngilizce', competencyLanguage: 'english', competencyLevels: ['A1', 'A2', 'B1', 'B2'] },
+  { name: 'Zeynep Kaya', username: 'zeynephoca', email: 'zeynep@zumra.local', phone: '+905321110002', specialty: 'İngilizce', competencyLanguage: 'english', competencyLevels: ['A1', 'A2', 'B1', 'B2'] },
+  { name: 'Merve Şahin', username: 'mervehoca', email: 'merve@zumra.local', phone: '+905321110003', specialty: 'Almanca', competencyLanguage: 'german', competencyLevels: ['A1', 'A2', 'B1'] },
 ];
 
 // language = slug (programs.language must match instructor competency slugs;

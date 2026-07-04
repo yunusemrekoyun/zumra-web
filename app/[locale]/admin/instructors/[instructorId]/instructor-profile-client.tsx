@@ -77,7 +77,10 @@ export function InstructorProfileClient({
         headers: { 'content-type': 'application/json' },
         method: 'PATCH',
       });
-      if (!response.ok) throw new Error('save_failed');
+      const body = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        throw new Error(String(body.error ?? 'save_failed'));
+      }
       setProfile((current) => ({
         ...current,
         ...editorPayload(draft),
@@ -85,8 +88,15 @@ export function InstructorProfileClient({
       }));
       setMessage(t('saved'));
       router.refresh();
-    } catch {
-      setMessage(t('saveError'));
+    } catch (error) {
+      const code = error instanceof Error ? error.message : '';
+      if (code === 'instructor_identity_conflict') {
+        setMessage(t('identityConflict'));
+      } else if (code === 'invalid_request' || code === 'invalid_instructor') {
+        setMessage(t('saveInvalid'));
+      } else {
+        setMessage(t('saveError'));
+      }
     } finally {
       setBusy(false);
     }
