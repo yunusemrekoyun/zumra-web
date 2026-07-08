@@ -79,8 +79,10 @@ function FloatingLanguages() {
 
 export default function PublicLandingClient({
   programs,
+  legalLinks = [],
 }: {
   programs: PublicProgramCard[];
+  legalLinks?: { slug: string; title: string }[];
 }) {
   return (
     <LeadModalProvider>
@@ -97,7 +99,7 @@ export default function PublicLandingClient({
           <Testimonials />
           <FAQ />
         </main>
-        <Footer />
+        <Footer legalLinks={legalLinks} />
       </div>
     </LeadModalProvider>
   );
@@ -876,7 +878,11 @@ function AccordionItem({ question, answer, delay }: { question: string, answer: 
 }
 
 // --- SEC 10: FOOTER ---
-function Footer() {
+function Footer({
+  legalLinks,
+}: {
+  legalLinks: { slug: string; title: string }[];
+}) {
   const t = useTranslations('public.footer');
   const brand = useTranslations('common.brand');
   const year = new Date().getFullYear();
@@ -917,6 +923,11 @@ function Footer() {
             <h4 className="font-bold font-neubau text-[11px] uppercase tracking-widest text-brand-dark mb-6">{t('support')}</h4>
             <ul className="space-y-4 text-[14px] font-neubau text-brand-dark/70">
               <li><a href="#sss" className="hover:text-brand-primary transition-colors">{t('links.faq')}</a></li>
+              {legalLinks.map((link) => (
+                <li key={link.slug}>
+                  <Link href={`/${link.slug}`} className="hover:text-brand-primary transition-colors">{link.title}</Link>
+                </li>
+              ))}
             </ul>
           </div>
        </div>

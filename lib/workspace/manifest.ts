@@ -8,6 +8,7 @@ export type WorkspaceIconKey =
   | 'clipboard'
   | 'creditCard'
   | 'dashboard'
+  | 'fileText'
   | 'hardDrive'
   | 'messages'
   | 'presentation'
@@ -108,6 +109,7 @@ export const workspaceModules = [
   { scope: 'admin', kind: 'nav', labelKey: 'admin.nav.payments', path: '/admin/payments', iconKey: 'creditCard', mobile: 'more' },
   { scope: 'admin', kind: 'nav', labelKey: 'admin.nav.reports', path: '/admin/reports', iconKey: 'barChart', mobile: 'more' },
   { scope: 'admin', kind: 'nav', labelKey: 'admin.nav.storage', path: '/admin/depolama', iconKey: 'hardDrive', mobile: 'more' },
+  { scope: 'admin', kind: 'nav', labelKey: 'admin.nav.legal', path: '/admin/legal', iconKey: 'fileText', mobile: 'more' },
   { scope: 'admin', kind: 'account', labelKey: 'workspace.nav.settings', path: '/admin/settings', iconKey: 'settings', mobile: 'more' },
 
   { scope: 'student', kind: 'nav', labelKey: 'student.nav.lessons', path: '/ogrenci', iconKey: 'book', mobile: 'tab' },

@@ -5,6 +5,7 @@ export * from './chat';
 export * from './enrollments';
 export * from './foundation';
 export * from './instructors';
+export * from './legal';
 export * from './notifications';
 export * from './programs';
 export * from './schedule';

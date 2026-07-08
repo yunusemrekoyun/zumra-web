@@ -501,6 +501,10 @@
         "privacy": "Privacy Policy",
         "terms": "Terms of Use"
       }
+    },
+    "legal": {
+      "backHome": "Home",
+      "eyebrow": "Legal"
     }
   },
   "domain": {
@@ -544,7 +548,8 @@
       "messages": "Messages",
       "payments": "Payments",
       "reports": "Reports",
-      "storage": "Storage"
+      "storage": "Storage",
+      "legal": "Legal Pages"
     },
     "storage": {
       "title": "Storage & File Care",
@@ -1554,6 +1559,51 @@
       "back": "Back",
       "loading": "Loading...",
       "error": "Conversations could not be loaded. Try again."
+    },
+    "legal": {
+      "title": "Legal Pages",
+      "description": "Edit and publish your KVKK, privacy, terms and cookie pages here. Change the content freely, add images and links.",
+      "list": {
+        "new": "New Page",
+        "empty": "Select a page on the left to edit."
+      },
+      "badge": {
+        "published": "Published",
+        "draft": "Draft",
+        "footer": "Footer"
+      },
+      "lang": {
+        "tr": "Turkish",
+        "en": "English"
+      },
+      "field": {
+        "slug": "URL (slug)",
+        "slugPlaceholder": "e.g. privacy",
+        "slugHint": "The page address is /slug. Leave empty to generate it from the title.",
+        "sortOrder": "Order",
+        "title": "Title",
+        "titleEnPlaceholder": "English title (falls back to Turkish when empty)",
+        "content": "Content",
+        "published": "Published",
+        "publishedHint": "While off, the page is not publicly visible.",
+        "footer": "Show in footer",
+        "footerHint": "When published, its link appears in the site footer."
+      },
+      "action": {
+        "save": "Save",
+        "create": "Create",
+        "saving": "Saving…",
+        "saved": "Saved.",
+        "delete": "Delete",
+        "deleteConfirm": "Are you sure you want to delete this page?",
+        "preview": "Preview"
+      },
+      "error": {
+        "generic": "Something went wrong. Please try again.",
+        "titleRequired": "Turkish title is required.",
+        "slugReserved": "This address is reserved by the system; choose another slug.",
+        "slugTaken": "This slug is already in use."
+      }
     }
   },
   "notifications": {

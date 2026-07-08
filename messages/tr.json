@@ -501,6 +501,10 @@
         "privacy": "Gizlilik Politikası",
         "terms": "Kullanım Şartları"
       }
+    },
+    "legal": {
+      "backHome": "Ana sayfa",
+      "eyebrow": "Yasal"
     }
   },
   "domain": {
@@ -544,7 +548,8 @@
       "messages": "Mesajlar",
       "payments": "Ödemeler",
       "reports": "Raporlar",
-      "storage": "Depolama"
+      "storage": "Depolama",
+      "legal": "Yasal Sayfalar"
     },
     "storage": {
       "title": "Depolama & Dosya Bakımı",
@@ -1554,6 +1559,51 @@
       "back": "Geri",
       "loading": "Yükleniyor...",
       "error": "Yazışmalar yüklenemedi. Tekrar deneyin."
+    },
+    "legal": {
+      "title": "Yasal Sayfalar",
+      "description": "KVKK, gizlilik, kullanım koşulları ve çerez sayfalarını buradan düzenleyip yayınlayın. İçeriği dilediğiniz gibi değiştirebilir, görsel ve bağlantı ekleyebilirsiniz.",
+      "list": {
+        "new": "Yeni Sayfa",
+        "empty": "Düzenlemek için soldan bir sayfa seçin."
+      },
+      "badge": {
+        "published": "Yayında",
+        "draft": "Taslak",
+        "footer": "Footer"
+      },
+      "lang": {
+        "tr": "Türkçe",
+        "en": "İngilizce"
+      },
+      "field": {
+        "slug": "Bağlantı adresi (slug)",
+        "slugPlaceholder": "ör. gizlilik",
+        "slugHint": "Sayfa adresi /slug şeklinde olur. Boş bırakırsan başlıktan otomatik üretilir.",
+        "sortOrder": "Sıra",
+        "title": "Başlık",
+        "titleEnPlaceholder": "İngilizce başlık (boşsa Türkçe gösterilir)",
+        "content": "İçerik",
+        "published": "Yayında",
+        "publishedHint": "Kapalıyken sayfa herkese açık görünmez.",
+        "footer": "Footer'da göster",
+        "footerHint": "Yayınlandığında bağlantısı sitenin alt menüsünde çıkar."
+      },
+      "action": {
+        "save": "Kaydet",
+        "create": "Oluştur",
+        "saving": "Kaydediliyor…",
+        "saved": "Kaydedildi.",
+        "delete": "Sil",
+        "deleteConfirm": "Bu sayfayı silmek istediğinize emin misiniz?",
+        "preview": "Önizle"
+      },
+      "error": {
+        "generic": "İşlem başarısız oldu. Lütfen tekrar deneyin.",
+        "titleRequired": "Türkçe başlık gerekli.",
+        "slugReserved": "Bu adres sistem tarafından kullanılıyor, başka bir slug seçin.",
+        "slugTaken": "Bu slug zaten kullanımda."
+      }
     }
   },
   "notifications": {
