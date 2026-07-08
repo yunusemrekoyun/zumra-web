@@ -80,6 +80,16 @@ export default async function TeacherCalendarPage({
           endLesson: t('endLesson'),
           endLessonConfirm: t('endLessonConfirm'),
           endLessonError: t('endLessonError'),
+          lessonStatus: {
+            cancel: t('lessonStatus.cancel'),
+            cancelSubmit: t('lessonStatus.cancelSubmit'),
+            postpone: t('lessonStatus.postpone'),
+            postponeSubmit: t('lessonStatus.postponeSubmit'),
+            newTimePlaceholder: t('lessonStatus.newTimePlaceholder'),
+            notePlaceholder: t('lessonStatus.notePlaceholder'),
+            dismiss: t('lessonStatus.dismiss'),
+            error: t('lessonStatus.error'),
+          },
         }}
       />
     </div>

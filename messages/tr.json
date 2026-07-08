@@ -644,7 +644,17 @@
       "joinOpensAt": "{time}'de açılır",
       "endLesson": "Dersi sonlandır",
       "endLessonConfirm": "Dersi sonlandırmak istediğinize emin misiniz? Katılım linki kapanacak.",
-      "endLessonError": "Ders kapatılamadı. Tekrar deneyin."
+      "endLessonError": "Ders kapatılamadı. Tekrar deneyin.",
+      "lessonStatus": {
+        "cancel": "Dersi iptal et",
+        "cancelSubmit": "Evet, iptal et",
+        "postpone": "Ertele",
+        "postponeSubmit": "Yeni saate ertele",
+        "newTimePlaceholder": "Yeni tarih ve saat seç",
+        "notePlaceholder": "Sebep (opsiyonel, öğrenciye gider)",
+        "dismiss": "Vazgeç",
+        "error": "İşlem başarısız. Tekrar deneyin."
+      }
     },
     "settings": {
       "title": "Ayarlar",
@@ -2088,7 +2098,17 @@
       "joinOpensAt": "{time}'de açılır",
       "endLesson": "Dersi sonlandır",
       "endLessonConfirm": "Dersi sonlandırmak istediğinize emin misiniz? Katılım linki kapanacak.",
-      "endLessonError": "Ders kapatılamadı. Tekrar deneyin."
+      "endLessonError": "Ders kapatılamadı. Tekrar deneyin.",
+      "lessonStatus": {
+        "cancel": "Dersi iptal et",
+        "cancelSubmit": "Evet, iptal et",
+        "postpone": "Ertele",
+        "postponeSubmit": "Yeni saate ertele",
+        "newTimePlaceholder": "Yeni tarih ve saat seç",
+        "notePlaceholder": "Sebep (opsiyonel, öğrenciye gider)",
+        "dismiss": "Vazgeç",
+        "error": "İşlem başarısız. Tekrar deneyin."
+      }
     },
     "attendance": {
       "title": "Yoklama",

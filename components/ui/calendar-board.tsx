@@ -17,6 +17,10 @@ import type {
   CalendarEventView,
 } from '@/lib/server/services/lesson-schedules';
 import { EndLessonButton } from './end-lesson-button';
+import {
+  LessonStatusActions,
+  type LessonStatusActionLabels,
+} from './lesson-status-actions';
 import { ModulePanel } from './module-panel';
 import { StatusChip } from './status-chip';
 
@@ -51,6 +55,7 @@ type CalendarBoardLabels = {
   endLesson?: string;
   endLessonConfirm?: string;
   endLessonError?: string;
+  lessonStatus?: LessonStatusActionLabels;
 };
 
 type CalendarBoardProps = {
@@ -441,7 +446,17 @@ function CalendarAgendaCard({
             </div>
           )}
         </div>
-        <StatusChip tone={event.status === 'scheduled' ? 'emerald' : 'gray'}>
+        <StatusChip
+          tone={
+            event.status === 'scheduled'
+              ? 'emerald'
+              : event.status === 'postponed'
+                ? 'amber'
+                : event.status === 'cancelled'
+                  ? 'red'
+                  : 'gray'
+          }
+        >
           {labels.status[event.status]}
         </StatusChip>
       </div>
@@ -532,13 +547,17 @@ function CalendarEventActions({
     event.canTakeAttendance && labels.takeAttendance,
   );
   const showEndLesson = Boolean(event.canEndLesson && labels.endLesson);
+  const showManageStatus = Boolean(
+    event.canManageStatus && labels.lessonStatus,
+  );
 
   if (
     !showMeetingAction &&
     !showAbsenceAction &&
     !showRetryAction &&
     !showAttendanceAction &&
-    !showEndLesson
+    !showEndLesson &&
+    !showManageStatus
   ) {
     return null;
   }
@@ -588,6 +607,14 @@ function CalendarEventActions({
           errorText={labels.endLessonError ?? labels.endLesson}
           label={labels.endLesson}
           lessonSessionId={event.id}
+        />
+      ) : null}
+
+      {showManageStatus && labels.lessonStatus ? (
+        <LessonStatusActions
+          labels={labels.lessonStatus}
+          lessonSessionId={event.id}
+          locale={locale}
         />
       ) : null}
 

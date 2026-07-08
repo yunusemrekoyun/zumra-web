@@ -89,6 +89,7 @@ export type CalendarEventView = {
   absenceReportUrl?: string;
   branchName?: string;
   canEndLesson?: boolean;
+  canManageStatus?: boolean;
   canTakeAttendance?: boolean;
   date: string;
   endsAt: string;
@@ -368,13 +369,17 @@ function applyJoinWindow(
     const isOpenStatus =
       event.status === 'scheduled' || event.status === 'postponed';
     const meetingReady = Boolean(event.joinUrl);
-    const opensAtMs =
-      new Date(event.startsAt).getTime() - leadMinutes * 60_000;
+    const startsAtMs = new Date(event.startsAt).getTime();
+    const opensAtMs = startsAtMs - leadMinutes * 60_000;
     const windowOpen = isOpenStatus && now >= opensAtMs;
+    // Cancel/postpone is offered to staff (canManage) on an open lesson that has
+    // not started yet; once startsAt passes, only "end lesson" remains.
+    const canManageStatus = canManage && isOpenStatus && now < startsAtMs;
 
     return {
       ...event,
       canEndLesson: canManage && windowOpen ? true : undefined,
+      canManageStatus: canManageStatus ? true : undefined,
       joinOpensAt:
         isOpenStatus && meetingReady && !windowOpen
           ? new Date(opensAtMs).toISOString()

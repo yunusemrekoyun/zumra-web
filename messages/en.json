@@ -644,7 +644,17 @@
       "joinOpensAt": "Opens at {time}",
       "endLesson": "End lesson",
       "endLessonConfirm": "Are you sure you want to end this lesson? The join link will close.",
-      "endLessonError": "Could not end the lesson. Try again."
+      "endLessonError": "Could not end the lesson. Try again.",
+      "lessonStatus": {
+        "cancel": "Cancel lesson",
+        "cancelSubmit": "Yes, cancel",
+        "postpone": "Postpone",
+        "postponeSubmit": "Postpone to new time",
+        "newTimePlaceholder": "Pick a new date and time",
+        "notePlaceholder": "Reason (optional, sent to student)",
+        "dismiss": "Dismiss",
+        "error": "Action failed. Please try again."
+      }
     },
     "settings": {
       "title": "Settings",
@@ -2088,7 +2098,17 @@
       "joinOpensAt": "Opens at {time}",
       "endLesson": "End lesson",
       "endLessonConfirm": "Are you sure you want to end this lesson? The join link will close.",
-      "endLessonError": "Could not end the lesson. Try again."
+      "endLessonError": "Could not end the lesson. Try again.",
+      "lessonStatus": {
+        "cancel": "Cancel lesson",
+        "cancelSubmit": "Yes, cancel",
+        "postpone": "Postpone",
+        "postponeSubmit": "Postpone to new time",
+        "newTimePlaceholder": "Pick a new date and time",
+        "notePlaceholder": "Reason (optional, sent to student)",
+        "dismiss": "Dismiss",
+        "error": "Action failed. Please try again."
+      }
     },
     "attendance": {
       "title": "Attendance",
