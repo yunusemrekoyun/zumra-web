@@ -32,6 +32,7 @@ import {
   programs,
   studentProfiles,
   users,
+  workspaceSettings,
 } from '@/lib/server/db/schema';
 
 // Contact learningGoal is an enum slug on real write paths — cycle valid slugs.
@@ -181,6 +182,15 @@ void (async () => {
 
     // --- admin ---
     const adminId = await newUser('Zümra Admin', 'admin@zumra.local', 'admin', 'admin');
+
+    // Demo accounts use @zumra.local placeholders that no real relay can deliver
+    // to, so device-verification / OTP mail must land in Mailpit. Default the
+    // workspace to test-mail mode; otherwise a fresh reseed emails admin OTPs to
+    // the live relay and locks the admin out. The admin can flip to 'live' from
+    // Settings once real mailboxes exist. Code default stays 'live' for real installs.
+    await tx
+      .insert(workspaceSettings)
+      .values({ key: 'mailMode', value: 'test', updatedByUserId: adminId });
 
     // --- teachers (user + instructor profile) ---
     const teacherUserIds: string[] = [];
