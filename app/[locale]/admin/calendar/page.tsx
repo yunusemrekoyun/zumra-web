@@ -1,5 +1,6 @@
 import { getTranslations } from 'next-intl/server';
 import { CalendarBoard, PageHeader } from '@/components/ui';
+import { AddPrivateLessonButton } from '@/components/add-private-lesson-button';
 import { requireWorkspaceRole } from '@/lib/server/authorization';
 import { getAdminCalendarData } from '@/lib/server/services/lesson-schedules';
 
@@ -16,6 +17,7 @@ export default async function AdminCalendarPage({
   const { month } = await searchParams;
   const principal = await requireWorkspaceRole('admin', locale);
   const t = await getTranslations('admin.calendar');
+  const tp = await getTranslations('privateLesson');
   const data = await getAdminCalendarData(principal);
   const returnPath = `/${locale}/admin/calendar${
     month ? `?month=${encodeURIComponent(month)}` : ''
@@ -23,7 +25,16 @@ export default async function AdminCalendarPage({
 
   return (
     <div className="admin-page">
-      <PageHeader title={t('title')} description={t('description')} />
+      <PageHeader
+        title={t('title')}
+        description={t('description')}
+        action={
+          <AddPrivateLessonButton
+            href="/admin/ozel-ders/yeni"
+            label={tp('addButton')}
+          />
+        }
+      />
       <CalendarBoard
         currentMonth={month}
         events={data.events}

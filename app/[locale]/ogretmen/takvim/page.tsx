@@ -1,5 +1,6 @@
 import { getTranslations } from 'next-intl/server';
 import { CalendarBoard, PageHeader } from '@/components/ui';
+import { AddPrivateLessonButton } from '@/components/add-private-lesson-button';
 import { requireWorkspaceRole } from '@/lib/server/authorization';
 import { getTeacherCalendarData } from '@/lib/server/services/lesson-schedules';
 
@@ -16,6 +17,7 @@ export default async function TeacherCalendarPage({
   const { month } = await searchParams;
   const principal = await requireWorkspaceRole('teacher', locale);
   const t = await getTranslations('teacher.calendar');
+  const tp = await getTranslations('privateLesson');
   const data = await getTeacherCalendarData(principal);
   const returnPath = `/${locale}/ogretmen/takvim${
     month ? `?month=${encodeURIComponent(month)}` : ''
@@ -29,6 +31,14 @@ export default async function TeacherCalendarPage({
           data.instructor
             ? t('descriptionWithName', { name: data.instructor.fullName })
             : t('missingProfileDescription')
+        }
+        action={
+          data.instructor ? (
+            <AddPrivateLessonButton
+              href="/ogretmen/ozel-ders/yeni"
+              label={tp('addButton')}
+            />
+          ) : undefined
         }
       />
       <CalendarBoard

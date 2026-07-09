@@ -1,6 +1,7 @@
 import { BookOpenCheck, CalendarDays, GraduationCap, Users } from 'lucide-react';
 import { getTranslations } from 'next-intl/server';
 import { KpiCard, ModulePanel, PageHeader, StatusChip } from '@/components/ui';
+import { AddPrivateLessonButton } from '@/components/add-private-lesson-button';
 import { requireWorkspaceRole } from '@/lib/server/authorization';
 import { getTeacherWorkspaceData } from '@/lib/server/services/teacher-workspace';
 
@@ -14,6 +15,7 @@ export default async function TeacherDashboardPage({
   const { locale } = await params;
   const principal = await requireWorkspaceRole('teacher', locale);
   const t = await getTranslations('teacher.dashboard');
+  const tp = await getTranslations('privateLesson');
   const data = await getTeacherWorkspaceData(principal);
   const groupStudents = data.students.filter(
     (student) => student.courseMode === 'group',
@@ -30,6 +32,14 @@ export default async function TeacherDashboardPage({
           data.instructor
             ? t('descriptionWithName', { name: data.instructor.fullName })
             : t('missingProfileDescription')
+        }
+        action={
+          privateStudents > 0 ? (
+            <AddPrivateLessonButton
+              href="/ogretmen/ozel-ders/yeni"
+              label={tp('addButton')}
+            />
+          ) : undefined
         }
       />
 

@@ -5,8 +5,11 @@ import {
   asc,
   count as drizzleCount,
   eq,
+  gt,
   inArray,
   isNotNull,
+  lt,
+  or,
 } from 'drizzle-orm';
 import type { WorkspacePrincipal } from '@/lib/domain';
 import { database } from '@/lib/server/db/client';
@@ -960,4 +963,271 @@ function assertStudent(principal: WorkspacePrincipal) {
 
 function fullName(firstName: string, lastName: string) {
   return `${firstName} ${lastName}`.trim();
+}
+
+// ---------------------------------------------------------------------------
+// Private (1:1) lesson scheduling
+// ---------------------------------------------------------------------------
+
+// Private lessons have no branch timezone; the school operates in Istanbul.
+const PRIVATE_LESSON_TZ = 'Europe/Istanbul';
+
+async function resolveInstructorProfileId(
+  principal: WorkspacePrincipal,
+): Promise<string | null> {
+  const [profile] = await database
+    .select({ id: instructorProfiles.id })
+    .from(instructorProfiles)
+    .where(eq(instructorProfiles.userId, principal.id))
+    .limit(1);
+  return profile?.id ?? null;
+}
+
+export type SchedulablePrivateEnrollment = {
+  enrollmentId: string;
+  studentName: string;
+  instructorProfileId: string;
+  instructorName: string;
+};
+
+/** Private enrollments the principal may schedule a lesson for (admin: all;
+ *  teacher: only their own), limited to active/paused. */
+export async function listSchedulablePrivateEnrollments(
+  principal: WorkspacePrincipal,
+): Promise<SchedulablePrivateEnrollment[]> {
+  const conditions = [
+    eq(enrollments.courseMode, 'private'),
+    inArray(enrollments.status, ['active', 'paused']),
+    isNotNull(enrollments.selectedInstructorProfileId),
+  ];
+
+  if (principal.role === 'teacher') {
+    const profileId = await resolveInstructorProfileId(principal);
+    if (!profileId) return [];
+    conditions.push(eq(enrollments.selectedInstructorProfileId, profileId));
+  } else {
+    assertAdmin(principal);
+  }
+
+  const rows = await database
+    .select({
+      enrollmentId: enrollments.id,
+      studentFirst: contacts.firstName,
+      studentLast: contacts.lastName,
+      instructorProfileId: enrollments.selectedInstructorProfileId,
+      instructorFirst: instructorProfiles.firstName,
+      instructorLast: instructorProfiles.lastName,
+    })
+    .from(enrollments)
+    .innerJoin(studentProfiles, eq(studentProfiles.id, enrollments.studentId))
+    .innerJoin(contacts, eq(contacts.id, studentProfiles.contactId))
+    .innerJoin(
+      instructorProfiles,
+      eq(instructorProfiles.id, enrollments.selectedInstructorProfileId),
+    )
+    .where(and(...conditions))
+    .orderBy(asc(contacts.firstName));
+
+  return rows.map((row) => ({
+    enrollmentId: row.enrollmentId,
+    studentName: fullName(row.studentFirst, row.studentLast),
+    instructorProfileId: row.instructorProfileId as string,
+    instructorName: fullName(row.instructorFirst, row.instructorLast),
+  }));
+}
+
+export type ScheduleConflict = {
+  scope: 'teacher' | 'student' | 'self';
+  startsAt: string;
+  endsAt: string;
+};
+
+// Person-specific calendar comparison: does the teacher or the student already
+// have an overlapping lesson (group OR private) in the target window? Only open
+// lessons (scheduled/postponed) count.
+async function findSlotConflicts(params: {
+  instructorProfileId: string;
+  studentProfileId: string;
+  studentBranchIds: string[];
+  startsAt: Date;
+  endsAt: Date;
+}): Promise<ScheduleConflict[]> {
+  const scopeConditions = [
+    eq(lessonSessions.instructorProfileId, params.instructorProfileId),
+    eq(lessonSessions.studentProfileId, params.studentProfileId),
+  ];
+  if (params.studentBranchIds.length) {
+    scopeConditions.push(
+      and(
+        eq(lessonSessions.source, 'branch'),
+        inArray(lessonSessions.branchId, params.studentBranchIds),
+      )!,
+    );
+  }
+
+  const rows = await database
+    .select({
+      startsAt: lessonSessions.startsAt,
+      endsAt: lessonSessions.endsAt,
+      instructorProfileId: lessonSessions.instructorProfileId,
+    })
+    .from(lessonSessions)
+    .where(
+      and(
+        inArray(lessonSessions.status, ['scheduled', 'postponed']),
+        // half-open overlap: existing.start < new.end AND existing.end > new.start
+        lt(lessonSessions.startsAt, params.endsAt),
+        gt(lessonSessions.endsAt, params.startsAt),
+        or(...scopeConditions),
+      ),
+    );
+
+  return rows.map((row) => ({
+    scope:
+      row.instructorProfileId === params.instructorProfileId
+        ? ('teacher' as const)
+        : ('student' as const),
+    startsAt: row.startsAt.toISOString(),
+    endsAt: row.endsAt.toISOString(),
+  }));
+}
+
+export type PrivateLessonSlotInput = { date: string; time: string };
+export type IndexedScheduleConflict = ScheduleConflict & { index: number };
+
+export class PrivateLessonConflictError extends Error {
+  constructor(public conflicts: IndexedScheduleConflict[]) {
+    super('private_lesson_conflict');
+    this.name = 'PrivateLessonConflictError';
+  }
+}
+
+/** Creates one or more private lessons for an enrollment. All slots are
+ *  conflict-checked up front; if any conflict, nothing is created and the
+ *  conflicts are reported per slot so the UI can offer a reschedule. */
+export async function createPrivateLessons(
+  principal: WorkspacePrincipal,
+  input: { enrollmentId: string; slots: PrivateLessonSlotInput[] },
+): Promise<{ lessonSessionIds: string[] }> {
+  if (!input.slots.length) {
+    throw new PublicFlowError('private_lesson_no_slots', 400);
+  }
+
+  const [enrollment] = await database
+    .select({
+      id: enrollments.id,
+      studentId: enrollments.studentId,
+      instructorProfileId: enrollments.selectedInstructorProfileId,
+      courseMode: enrollments.courseMode,
+      status: enrollments.status,
+    })
+    .from(enrollments)
+    .where(eq(enrollments.id, input.enrollmentId))
+    .limit(1);
+
+  if (
+    !enrollment ||
+    enrollment.courseMode !== 'private' ||
+    !enrollment.instructorProfileId
+  ) {
+    throw new PublicFlowError('private_lesson_enrollment_invalid', 400);
+  }
+  if (enrollment.status !== 'active' && enrollment.status !== 'paused') {
+    throw new PublicFlowError('private_lesson_enrollment_inactive', 400);
+  }
+
+  // Authorization: admin schedules for anyone; a teacher only for their own.
+  if (principal.role === 'teacher') {
+    const profileId = await resolveInstructorProfileId(principal);
+    if (!profileId || profileId !== enrollment.instructorProfileId) {
+      throw new AuthorizationDeniedError('Not your student.');
+    }
+  } else {
+    assertAdmin(principal);
+  }
+
+  const instructorProfileId = enrollment.instructorProfileId;
+  const studentProfileId = enrollment.studentId;
+
+  // Group branches the student attends — so a group lesson also counts as a
+  // conflict on the student's side.
+  const branchRows = await database
+    .select({ branchId: enrollments.branchId })
+    .from(enrollments)
+    .where(
+      and(
+        eq(enrollments.studentId, studentProfileId),
+        inArray(enrollments.status, ['active', 'paused']),
+        isNotNull(enrollments.branchId),
+      ),
+    );
+  const studentBranchIds = branchRows
+    .map((row) => row.branchId)
+    .filter((id): id is string => Boolean(id));
+
+  const computed = input.slots.map((slot, index) => {
+    const startsAt = zonedDateTimeToUtc(slot.date, slot.time, PRIVATE_LESSON_TZ);
+    const endsAt = new Date(
+      startsAt.getTime() + LESSON_DURATION_MINUTES * 60_000,
+    );
+    return { index, startsAt, endsAt };
+  });
+
+  const conflicts: IndexedScheduleConflict[] = [];
+  for (const slot of computed) {
+    // Against existing lessons.
+    const found = await findSlotConflicts({
+      instructorProfileId,
+      studentProfileId,
+      studentBranchIds,
+      startsAt: slot.startsAt,
+      endsAt: slot.endsAt,
+    });
+    for (const conflict of found) {
+      conflicts.push({ index: slot.index, ...conflict });
+    }
+    // Against other slots in the same request.
+    for (const other of computed) {
+      if (
+        other.index < slot.index &&
+        other.startsAt < slot.endsAt &&
+        other.endsAt > slot.startsAt
+      ) {
+        conflicts.push({
+          index: slot.index,
+          scope: 'self',
+          startsAt: other.startsAt.toISOString(),
+          endsAt: other.endsAt.toISOString(),
+        });
+      }
+    }
+  }
+
+  if (conflicts.length) {
+    throw new PrivateLessonConflictError(conflicts);
+  }
+
+  const now = new Date();
+  const created = await database.transaction(async (transaction) => {
+    const rows = await transaction
+      .insert(lessonSessions)
+      .values(
+        computed.map((slot) => ({
+          createdByUserId: principal.id,
+          endsAt: slot.endsAt,
+          enrollmentId: input.enrollmentId,
+          instructorProfileId,
+          source: 'private' as const,
+          startsAt: slot.startsAt,
+          studentProfileId,
+          timezone: PRIVATE_LESSON_TZ,
+          updatedAt: now,
+        })),
+      )
+      .returning({ id: lessonSessions.id });
+    return rows.map((row) => row.id);
+  });
+
+  await ensureLessonMeetingsForSessions(created);
+  return { lessonSessionIds: created };
 }

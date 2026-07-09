@@ -2248,5 +2248,30 @@
       "description": "The required role or security verification is missing for this workspace.",
       "help": "Refresh your session or contact your system administrator."
     }
+  },
+  "privateLesson": {
+    "title": "Create private lesson",
+    "description": "Schedule a lesson for your 1:1 student — single or weekly recurring.",
+    "addButton": "Add private lesson",
+    "noStudents": "You have no active 1:1 students to schedule for.",
+    "studentLabel": "Student",
+    "studentPlaceholder": "Select a student",
+    "modeSingle": "Single lesson",
+    "modeRecurring": "Weekly recurring",
+    "dateLabel": "Date and time",
+    "startLabel": "Start date and time",
+    "datePlaceholder": "Pick date and time",
+    "countLabel": "How many weeks",
+    "slotsTitle": "{count} lessons",
+    "change": "Change",
+    "create": "Create",
+    "creating": "Creating…",
+    "error": "Something went wrong. Please try again.",
+    "errorStudent": "Please select a student.",
+    "errorDate": "Please pick a date and time.",
+    "conflictIntro": "Some dates clash. Change the conflicting lessons:",
+    "conflictTeacher": "The teacher already has a lesson at this time.",
+    "conflictStudent": "The student already has a lesson at this time.",
+    "conflictSelf": "This lesson clashes with another one in the list."
   }
 }

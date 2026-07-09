@@ -2248,5 +2248,30 @@
       "description": "Bu panel için gerekli rol veya güvenlik doğrulaması bulunmuyor.",
       "help": "Oturumunuzu yenileyin veya sistem yöneticinizle iletişime geçin."
     }
+  },
+  "privateLesson": {
+    "title": "Birebir ders oluştur",
+    "description": "Özel (1:1) öğrencin için ders planla — tek ders ya da haftalık tekrarlı.",
+    "addButton": "Birebir ders ekle",
+    "noStudents": "Planlanacak aktif birebir öğrencin yok.",
+    "studentLabel": "Öğrenci",
+    "studentPlaceholder": "Öğrenci seç",
+    "modeSingle": "Tek ders",
+    "modeRecurring": "Haftalık tekrarlı",
+    "dateLabel": "Tarih ve saat",
+    "startLabel": "Başlangıç tarihi ve saati",
+    "datePlaceholder": "Tarih ve saat seç",
+    "countLabel": "Kaç hafta",
+    "slotsTitle": "{count} ders",
+    "change": "Değiştir",
+    "create": "Oluştur",
+    "creating": "Oluşturuluyor…",
+    "error": "İşlem başarısız. Tekrar deneyin.",
+    "errorStudent": "Lütfen bir öğrenci seç.",
+    "errorDate": "Lütfen tarih ve saat seç.",
+    "conflictIntro": "Bazı tarihler çakışıyor. Çakışan dersleri değiştir:",
+    "conflictTeacher": "Öğretmenin bu saatte başka dersi var.",
+    "conflictStudent": "Öğrencinin bu saatte başka dersi var.",
+    "conflictSelf": "Bu ders, listedeki başka bir dersle çakışıyor."
   }
 }
