@@ -204,6 +204,13 @@
       "when": 1783586760521,
       "tag": "0028_superb_roland_deschain",
       "breakpoints": true
+    },
+    {
+      "idx": 29,
+      "version": "7",
+      "when": 1783590113427,
+      "tag": "0029_powerful_the_executioner",
+      "breakpoints": true
     }
   ]
 }

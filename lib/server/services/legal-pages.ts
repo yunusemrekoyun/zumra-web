@@ -11,9 +11,9 @@ export type LegalLocale = 'tr' | 'en';
 // by the static route and never render, so we refuse them.
 const RESERVED_SLUGS = new Set([
   'admin', 'danisman', 'ogrenci', 'ogretmen', 'giris', 'api', '_next',
-  'level-test', 'mfa', 'mfa-kurulum', 'cihaz-dogrulama', 'aktivasyon',
-  'google-tamamla', 'sifre-sifirla', 'sifremi-unuttum', 'ders-baglanti',
-  'yetkisiz',
+  'level-test', 'seviye-testi', 'mfa', 'mfa-kurulum', 'cihaz-dogrulama',
+  'aktivasyon', 'google-tamamla', 'sifre-sifirla', 'sifremi-unuttum',
+  'ders-baglanti', 'yetkisiz', 'ozel-ders',
 ]);
 
 const SANITIZE_OPTIONS: sanitizeHtml.IOptions = {
@@ -168,8 +168,25 @@ export class LegalPageError extends Error {
   }
 }
 
+async function slugTaken(slug: string, ignoreId?: string): Promise<boolean> {
+  const [clash] = await database
+    .select({ id: legalPages.id })
+    .from(legalPages)
+    .where(
+      ignoreId
+        ? and(eq(legalPages.slug, slug), ne(legalPages.id, ignoreId))
+        : eq(legalPages.slug, slug),
+    )
+    .limit(1);
+  return Boolean(clash);
+}
+
+// `userProvided` = the admin typed the slug explicitly (vs it being derived
+// from the title). A collision on a user-typed slug is an error to report;
+// a collision on an auto-derived slug is silently disambiguated with a suffix.
 async function resolveUniqueSlug(
   desired: string,
+  userProvided: boolean,
   ignoreId?: string,
 ): Promise<string> {
   const base = slugifyLegal(desired);
@@ -177,24 +194,20 @@ async function resolveUniqueSlug(
     throw new LegalPageError('slug_reserved');
   }
 
-  let candidate = base;
+  if (!(await slugTaken(base, ignoreId))) {
+    return base;
+  }
+  if (userProvided) {
+    throw new LegalPageError('slug_taken');
+  }
+
   let suffix = 1;
-  // Loop until the slug is free (excluding the row being edited).
   for (;;) {
-    const [clash] = await database
-      .select({ id: legalPages.id })
-      .from(legalPages)
-      .where(
-        ignoreId
-          ? and(eq(legalPages.slug, candidate), ne(legalPages.id, ignoreId))
-          : eq(legalPages.slug, candidate),
-      )
-      .limit(1);
-    if (!clash) {
+    suffix += 1;
+    const candidate = `${base}-${suffix}`;
+    if (!(await slugTaken(candidate, ignoreId))) {
       return candidate;
     }
-    suffix += 1;
-    candidate = `${base}-${suffix}`;
   }
 }
 
@@ -213,7 +226,10 @@ export async function createLegalPage(
   input: CreateLegalPageInput,
   userId: string,
 ): Promise<AdminLegalPage> {
-  const slug = await resolveUniqueSlug(input.slug || input.titleTr);
+  const slug = await resolveUniqueSlug(
+    input.slug || input.titleTr,
+    Boolean(input.slug),
+  );
   const [row] = await database
     .insert(legalPages)
     .values({
@@ -244,7 +260,7 @@ export async function updateLegalPage(
   };
 
   if (input.slug !== undefined) {
-    patch.slug = await resolveUniqueSlug(input.slug, id);
+    patch.slug = await resolveUniqueSlug(input.slug, true, id);
   }
   if (input.titleTr !== undefined) patch.titleTr = input.titleTr.trim();
   if (input.titleEn !== undefined) patch.titleEn = input.titleEn.trim();

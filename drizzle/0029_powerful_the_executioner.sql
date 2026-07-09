@@ -1,0 +1,4 @@
+DROP INDEX "lesson_sessions_branch_starts_unique";--> statement-breakpoint
+DROP INDEX "lesson_sessions_enrollment_starts_unique";--> statement-breakpoint
+CREATE UNIQUE INDEX "lesson_sessions_branch_starts_unique" ON "lesson_sessions" USING btree ("branch_id","starts_at") WHERE "lesson_sessions"."branch_id" is not null and "lesson_sessions"."status" in ('scheduled', 'postponed');--> statement-breakpoint
+CREATE UNIQUE INDEX "lesson_sessions_enrollment_starts_unique" ON "lesson_sessions" USING btree ("enrollment_id","starts_at") WHERE "lesson_sessions"."enrollment_id" is not null and "lesson_sessions"."status" in ('scheduled', 'postponed');

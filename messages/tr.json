@@ -1118,7 +1118,8 @@
         "outcome_completed": "Görüşme yapıldı",
         "outcome_no_show": "Gelmedi",
         "outcome_cancelled": "İptal",
-        "error": "İşlem başarısız. Tekrar deneyin."
+        "error": "İşlem başarısız. Tekrar deneyin.",
+        "stale": "Bu randevu başka bir yerde güncellenmiş. Sayfayı yenileyin."
       },
       "noAppointment": "Henüz talep yok",
       "source": "Kaynak",
@@ -1982,7 +1983,8 @@
         "saving": "Oluşturuluyor...",
         "submit": "Ödevi oluştur",
         "lessonLabel": "Bağlı ders",
-        "lessonNone": "Derse bağlama"
+        "lessonNone": "Derse bağlama",
+        "errorProcessing": "Ek dosya hâlâ işleniyor. Birkaç saniye sonra tekrar dene."
       },
       "grading": {
         "description": "{target} • teslimleri puanla",

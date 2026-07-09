@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { CalendarClock, XCircle } from 'lucide-react';
+import { istanbulWallClockToISO } from '@/lib/datetime';
 import { useRouter } from '@/i18n/navigation';
 import { DateTimePicker } from './date-picker';
 
@@ -146,7 +147,7 @@ export function LessonStatusActions({
             onClick={() =>
               submit({
                 status: 'postponed',
-                startsAt: new Date(newTime).toISOString(),
+                startsAt: istanbulWallClockToISO(newTime),
                 ...(trimmedNote ? { note: trimmedNote } : {}),
               })
             }

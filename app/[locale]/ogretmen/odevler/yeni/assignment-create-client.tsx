@@ -5,6 +5,7 @@ import { useTranslations } from 'next-intl';
 import { Send } from 'lucide-react';
 import { type Attachment, AttachmentInput } from '@/components/attachment-input';
 import { Button, FormField, Input, ModulePanel } from '@/components/ui';
+import { istanbulWallClockToISO } from '@/lib/datetime';
 import type { AssignableLesson } from '@/lib/server/services/assignments';
 import { cn } from '@/lib/utils';
 
@@ -79,7 +80,7 @@ export function AssignmentCreateClient({
           description: description.trim() || undefined,
           requiresSubmission,
           maxScore: requiresSubmission ? Number(maxScore) || 100 : undefined,
-          dueAt: dueAt ? new Date(dueAt).toISOString() : undefined,
+          dueAt: dueAt ? istanbulWallClockToISO(dueAt) : undefined,
           target: targetPayload,
           lessonSessionId: lessonSessionId || undefined,
           attachmentMediaIds: attachments.map((item) => item.mediaAssetId),
@@ -88,7 +89,18 @@ export function AssignmentCreateClient({
         headers: { 'content-type': 'application/json' },
         method: 'POST',
       });
-      if (!response.ok) throw new Error('create_failed');
+      if (!response.ok) {
+        const body = (await response.json().catch(() => ({}))) as {
+          error?: string;
+        };
+        setError(
+          body.error === 'attachment_not_ready'
+            ? t('create.errorProcessing')
+            : t('create.error'),
+        );
+        setBusy(false);
+        return;
+      }
       window.location.assign(`/${locale}/ogretmen/odevler`);
     } catch {
       setError(t('create.error'));

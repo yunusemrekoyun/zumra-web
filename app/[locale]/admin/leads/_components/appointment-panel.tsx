@@ -5,22 +5,15 @@ import { useTranslations } from 'next-intl';
 import { CalendarCheck, Check, X } from 'lucide-react';
 import { StatusChip } from '@/components/ui';
 import { DateTimePicker } from '@/components/ui/date-picker';
+import {
+  APP_TIME_ZONE,
+  isoToIstanbulWallClock,
+  istanbulWallClockToISO,
+} from '@/lib/datetime';
 import { useRouter } from '@/i18n/navigation';
 
 type Preference = { rank: number; startsAt: string };
 type Outcome = 'completed' | 'no_show' | 'cancelled';
-
-function pad(value: number) {
-  return String(value).padStart(2, '0');
-}
-
-// ISO (UTC) -> local 'YYYY-MM-DDTHH:mm' for the DateTimePicker.
-function isoToPickerValue(iso: string): string {
-  const date = new Date(iso);
-  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(
-    date.getDate(),
-  )}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
-}
 
 export function AppointmentPanel({
   candidateId,
@@ -47,6 +40,7 @@ export function AppointmentPanel({
   const formatter = new Intl.DateTimeFormat(locale, {
     dateStyle: 'medium',
     timeStyle: 'short',
+    timeZone: APP_TIME_ZONE,
   });
 
   async function send(body: Record<string, unknown>) {
@@ -64,7 +58,13 @@ export function AppointmentPanel({
         },
       );
       if (!response.ok) {
-        setError(t('error'));
+        // 404/409 means the appointment changed under us (another tab/staff);
+        // a stale panel should prompt a refresh rather than a blind retry.
+        setError(
+          response.status === 404 || response.status === 409
+            ? t('stale')
+            : t('error'),
+        );
         setBusy(false);
         return;
       }
@@ -107,7 +107,7 @@ export function AppointmentPanel({
                     key={`${preference.rank}-${preference.startsAt}`}
                     type="button"
                     onClick={() =>
-                      setPickerValue(isoToPickerValue(preference.startsAt))
+                      setPickerValue(isoToIstanbulWallClock(preference.startsAt))
                     }
                     className="rounded-2xl bg-white p-3 text-left ring-1 ring-black/[0.04] transition-colors hover:ring-[#533089]/30"
                   >
@@ -128,6 +128,7 @@ export function AppointmentPanel({
             </p>
             <DateTimePicker
               locale={locale}
+              min={new Date()}
               value={pickerValue}
               onChange={setPickerValue}
               placeholder={t('pickTime')}
@@ -142,7 +143,7 @@ export function AppointmentPanel({
             onClick={() =>
               send({
                 action: 'schedule',
-                startsAt: new Date(pickerValue).toISOString(),
+                startsAt: istanbulWallClockToISO(pickerValue),
               })
             }
             className="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-2xl bg-[#533089] px-5 text-xs font-bold uppercase tracking-wider text-white shadow-md shadow-[#533089]/20 transition-colors hover:bg-[#462878] disabled:opacity-50"

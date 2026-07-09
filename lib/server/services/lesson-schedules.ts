@@ -10,6 +10,7 @@ import {
   isNotNull,
   lt,
   or,
+  sql,
 } from 'drizzle-orm';
 import type { WorkspacePrincipal } from '@/lib/domain';
 import { database } from '@/lib/server/db/client';
@@ -1173,42 +1174,40 @@ export async function createPrivateLessons(
     return { index, startsAt, endsAt };
   });
 
-  const conflicts: IndexedScheduleConflict[] = [];
-  for (const slot of computed) {
-    // Against existing lessons.
-    const found = await findSlotConflicts({
-      instructorProfileId,
-      studentProfileId,
-      studentBranchIds,
-      startsAt: slot.startsAt,
-      endsAt: slot.endsAt,
-    });
-    for (const conflict of found) {
-      conflicts.push({ index: slot.index, ...conflict });
-    }
-    // Against other slots in the same request.
-    for (const other of computed) {
-      if (
-        other.index < slot.index &&
-        other.startsAt < slot.endsAt &&
-        other.endsAt > slot.startsAt
-      ) {
-        conflicts.push({
-          index: slot.index,
-          scope: 'self',
-          startsAt: other.startsAt.toISOString(),
-          endsAt: other.endsAt.toISOString(),
-        });
-      }
-    }
+  // A crafted request (or a browser whose local time is ahead of Istanbul) could
+  // slip a past slot past the client's min guard; reject it server-side.
+  const nowMs = Date.now();
+  if (computed.some((slot) => slot.startsAt.getTime() <= nowMs)) {
+    throw new PublicFlowError('private_lesson_past', 400);
   }
 
+  const conflicts = await collectPrivateSlotConflicts({
+    computed,
+    instructorProfileId,
+    studentProfileId,
+    studentBranchIds,
+  });
   if (conflicts.length) {
     throw new PrivateLessonConflictError(conflicts);
   }
 
   const now = new Date();
   const created = await database.transaction(async (transaction) => {
+    // Serialize concurrent bookings for this teacher, then re-check conflicts
+    // inside the lock so a slot booked between our check and insert is caught.
+    await transaction.execute(
+      sql`SELECT pg_advisory_xact_lock(hashtext(${instructorProfileId}))`,
+    );
+    const raceConflicts = await collectPrivateSlotConflicts({
+      computed,
+      instructorProfileId,
+      studentProfileId,
+      studentBranchIds,
+    });
+    if (raceConflicts.length) {
+      throw new PrivateLessonConflictError(raceConflicts);
+    }
+
     const rows = await transaction
       .insert(lessonSessions)
       .values(
@@ -1230,4 +1229,47 @@ export async function createPrivateLessons(
 
   await ensureLessonMeetingsForSessions(created);
   return { lessonSessionIds: created };
+}
+
+async function collectPrivateSlotConflicts(params: {
+  computed: Array<{ index: number; startsAt: Date; endsAt: Date }>;
+  instructorProfileId: string;
+  studentProfileId: string;
+  studentBranchIds: string[];
+}): Promise<IndexedScheduleConflict[]> {
+  const conflicts: IndexedScheduleConflict[] = [];
+  for (const slot of params.computed) {
+    const found = await findSlotConflicts({
+      instructorProfileId: params.instructorProfileId,
+      studentProfileId: params.studentProfileId,
+      studentBranchIds: params.studentBranchIds,
+      startsAt: slot.startsAt,
+      endsAt: slot.endsAt,
+    });
+    for (const conflict of found) {
+      conflicts.push({ index: slot.index, ...conflict });
+    }
+    // Overlap with another slot in the same request — flag BOTH sides.
+    for (const other of params.computed) {
+      if (
+        other.index < slot.index &&
+        other.startsAt < slot.endsAt &&
+        other.endsAt > slot.startsAt
+      ) {
+        conflicts.push({
+          index: slot.index,
+          scope: 'self',
+          startsAt: other.startsAt.toISOString(),
+          endsAt: other.endsAt.toISOString(),
+        });
+        conflicts.push({
+          index: other.index,
+          scope: 'self',
+          startsAt: slot.startsAt.toISOString(),
+          endsAt: slot.endsAt.toISOString(),
+        });
+      }
+    }
+  }
+  return conflicts;
 }

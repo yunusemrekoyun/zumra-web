@@ -148,12 +148,18 @@ export const lessonSessions = pgTable(
       .defaultNow(),
   },
   (table) => [
+    // Only OPEN lessons hold a slot — a cancelled/completed lesson must not
+    // block re-booking the same branch/enrollment at that time.
     uniqueIndex('lesson_sessions_branch_starts_unique')
       .on(table.branchId, table.startsAt)
-      .where(sql`${table.branchId} is not null`),
+      .where(
+        sql`${table.branchId} is not null and ${table.status} in ('scheduled', 'postponed')`,
+      ),
     uniqueIndex('lesson_sessions_enrollment_starts_unique')
       .on(table.enrollmentId, table.startsAt)
-      .where(sql`${table.enrollmentId} is not null`),
+      .where(
+        sql`${table.enrollmentId} is not null and ${table.status} in ('scheduled', 'postponed')`,
+      ),
     index('lesson_sessions_instructor_starts_idx').on(
       table.instructorProfileId,
       table.startsAt,

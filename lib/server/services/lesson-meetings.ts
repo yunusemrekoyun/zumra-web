@@ -4,10 +4,12 @@ import {
   and,
   asc,
   eq,
+  gt,
   inArray,
   isNull,
   lt,
   lte,
+  ne,
   or,
   sql,
 } from 'drizzle-orm';
@@ -650,6 +652,40 @@ export async function retryLessonMeetingCreation(
   return { status: 'queued' as const };
 }
 
+// Does the teacher or the student already have an open (scheduled/postponed)
+// lesson overlapping this window? Used to guard postpone against double-booking.
+async function hasOverlappingOpenLesson(params: {
+  instructorProfileId: string | null;
+  studentProfileId: string | null;
+  startsAt: Date;
+  endsAt: Date;
+  excludeId: string;
+}): Promise<boolean> {
+  const scope = [];
+  if (params.instructorProfileId) {
+    scope.push(eq(lessonSessions.instructorProfileId, params.instructorProfileId));
+  }
+  if (params.studentProfileId) {
+    scope.push(eq(lessonSessions.studentProfileId, params.studentProfileId));
+  }
+  if (!scope.length) return false;
+
+  const [row] = await database
+    .select({ id: lessonSessions.id })
+    .from(lessonSessions)
+    .where(
+      and(
+        ne(lessonSessions.id, params.excludeId),
+        inArray(lessonSessions.status, ['scheduled', 'postponed']),
+        lt(lessonSessions.startsAt, params.endsAt),
+        gt(lessonSessions.endsAt, params.startsAt),
+        or(...scope),
+      ),
+    )
+    .limit(1);
+  return Boolean(row);
+}
+
 export async function updateLessonSessionOperationalStatus(
   principal: WorkspacePrincipal,
   lessonSessionId: string,
@@ -667,17 +703,52 @@ export async function updateLessonSessionOperationalStatus(
 
   await assertCanManageLesson(principal, context);
 
+  // A completed/cancelled lesson is terminal — never re-open or re-time it.
+  // The UI gates this client-side, but a direct POST must be rejected too.
+  if (context.status !== 'scheduled' && context.status !== 'postponed') {
+    throw new PublicFlowError('lesson_session_not_open', 409);
+  }
+
   const updatedStartsAt =
     input.status === 'postponed' && input.startsAt
       ? parseOperationalDate(input.startsAt)
       : undefined;
   const durationMs = context.endsAt.getTime() - context.startsAt.getTime();
+  const updatedEndsAt = updatedStartsAt
+    ? new Date(updatedStartsAt.getTime() + durationMs)
+    : undefined;
+
+  // Postpone must move the lesson to a future slot that doesn't clash with the
+  // teacher's or the student's other open lessons (mirrors the create flow).
+  if (input.status === 'postponed') {
+    if (
+      !updatedStartsAt ||
+      !updatedEndsAt ||
+      updatedStartsAt.getTime() <= Date.now()
+    ) {
+      throw new PublicFlowError('lesson_postpone_invalid', 400);
+    }
+    const [session] = await database
+      .select({ studentProfileId: lessonSessions.studentProfileId })
+      .from(lessonSessions)
+      .where(eq(lessonSessions.id, lessonSessionId))
+      .limit(1);
+    const clash = await hasOverlappingOpenLesson({
+      excludeId: lessonSessionId,
+      instructorProfileId: context.instructorProfileId,
+      studentProfileId: session?.studentProfileId ?? null,
+      startsAt: updatedStartsAt,
+      endsAt: updatedEndsAt,
+    });
+    if (clash) {
+      throw new PublicFlowError('lesson_postpone_conflict', 409);
+    }
+  }
+
   const [updated] = await database
     .update(lessonSessions)
     .set({
-      endsAt: updatedStartsAt
-        ? new Date(updatedStartsAt.getTime() + durationMs)
-        : undefined,
+      endsAt: updatedEndsAt,
       startsAt: updatedStartsAt,
       status: input.status,
       updatedAt: new Date(),
@@ -692,6 +763,20 @@ export async function updateLessonSessionOperationalStatus(
 
   if (!updated) {
     throw new PublicFlowError('lesson_session_not_found', 404);
+  }
+
+  // Re-arm attendance sync for the new end time so the reconciliation sweep
+  // doesn't fire against the old (now-past) time and mark everyone absent.
+  if (updatedStartsAt) {
+    await database
+      .update(lessonSessionMeetings)
+      .set({
+        nextSyncAt: new Date(
+          updated.endsAt.getTime() + ATTENDANCE_SYNC_DELAY_MS,
+        ),
+        updatedAt: new Date(),
+      })
+      .where(eq(lessonSessionMeetings.lessonSessionId, lessonSessionId));
   }
 
   // A normal "completed" close is not a disruption, so it does not fan out

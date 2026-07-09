@@ -419,6 +419,7 @@ export async function createAssignment(
       .where(
         and(
           eq(lessonSessions.id, input.lessonSessionId),
+          eq(lessonSessions.instructorProfileId, instructorProfileId),
           targetBranchId
             ? eq(lessonSessions.branchId, targetBranchId)
             : eq(lessonSessions.enrollmentId, targetEnrollmentId as string),

@@ -1118,7 +1118,8 @@
         "outcome_completed": "Held",
         "outcome_no_show": "No-show",
         "outcome_cancelled": "Cancelled",
-        "error": "Something went wrong. Please try again."
+        "error": "Something went wrong. Please try again.",
+        "stale": "This appointment changed elsewhere. Please refresh the page."
       },
       "noAppointment": "No request yet",
       "source": "Source",
@@ -1982,7 +1983,8 @@
         "saving": "Creating...",
         "submit": "Create assignment",
         "lessonLabel": "Linked lesson",
-        "lessonNone": "Don't link to a lesson"
+        "lessonNone": "Don't link to a lesson",
+        "errorProcessing": "An attachment is still processing. Try again in a few seconds."
       },
       "grading": {
         "description": "{target} • grade submissions",

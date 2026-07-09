@@ -6,6 +6,7 @@ import { database } from '@/lib/server/db/client';
 import {
   appointmentRequests,
   candidateActivities,
+  candidateInquiries,
   candidateNotes,
   candidateProfiles,
   contacts,
@@ -139,6 +140,35 @@ export async function addCandidateNote(
 export const appointmentOutcomes = ['completed', 'no_show', 'cancelled'] as const;
 export type AppointmentOutcome = (typeof appointmentOutcomes)[number];
 
+// Act on the SAME appointment the candidate drawer displays: the one attached
+// to the candidate's most recent inquiry (mirrors candidate-directory), and
+// only when it is in the expected state.
+async function latestInquiryAppointmentId(
+  candidateId: string,
+  status: 'requested' | 'scheduled',
+): Promise<string | null> {
+  const [inquiry] = await database
+    .select({ id: candidateInquiries.id })
+    .from(candidateInquiries)
+    .where(eq(candidateInquiries.candidateId, candidateId))
+    .orderBy(desc(candidateInquiries.createdAt))
+    .limit(1);
+  if (!inquiry) return null;
+
+  const [appointment] = await database
+    .select({ id: appointmentRequests.id })
+    .from(appointmentRequests)
+    .where(
+      and(
+        eq(appointmentRequests.inquiryId, inquiry.id),
+        eq(appointmentRequests.status, status),
+      ),
+    )
+    .orderBy(desc(appointmentRequests.createdAt))
+    .limit(1);
+  return appointment?.id ?? null;
+}
+
 /** Confirm the consultation appointment at the chosen time and email the lead. */
 export async function scheduleAppointment(
   principal: WorkspacePrincipal,
@@ -149,30 +179,34 @@ export async function scheduleAppointment(
   await requireCandidate(candidateId);
 
   const startsAt = new Date(input.startsAt);
-  if (Number.isNaN(startsAt.getTime())) {
+  if (Number.isNaN(startsAt.getTime()) || startsAt.getTime() <= Date.now()) {
     throw new PublicFlowError('invalid_request');
   }
 
-  const [appointment] = await database
-    .select({ id: appointmentRequests.id })
-    .from(appointmentRequests)
-    .where(
-      and(
-        eq(appointmentRequests.candidateId, candidateId),
-        eq(appointmentRequests.status, 'requested'),
-      ),
-    )
-    .orderBy(desc(appointmentRequests.createdAt))
-    .limit(1);
-  if (!appointment) {
+  const appointmentId = await latestInquiryAppointmentId(
+    candidateId,
+    'requested',
+  );
+  if (!appointmentId) {
     throw new PublicFlowError('appointment_not_found', 404);
   }
 
   const now = new Date();
-  await database
+  // Atomic transition: only flip a still-'requested' row.
+  const updated = await database
     .update(appointmentRequests)
     .set({ status: 'scheduled', scheduledStartsAt: startsAt, updatedAt: now })
-    .where(eq(appointmentRequests.id, appointment.id));
+    .where(
+      and(
+        eq(appointmentRequests.id, appointmentId),
+        eq(appointmentRequests.status, 'requested'),
+      ),
+    )
+    .returning({ id: appointmentRequests.id });
+  if (!updated.length) {
+    throw new PublicFlowError('appointment_not_found', 404);
+  }
+
   await database
     .update(candidateProfiles)
     .set({ lastActivityAt: now, updatedAt: now })
@@ -192,7 +226,7 @@ export async function scheduleAppointment(
   if (contact?.email) {
     await notificationService.enqueue({
       channel: 'email',
-      idempotencyKey: `appointment-scheduled:${appointment.id}:${startsAt.getTime()}`,
+      idempotencyKey: `appointment-scheduled:${appointmentId}:${startsAt.getTime()}`,
       locale: 'tr',
       payload: { name: contact.firstName, startsAt: startsAt.toISOString() },
       recipient: contact.email,
@@ -213,27 +247,30 @@ export async function resolveAppointment(
     throw new PublicFlowError('invalid_request');
   }
 
-  const [appointment] = await database
-    .select({ id: appointmentRequests.id })
-    .from(appointmentRequests)
-    .where(
-      and(
-        eq(appointmentRequests.candidateId, candidateId),
-        eq(appointmentRequests.status, 'scheduled'),
-      ),
-    )
-    .orderBy(desc(appointmentRequests.createdAt))
-    .limit(1);
-  if (!appointment) {
+  const appointmentId = await latestInquiryAppointmentId(
+    candidateId,
+    'scheduled',
+  );
+  if (!appointmentId) {
     throw new PublicFlowError('appointment_not_found', 404);
   }
 
   const now = new Date();
   const note = input.note?.trim().slice(0, 2000) || null;
-  await database
+  const updated = await database
     .update(appointmentRequests)
     .set({ status: input.outcome, outcomeNote: note, updatedAt: now })
-    .where(eq(appointmentRequests.id, appointment.id));
+    .where(
+      and(
+        eq(appointmentRequests.id, appointmentId),
+        eq(appointmentRequests.status, 'scheduled'),
+      ),
+    )
+    .returning({ id: appointmentRequests.id });
+  if (!updated.length) {
+    throw new PublicFlowError('appointment_not_found', 404);
+  }
+
   await database
     .update(candidateProfiles)
     .set({ lastActivityAt: now, updatedAt: now })
