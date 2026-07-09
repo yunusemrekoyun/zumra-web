@@ -6,6 +6,7 @@ import {
   eq,
   gt,
   inArray,
+  isNotNull,
   isNull,
   lt,
   lte,
@@ -657,6 +658,7 @@ export async function retryLessonMeetingCreation(
 async function hasOverlappingOpenLesson(params: {
   instructorProfileId: string | null;
   studentProfileId: string | null;
+  studentBranchIds: string[];
   startsAt: Date;
   endsAt: Date;
   excludeId: string;
@@ -667,6 +669,15 @@ async function hasOverlappingOpenLesson(params: {
   }
   if (params.studentProfileId) {
     scope.push(eq(lessonSessions.studentProfileId, params.studentProfileId));
+  }
+  // The student's own group (branch) lessons also count as a conflict.
+  if (params.studentBranchIds.length) {
+    scope.push(
+      and(
+        eq(lessonSessions.source, 'branch'),
+        inArray(lessonSessions.branchId, params.studentBranchIds),
+      )!,
+    );
   }
   if (!scope.length) return false;
 
@@ -733,10 +744,28 @@ export async function updateLessonSessionOperationalStatus(
       .from(lessonSessions)
       .where(eq(lessonSessions.id, lessonSessionId))
       .limit(1);
+    const studentProfileId = session?.studentProfileId ?? null;
+    let studentBranchIds: string[] = [];
+    if (studentProfileId) {
+      const branchRows = await database
+        .select({ branchId: enrollments.branchId })
+        .from(enrollments)
+        .where(
+          and(
+            eq(enrollments.studentId, studentProfileId),
+            inArray(enrollments.status, ['active', 'paused']),
+            isNotNull(enrollments.branchId),
+          ),
+        );
+      studentBranchIds = branchRows
+        .map((row) => row.branchId)
+        .filter((id): id is string => Boolean(id));
+    }
     const clash = await hasOverlappingOpenLesson({
       excludeId: lessonSessionId,
       instructorProfileId: context.instructorProfileId,
-      studentProfileId: session?.studentProfileId ?? null,
+      studentProfileId,
+      studentBranchIds,
       startsAt: updatedStartsAt,
       endsAt: updatedEndsAt,
     });

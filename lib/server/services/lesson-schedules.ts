@@ -1193,10 +1193,16 @@ export async function createPrivateLessons(
 
   const now = new Date();
   const created = await database.transaction(async (transaction) => {
-    // Serialize concurrent bookings for this teacher, then re-check conflicts
-    // inside the lock so a slot booked between our check and insert is caught.
+    // Serialize concurrent bookings that share this teacher OR this student,
+    // then re-check inside the locks so a slot booked between our check and
+    // insert is caught. Locks are taken in a fixed order (instructor, student)
+    // — instructor and student ids are disjoint, so a single fixed order is
+    // deadlock-free.
     await transaction.execute(
       sql`SELECT pg_advisory_xact_lock(hashtext(${instructorProfileId}))`,
+    );
+    await transaction.execute(
+      sql`SELECT pg_advisory_xact_lock(hashtext(${studentProfileId}))`,
     );
     const raceConflicts = await collectPrivateSlotConflicts({
       computed,
