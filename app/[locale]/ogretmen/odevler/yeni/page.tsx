@@ -1,6 +1,7 @@
 import { getTranslations } from 'next-intl/server';
 import { PageHeader } from '@/components/ui';
 import { requireWorkspaceRole } from '@/lib/server/authorization';
+import { listAssignableLessonsForInstructor } from '@/lib/server/services/assignments';
 import { getTeacherWorkspaceData } from '@/lib/server/services/teacher-workspace';
 import { AssignmentCreateClient } from './assignment-create-client';
 
@@ -14,7 +15,10 @@ export default async function NewAssignmentPage({
   const { locale } = await params;
   const principal = await requireWorkspaceRole('teacher', locale);
   const t = await getTranslations('teacher.assignments');
-  const data = await getTeacherWorkspaceData(principal);
+  const [data, lessons] = await Promise.all([
+    getTeacherWorkspaceData(principal),
+    listAssignableLessonsForInstructor(principal),
+  ]);
 
   return (
     <div className="workspace-page">
@@ -30,6 +34,7 @@ export default async function NewAssignmentPage({
           name: student.fullName,
           branchName: student.branchName,
         }))}
+        lessons={lessons}
       />
     </div>
   );

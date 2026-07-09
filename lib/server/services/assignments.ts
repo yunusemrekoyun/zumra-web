@@ -11,6 +11,7 @@ import {
   contacts,
   enrollments,
   instructorProfiles,
+  lessonSessions,
   mediaAssets,
   programBranches,
   studentProfiles,
@@ -76,6 +77,13 @@ export type SubmissionView = {
   attachments: AttachmentView[];
 };
 
+// A lesson an assignment is linked to (optional). The client formats startsAt
+// into a locale-aware label.
+export type LinkedLessonView = {
+  id: string;
+  startsAt: string;
+};
+
 export type AssignmentDetail = {
   id: string;
   title: string;
@@ -87,6 +95,24 @@ export type AssignmentDetail = {
   targetType: 'branch' | 'student';
   targetLabel: string;
   attachments: AttachmentView[];
+  lesson?: LinkedLessonView;
+};
+
+// A lesson the teacher may link a new assignment to. Client filters by the
+// selected target (branchId for a branch target, enrollmentId for a student).
+export type AssignableLesson = {
+  id: string;
+  startsAt: string;
+  branchId: string | null;
+  enrollmentId: string | null;
+};
+
+// An assignment shown on a lesson's detail page (reverse link).
+export type LessonAssignmentItem = {
+  id: string;
+  title: string;
+  requiresSubmission: boolean;
+  dueAt?: string;
 };
 
 export type GradingRosterRow = {
@@ -384,6 +410,26 @@ export async function createAssignment(
     targetEnrollmentId = enrollment.id;
   }
 
+  // A linked lesson (optional) must belong to the same target — which is already
+  // verified to be the teacher's, so this transitively enforces ownership.
+  if (input.lessonSessionId) {
+    const [lesson] = await database
+      .select({ id: lessonSessions.id })
+      .from(lessonSessions)
+      .where(
+        and(
+          eq(lessonSessions.id, input.lessonSessionId),
+          targetBranchId
+            ? eq(lessonSessions.branchId, targetBranchId)
+            : eq(lessonSessions.enrollmentId, targetEnrollmentId as string),
+        ),
+      )
+      .limit(1);
+    if (!lesson) {
+      throw new PublicFlowError('assignment_lesson_invalid', 400);
+    }
+  }
+
   const attachmentMediaIds = input.attachmentMediaIds ?? [];
   await assertMediaOwnedAndReady(attachmentMediaIds, principal.id);
 
@@ -425,6 +471,62 @@ export async function createAssignment(
 
   await notifyAssignmentAssigned(created.id);
   return { id: created.id };
+}
+
+// Lessons the teacher may link a new assignment to. Returns all of the
+// teacher's own lessons (branch + private); the client filters to the chosen
+// target. Volume is low, so no time window is applied — newest first.
+export async function listAssignableLessonsForInstructor(
+  principal: WorkspacePrincipal,
+): Promise<AssignableLesson[]> {
+  const instructorProfileId = await requireInstructorProfileId(principal);
+  const rows = await database
+    .select({
+      id: lessonSessions.id,
+      startsAt: lessonSessions.startsAt,
+      branchId: lessonSessions.branchId,
+      enrollmentId: lessonSessions.enrollmentId,
+    })
+    .from(lessonSessions)
+    .where(eq(lessonSessions.instructorProfileId, instructorProfileId))
+    .orderBy(desc(lessonSessions.startsAt))
+    .limit(500);
+  return rows.map((row) => ({
+    id: row.id,
+    startsAt: row.startsAt.toISOString(),
+    branchId: row.branchId,
+    enrollmentId: row.enrollmentId,
+  }));
+}
+
+// Assignments linked to a given lesson (reverse link on the lesson detail),
+// scoped to the requesting teacher.
+export async function listAssignmentsForLesson(
+  principal: WorkspacePrincipal,
+  lessonSessionId: string,
+): Promise<LessonAssignmentItem[]> {
+  const instructorProfileId = await requireInstructorProfileId(principal);
+  const rows = await database
+    .select({
+      id: assignments.id,
+      title: assignments.title,
+      requiresSubmission: assignments.requiresSubmission,
+      dueAt: assignments.dueAt,
+    })
+    .from(assignments)
+    .where(
+      and(
+        eq(assignments.lessonSessionId, lessonSessionId),
+        eq(assignments.instructorProfileId, instructorProfileId),
+      ),
+    )
+    .orderBy(desc(assignments.createdAt));
+  return rows.map((row) => ({
+    id: row.id,
+    title: row.title,
+    requiresSubmission: row.requiresSubmission,
+    dueAt: row.dueAt?.toISOString(),
+  }));
 }
 
 // ---------------------------------------------------------------------------
@@ -561,11 +663,17 @@ async function requireOwnedAssignment(
       targetBranchId: assignments.targetBranchId,
       targetEnrollmentId: assignments.targetEnrollmentId,
       branchName: programBranches.name,
+      lessonSessionId: assignments.lessonSessionId,
+      lessonStartsAt: lessonSessions.startsAt,
     })
     .from(assignments)
     .leftJoin(
       programBranches,
       eq(programBranches.id, assignments.targetBranchId),
+    )
+    .leftJoin(
+      lessonSessions,
+      eq(lessonSessions.id, assignments.lessonSessionId),
     )
     .where(
       and(
@@ -624,6 +732,13 @@ export async function getAssignmentForGrading(
       targetType: assignment.targetType,
       targetLabel,
       attachments: assignmentAttachmentMap.get(assignmentId) ?? [],
+      lesson:
+        assignment.lessonSessionId && assignment.lessonStartsAt
+          ? {
+              id: assignment.lessonSessionId,
+              startsAt: assignment.lessonStartsAt.toISOString(),
+            }
+          : undefined,
     },
     roster: roster.map((entry) => ({
       ...entry,
@@ -823,6 +938,8 @@ async function requireStudentTargetAssignment(
       branchName: programBranches.name,
       instructorFirstName: instructorProfiles.firstName,
       instructorLastName: instructorProfiles.lastName,
+      lessonSessionId: assignments.lessonSessionId,
+      lessonStartsAt: lessonSessions.startsAt,
     })
     .from(assignments)
     .innerJoin(
@@ -832,6 +949,10 @@ async function requireStudentTargetAssignment(
     .leftJoin(
       programBranches,
       eq(programBranches.id, assignments.targetBranchId),
+    )
+    .leftJoin(
+      lessonSessions,
+      eq(lessonSessions.id, assignments.lessonSessionId),
     )
     .where(eq(assignments.id, assignmentId))
     .limit(1);
@@ -897,6 +1018,13 @@ export async function getStudentAssignment(
         ? (assignment.branchName ?? '—')
         : fullName(assignment.instructorFirstName, assignment.instructorLastName),
     attachments: assignmentAttachmentMap.get(assignmentId) ?? [],
+    lesson:
+      assignment.lessonSessionId && assignment.lessonStartsAt
+        ? {
+            id: assignment.lessonSessionId,
+            startsAt: assignment.lessonStartsAt.toISOString(),
+          }
+        : undefined,
     instructorName: fullName(
       assignment.instructorFirstName,
       assignment.instructorLastName,

@@ -5,6 +5,7 @@ import { useTranslations } from 'next-intl';
 import { Send } from 'lucide-react';
 import { type Attachment, AttachmentInput } from '@/components/attachment-input';
 import { Button, FormField, Input, ModulePanel } from '@/components/ui';
+import type { AssignableLesson } from '@/lib/server/services/assignments';
 import { cn } from '@/lib/utils';
 
 type BranchOption = { id: string; name: string };
@@ -18,21 +19,40 @@ export function AssignmentCreateClient({
   locale,
   branches,
   students,
+  lessons,
 }: {
   locale: string;
   branches: BranchOption[];
   students: StudentOption[];
+  lessons: AssignableLesson[];
 }) {
   const t = useTranslations('teacher.assignments');
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [requiresSubmission, setRequiresSubmission] = useState(true);
   const [target, setTarget] = useState('');
+  const [lessonSessionId, setLessonSessionId] = useState('');
   const [maxScore, setMaxScore] = useState('100');
   const [dueAt, setDueAt] = useState('');
   const [attachments, setAttachments] = useState<Attachment[]>([]);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string>();
+
+  // Lessons offered in the picker are scoped to the chosen target.
+  const [targetKind, targetId] = target ? target.split(':') : [];
+  const lessonOptions = target
+    ? lessons.filter((lesson) =>
+        targetKind === 'branch'
+          ? lesson.branchId === targetId
+          : lesson.enrollmentId === targetId,
+      )
+    : [];
+  const lessonFormatter = new Intl.DateTimeFormat(locale, {
+    day: 'numeric',
+    month: 'long',
+    hour: '2-digit',
+    minute: '2-digit',
+  });
 
   async function submit() {
     setError(undefined);
@@ -61,6 +81,7 @@ export function AssignmentCreateClient({
           maxScore: requiresSubmission ? Number(maxScore) || 100 : undefined,
           dueAt: dueAt ? new Date(dueAt).toISOString() : undefined,
           target: targetPayload,
+          lessonSessionId: lessonSessionId || undefined,
           attachmentMediaIds: attachments.map((item) => item.mediaAssetId),
         }),
         credentials: 'same-origin',
@@ -117,7 +138,10 @@ export function AssignmentCreateClient({
       <FormField label={t('create.targetLabel')} required>
         <select
           value={target}
-          onChange={(event) => setTarget(event.target.value)}
+          onChange={(event) => {
+            setTarget(event.target.value);
+            setLessonSessionId('');
+          }}
           className="h-10 w-full rounded-xl border border-transparent bg-[#F8F9FC] px-4 text-sm font-medium text-[#2E286C] outline-none transition-all focus:border-[#533089]/30"
         >
           <option value="">{t('create.targetPlaceholder')}</option>
@@ -145,6 +169,26 @@ export function AssignmentCreateClient({
           )}
         </select>
       </FormField>
+
+      {lessonOptions.length > 0 && (
+        <FormField
+          label={t('create.lessonLabel')}
+          optionalLabel={t('optional')}
+        >
+          <select
+            value={lessonSessionId}
+            onChange={(event) => setLessonSessionId(event.target.value)}
+            className="h-10 w-full rounded-xl border border-transparent bg-[#F8F9FC] px-4 text-sm font-medium text-[#2E286C] outline-none transition-all focus:border-[#533089]/30"
+          >
+            <option value="">{t('create.lessonNone')}</option>
+            {lessonOptions.map((lesson) => (
+              <option key={lesson.id} value={lesson.id}>
+                {lessonFormatter.format(new Date(lesson.startsAt))}
+              </option>
+            ))}
+          </select>
+        </FormField>
+      )}
 
       <div className="grid gap-5 sm:grid-cols-2">
         {requiresSubmission && (

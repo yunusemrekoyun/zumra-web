@@ -2,7 +2,14 @@
 
 import { useState } from 'react';
 import { useTranslations } from 'next-intl';
-import { CheckCircle2, Clock, MessageSquare, Paperclip, Star } from 'lucide-react';
+import {
+  CalendarClock,
+  CheckCircle2,
+  Clock,
+  MessageSquare,
+  Paperclip,
+  Star,
+} from 'lucide-react';
 import type { AssignmentForGrading } from '@/lib/server/services/assignments';
 import { Avatar, Button, ModulePanel, StatusChip } from '@/components/ui';
 import { useRouter } from '@/i18n/navigation';
@@ -135,6 +142,20 @@ export function GradingClient({
           {assignment.dueAt && (
             <StatusChip tone="gray" icon={<Clock className="h-3 w-3" />}>
               {formatDate(assignment.dueAt, locale)}
+            </StatusChip>
+          )}
+          {assignment.lesson && (
+            <StatusChip
+              tone="amber"
+              icon={<CalendarClock className="h-3 w-3" />}
+            >
+              {t('grading.linkedLesson')}:{' '}
+              {new Intl.DateTimeFormat(locale, {
+                day: 'numeric',
+                month: 'long',
+                hour: '2-digit',
+                minute: '2-digit',
+              }).format(new Date(assignment.lesson.startsAt))}
             </StatusChip>
           )}
         </div>

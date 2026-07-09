@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { useTranslations } from 'next-intl';
-import { CheckCircle2, Clock, Paperclip, Send } from 'lucide-react';
+import { CalendarClock, CheckCircle2, Clock, Paperclip, Send } from 'lucide-react';
 import { type Attachment, AttachmentInput } from '@/components/attachment-input';
 import type { StudentAssignmentDetail } from '@/lib/server/services/assignments';
 import { Button, ModulePanel, StatusChip } from '@/components/ui';
@@ -84,6 +84,20 @@ export function SubmissionClient({
           {data.dueAt && (
             <StatusChip tone="gray" icon={<Clock className="h-3 w-3" />}>
               {formatDate(data.dueAt, locale)}
+            </StatusChip>
+          )}
+          {data.lesson && (
+            <StatusChip
+              tone="amber"
+              icon={<CalendarClock className="h-3 w-3" />}
+            >
+              {t('detail.linkedLesson')}:{' '}
+              {new Intl.DateTimeFormat(locale, {
+                day: 'numeric',
+                month: 'long',
+                hour: '2-digit',
+                minute: '2-digit',
+              }).format(new Date(data.lesson.startsAt))}
             </StatusChip>
           )}
         </div>

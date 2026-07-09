@@ -1682,7 +1682,8 @@
         "gradedTitle": "Ödevin notlandı",
         "feedback": "Geri bildirim",
         "yourSubmission": "Teslimin",
-        "yourAttachments": "Eklerin"
+        "yourAttachments": "Eklerin",
+        "linkedLesson": "Bağlı ders"
       },
       "submit": {
         "title": "Ödevini teslim et",
@@ -1964,7 +1965,9 @@
         "errorTarget": "Lütfen bir hedef seç.",
         "error": "Ödev oluşturulamadı. Tekrar dene.",
         "saving": "Oluşturuluyor...",
-        "submit": "Ödevi oluştur"
+        "submit": "Ödevi oluştur",
+        "lessonLabel": "Bağlı ders",
+        "lessonNone": "Derse bağlama"
       },
       "grading": {
         "description": "{target} • teslimleri puanla",
@@ -1982,7 +1985,8 @@
         "shared": "Paylaşıldı",
         "awaitingSubmission": "Henüz teslim edilmedi.",
         "scoreRange": "Puan 0 ile {max} arasında tam sayı olmalı.",
-        "shareError": "Sohbette paylaşılamadı. Tekrar deneyin."
+        "shareError": "Sohbette paylaşılamadı. Tekrar deneyin.",
+        "linkedLesson": "Bağlı ders"
       }
     },
     "dashboard": {
@@ -2133,7 +2137,8 @@
       "saved": "Yoklama kaydedildi.",
       "error": "Yoklama kaydedilemedi. Tekrar deneyin.",
       "noStudents": "Bu derse atanmış öğrenci yok.",
-      "unmatchedTitle": "Eşleşmeyen katılımcılar"
+      "unmatchedTitle": "Eşleşmeyen katılımcılar",
+      "linkedAssignments": "Bu derse bağlı ödevler"
     },
     "empty": {
       "students": {

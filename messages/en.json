@@ -1682,7 +1682,8 @@
         "gradedTitle": "Your assignment was graded",
         "feedback": "Feedback",
         "yourSubmission": "Your submission",
-        "yourAttachments": "Your attachments"
+        "yourAttachments": "Your attachments",
+        "linkedLesson": "Linked lesson"
       },
       "submit": {
         "title": "Submit your assignment",
@@ -1964,7 +1965,9 @@
         "errorTarget": "Please select a target.",
         "error": "Could not create the assignment. Try again.",
         "saving": "Creating...",
-        "submit": "Create assignment"
+        "submit": "Create assignment",
+        "lessonLabel": "Linked lesson",
+        "lessonNone": "Don't link to a lesson"
       },
       "grading": {
         "description": "{target} • grade submissions",
@@ -1982,7 +1985,8 @@
         "shared": "Shared",
         "awaitingSubmission": "Not submitted yet.",
         "scoreRange": "Score must be a whole number between 0 and {max}.",
-        "shareError": "Could not share in chat. Try again."
+        "shareError": "Could not share in chat. Try again.",
+        "linkedLesson": "Linked lesson"
       }
     },
     "dashboard": {
@@ -2133,7 +2137,8 @@
       "saved": "Attendance saved.",
       "error": "Could not save attendance. Try again.",
       "noStudents": "No students are assigned to this lesson.",
-      "unmatchedTitle": "Unmatched participants"
+      "unmatchedTitle": "Unmatched participants",
+      "linkedAssignments": "Assignments for this lesson"
     },
     "empty": {
       "students": {
