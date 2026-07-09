@@ -1106,7 +1106,20 @@
       "phone": "Telefon",
       "email": "E-posta",
       "assessment": "Seviye tespiti",
-      "appointment": "Randevu",
+      "appointment": {
+        "title": "Randevu",
+        "preferencesHint": "Adayın uygunluk tercihleri — birine tıkla ya da saati kendin seç.",
+        "rank": "{rank}. tercih",
+        "pickTime": "Görüşme saati",
+        "confirm": "Randevuyu onayla",
+        "emailNote": "Onaylayınca adaya bilgilendirme e-postası gönderilir.",
+        "scheduledAt": "Onaylanan randevu",
+        "outcomeNotePlaceholder": "Görüşme notu (opsiyonel)",
+        "outcome_completed": "Görüşme yapıldı",
+        "outcome_no_show": "Gelmedi",
+        "outcome_cancelled": "İptal",
+        "error": "İşlem başarısız. Tekrar deneyin."
+      },
       "noAppointment": "Henüz talep yok",
       "source": "Kaynak",
       "language": "İlgilendiği dil",
@@ -1169,7 +1182,9 @@
         "stage_changed": "Aşama değiştirildi",
         "note_added": "Not eklendi",
         "enrollment_started": "Kayıt süreci başlatıldı",
-        "enrollment_completed": "Aday öğrenciye dönüştürüldü"
+        "enrollment_completed": "Aday öğrenciye dönüştürüldü",
+        "appointment_scheduled": "Randevu planlandı",
+        "appointment_resolved": "Randevu sonuçlandı"
       },
       "stages": {
         "new": "Yeni aday",

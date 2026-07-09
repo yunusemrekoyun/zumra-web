@@ -429,6 +429,10 @@ export const appointmentRequests = pgTable(
     status: appointmentRequestStatusEnum('status')
       .notNull()
       .default('requested'),
+    // The slot staff confirmed (set when status -> scheduled).
+    scheduledStartsAt: timestamp('scheduled_starts_at', { withTimezone: true }),
+    // Free-text note staff records about the consultation outcome.
+    outcomeNote: text('outcome_note'),
     createdAt: timestamp('created_at', { withTimezone: true })
       .notNull()
       .defaultNow(),

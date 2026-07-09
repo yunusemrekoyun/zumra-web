@@ -1,18 +1,21 @@
 import 'server-only';
 
-import { and, asc, eq, inArray } from 'drizzle-orm';
+import { and, asc, desc, eq, inArray } from 'drizzle-orm';
 import type { WorkspacePrincipal } from '@/lib/domain';
 import { database } from '@/lib/server/db/client';
 import {
+  appointmentRequests,
   candidateActivities,
   candidateNotes,
   candidateProfiles,
+  contacts,
   users,
 } from '@/lib/server/db/schema';
 import {
   AuthorizationDeniedError,
   PublicFlowError,
 } from '@/lib/server/http/errors';
+import { notificationService } from '@/lib/server/services/notifications';
 
 export const candidateStages = [
   'new',
@@ -130,5 +133,114 @@ export async function addCandidateNote(
     candidateId,
     metadata: {},
     type: 'candidate.note_added',
+  });
+}
+
+export const appointmentOutcomes = ['completed', 'no_show', 'cancelled'] as const;
+export type AppointmentOutcome = (typeof appointmentOutcomes)[number];
+
+/** Confirm the consultation appointment at the chosen time and email the lead. */
+export async function scheduleAppointment(
+  principal: WorkspacePrincipal,
+  candidateId: string,
+  input: { startsAt: string },
+): Promise<void> {
+  assertStaff(principal);
+  await requireCandidate(candidateId);
+
+  const startsAt = new Date(input.startsAt);
+  if (Number.isNaN(startsAt.getTime())) {
+    throw new PublicFlowError('invalid_request');
+  }
+
+  const [appointment] = await database
+    .select({ id: appointmentRequests.id })
+    .from(appointmentRequests)
+    .where(
+      and(
+        eq(appointmentRequests.candidateId, candidateId),
+        eq(appointmentRequests.status, 'requested'),
+      ),
+    )
+    .orderBy(desc(appointmentRequests.createdAt))
+    .limit(1);
+  if (!appointment) {
+    throw new PublicFlowError('appointment_not_found', 404);
+  }
+
+  const now = new Date();
+  await database
+    .update(appointmentRequests)
+    .set({ status: 'scheduled', scheduledStartsAt: startsAt, updatedAt: now })
+    .where(eq(appointmentRequests.id, appointment.id));
+  await database
+    .update(candidateProfiles)
+    .set({ lastActivityAt: now, updatedAt: now })
+    .where(eq(candidateProfiles.id, candidateId));
+  await database.insert(candidateActivities).values({
+    candidateId,
+    type: 'candidate.appointment_scheduled',
+    metadata: { startsAt: startsAt.toISOString() },
+  });
+
+  const [contact] = await database
+    .select({ email: contacts.email, firstName: contacts.firstName })
+    .from(candidateProfiles)
+    .innerJoin(contacts, eq(contacts.id, candidateProfiles.contactId))
+    .where(eq(candidateProfiles.id, candidateId))
+    .limit(1);
+  if (contact?.email) {
+    await notificationService.enqueue({
+      channel: 'email',
+      idempotencyKey: `appointment-scheduled:${appointment.id}:${startsAt.getTime()}`,
+      locale: 'tr',
+      payload: { name: contact.firstName, startsAt: startsAt.toISOString() },
+      recipient: contact.email,
+      templateKey: 'appointment-scheduled',
+    });
+  }
+}
+
+/** Record the outcome of a scheduled consultation (with an optional note). */
+export async function resolveAppointment(
+  principal: WorkspacePrincipal,
+  candidateId: string,
+  input: { outcome: AppointmentOutcome; note?: string },
+): Promise<void> {
+  assertStaff(principal);
+  await requireCandidate(candidateId);
+  if (!appointmentOutcomes.includes(input.outcome)) {
+    throw new PublicFlowError('invalid_request');
+  }
+
+  const [appointment] = await database
+    .select({ id: appointmentRequests.id })
+    .from(appointmentRequests)
+    .where(
+      and(
+        eq(appointmentRequests.candidateId, candidateId),
+        eq(appointmentRequests.status, 'scheduled'),
+      ),
+    )
+    .orderBy(desc(appointmentRequests.createdAt))
+    .limit(1);
+  if (!appointment) {
+    throw new PublicFlowError('appointment_not_found', 404);
+  }
+
+  const now = new Date();
+  const note = input.note?.trim().slice(0, 2000) || null;
+  await database
+    .update(appointmentRequests)
+    .set({ status: input.outcome, outcomeNote: note, updatedAt: now })
+    .where(eq(appointmentRequests.id, appointment.id));
+  await database
+    .update(candidateProfiles)
+    .set({ lastActivityAt: now, updatedAt: now })
+    .where(eq(candidateProfiles.id, candidateId));
+  await database.insert(candidateActivities).values({
+    candidateId,
+    type: 'candidate.appointment_resolved',
+    metadata: { outcome: input.outcome },
   });
 }

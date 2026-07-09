@@ -26,6 +26,7 @@ import {
   TimelineItem,
 } from '@/components/ui';
 import { useRouter } from '@/i18n/navigation';
+import { AppointmentPanel } from './appointment-panel';
 import type { CandidateDirectoryRecord } from '@/lib/server/services/candidate-directory';
 import type { AdvisorOption } from '@/lib/server/services/candidate-pipeline';
 
@@ -426,30 +427,15 @@ function CandidateProfile({
           </div>
         </div>
 
-        {candidate.appointmentPreferences.length > 0 && (
-          <div className="mt-6 rounded-3xl bg-[#F8F7FB] p-5">
-            <h3 className="text-xs font-bold uppercase tracking-[0.16em] text-[#2E286C]/40">
-              {t('appointmentPreferences')}
-            </h3>
-            <div className="mt-4 grid gap-3 sm:grid-cols-3">
-              {candidate.appointmentPreferences.map((preference) => (
-                <div
-                  key={`${preference.rank}-${preference.startsAt}`}
-                  className="rounded-2xl bg-white p-4"
-                >
-                  <div className="text-[10px] font-bold uppercase tracking-wider text-[#533089]">
-                    {t('preferenceRank', { rank: preference.rank })}
-                  </div>
-                  <div className="mt-2 text-sm font-bold text-[#2E286C]">
-                    {new Intl.DateTimeFormat(locale, {
-                      dateStyle: 'medium',
-                      timeStyle: 'short',
-                    }).format(new Date(preference.startsAt))}
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
+        {candidate.appointmentStatus && (
+          <AppointmentPanel
+            candidateId={candidate.id}
+            locale={locale}
+            status={candidate.appointmentStatus}
+            preferences={candidate.appointmentPreferences}
+            scheduledStartsAt={candidate.appointmentStartsAt}
+            outcomeNote={candidate.appointmentOutcomeNote}
+          />
         )}
 
         {(candidate.referrer ||
@@ -745,6 +731,8 @@ function activityLabel(
     'candidate.assessment_completed',
     'candidate.profile_completed',
     'candidate.appointment_requested',
+    'candidate.appointment_scheduled',
+    'candidate.appointment_resolved',
     'candidate.advisor_assigned',
     'candidate.stage_changed',
     'candidate.note_added',

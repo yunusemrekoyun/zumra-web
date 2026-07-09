@@ -1106,7 +1106,20 @@
       "phone": "Phone",
       "email": "Email",
       "assessment": "Level assessment",
-      "appointment": "Consultation",
+      "appointment": {
+        "title": "Appointment",
+        "preferencesHint": "The lead's availability preferences — click one or pick a time yourself.",
+        "rank": "Choice {rank}",
+        "pickTime": "Appointment time",
+        "confirm": "Confirm appointment",
+        "emailNote": "The lead is emailed a confirmation once you confirm.",
+        "scheduledAt": "Confirmed appointment",
+        "outcomeNotePlaceholder": "Consultation note (optional)",
+        "outcome_completed": "Held",
+        "outcome_no_show": "No-show",
+        "outcome_cancelled": "Cancelled",
+        "error": "Something went wrong. Please try again."
+      },
       "noAppointment": "No request yet",
       "source": "Source",
       "language": "Interested language",
@@ -1169,7 +1182,9 @@
         "stage_changed": "Stage changed",
         "note_added": "Note added",
         "enrollment_started": "Enrollment process started",
-        "enrollment_completed": "Candidate converted to student"
+        "enrollment_completed": "Candidate converted to student",
+        "appointment_scheduled": "Appointment scheduled",
+        "appointment_resolved": "Appointment resolved"
       },
       "stages": {
         "new": "New candidate",

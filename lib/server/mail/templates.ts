@@ -176,6 +176,58 @@ export function renderMailTemplate(input: TemplateInput) {
     };
   }
 
+  if (input.templateKey === 'appointment-scheduled') {
+    const when = escapeHtml(
+      formatDate(String(input.payload.startsAt ?? ''), english ? 'en-US' : 'tr-TR'),
+    );
+    const greeting = english ? 'Hello' : 'Merhaba';
+    const intro = english
+      ? 'Your free consultation has been confirmed. Here are the details:'
+      : 'Ücretsiz danışmanlık görüşmeniz onaylandı. Görüşme detayları:';
+    const whenLabel = english ? 'APPOINTMENT TIME' : 'GÖRÜŞME ZAMANI';
+    const closing = english
+      ? 'Our advisor will reach out to you at the scheduled time. See you soon!'
+      : 'Danışmanımız belirtilen saatte sizinle iletişime geçecek. Görüşmek üzere!';
+    const tagline = english
+      ? 'Zümra Academy — women-only online language education'
+      : 'Zümra Akademi — kadınlara özel online dil eğitimi';
+
+    const html = `<div style="background:#f4f4f8;padding:24px 12px;font-family:'Segoe UI',Arial,sans-serif;">
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:520px;margin:0 auto;background:#ffffff;border-radius:16px;overflow:hidden;border:1px solid #ececf3;">
+    <tr><td style="background:#533089;padding:22px 28px;">
+      <span style="color:#ffffff;font-size:20px;font-weight:700;letter-spacing:.5px;">ZÜMRA</span>
+      <span style="color:#ffffff;font-size:11px;font-weight:600;letter-spacing:2px;opacity:.75;margin-left:4px;">AKADEMİ</span>
+    </td></tr>
+    <tr><td style="padding:28px 28px 8px;">
+      <p style="margin:0 0 10px;font-size:16px;color:#2E286C;">${greeting} ${name},</p>
+      <p style="margin:0 0 20px;font-size:14px;line-height:1.6;color:#5b5b6b;">${intro}</p>
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#f7f6fb;border:1px solid #ece9f6;border-radius:12px;">
+        <tr><td style="padding:18px 20px;">
+          <div style="font-size:11px;text-transform:uppercase;letter-spacing:1.5px;color:#533089;font-weight:700;margin-bottom:6px;">${whenLabel}</div>
+          <div style="font-size:19px;font-weight:700;color:#2E286C;">${when}</div>
+        </td></tr>
+      </table>
+    </td></tr>
+    <tr><td style="padding:12px 28px 26px;">
+      <p style="margin:0;font-size:13px;line-height:1.6;color:#7a7a88;">${closing}</p>
+    </td></tr>
+    <tr><td style="padding:16px 28px;background:#faf9fc;border-top:1px solid #ececf3;">
+      <span style="font-size:12px;color:#a0a0ad;">${tagline}</span>
+    </td></tr>
+  </table>
+</div>`;
+
+    return {
+      html,
+      subject: english
+        ? 'Your consultation is confirmed'
+        : 'Görüşmeniz onaylandı',
+      text: english
+        ? `Your free consultation is confirmed for ${when}.`
+        : `Ücretsiz danışmanlık görüşmeniz ${when} için onaylandı.`,
+    };
+  }
+
   throw new Error(`Unknown mail template: ${input.templateKey}`);
 }
 

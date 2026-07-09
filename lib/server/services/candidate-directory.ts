@@ -34,6 +34,8 @@ export type CandidateDirectoryRecord = {
     startsAt: string;
   }>;
   appointmentStatus?: string;
+  appointmentStartsAt?: string;
+  appointmentOutcomeNote?: string;
   assessmentStatus: 'completed' | 'in_progress' | 'not_started';
   attribution?: Record<string, string>;
   city?: string;
@@ -142,6 +144,8 @@ export async function listCandidateDirectory(): Promise<
           id: appointmentRequests.id,
           inquiryId: appointmentRequests.inquiryId,
           status: appointmentRequests.status,
+          scheduledStartsAt: appointmentRequests.scheduledStartsAt,
+          outcomeNote: appointmentRequests.outcomeNote,
         })
         .from(appointmentRequests)
         .where(inArray(appointmentRequests.inquiryId, inquiryIds))
@@ -267,6 +271,9 @@ export async function listCandidateDirectory(): Promise<
             }))
         : [],
       appointmentStatus: latestAppointment?.status,
+      appointmentStartsAt:
+        latestAppointment?.scheduledStartsAt?.toISOString() ?? undefined,
+      appointmentOutcomeNote: latestAppointment?.outcomeNote ?? undefined,
       assessmentStatus: latestAttempt?.status ?? 'not_started',
       attribution:
         (latestInquiry?.attribution as Record<string, string> | null) ??
