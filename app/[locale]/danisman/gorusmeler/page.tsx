@@ -115,7 +115,7 @@ export default async function AdvisorMeetingsPage({
               ))}
             </ul>
           ) : (
-            <EmptyState className="mt-4 min-h-[8rem]" title={section.empty} />
+            <EmptyState className="mt-4 min-h-[8rem]" title={section.empty} description="" />
           )}
         </ModulePanel>
       ))}

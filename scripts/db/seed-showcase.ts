@@ -18,6 +18,7 @@ import { and, asc, eq, gte, inArray, like, sql } from 'drizzle-orm';
 import { database } from '@/lib/server/db/client';
 import {
   accounts,
+  advisorTasks,
   appointmentPreferences,
   appointmentRequests,
   assessmentAttempts,
@@ -152,6 +153,52 @@ async function ensureDemoAdvisor() {
       );
     console.log(`${inquiries.length} showcase adayı Aylin'e atandı`);
   }
+
+  // Görev backfill'i: Elif Kaya'nın bekleyen talebi ve sahipsiz yeni adaylar
+  // havuza düşsün — tekrar çalıştırmak güvenli (kısmi unique engeller).
+  const [pendingRequest] = await database
+    .select({
+      candidateId: appointmentRequests.candidateId,
+      id: appointmentRequests.id,
+    })
+    .from(appointmentRequests)
+    .where(eq(appointmentRequests.status, 'requested'))
+    .limit(1);
+  if (pendingRequest) {
+    await database
+      .insert(advisorTasks)
+      .values({
+        appointmentId: pendingRequest.id,
+        assigneeUserId: null,
+        candidateId: pendingRequest.candidateId,
+        kind: 'appointment_request',
+        visibility: 'staff',
+      })
+      .onConflictDoNothing();
+  }
+  const unowned = await database
+    .select({ id: candidateProfiles.id })
+    .from(candidateProfiles)
+    .where(
+      and(
+        eq(candidateProfiles.stage, 'new'),
+        sql`${candidateProfiles.advisorId} is null`,
+      ),
+    );
+  for (const candidate of unowned) {
+    await database
+      .insert(advisorTasks)
+      .values({
+        assigneeUserId: null,
+        candidateId: candidate.id,
+        kind: 'first_contact',
+        visibility: 'staff',
+      })
+      .onConflictDoNothing();
+  }
+  console.log(
+    `Görev backfill: ${pendingRequest ? 1 : 0} talep + ${unowned.length} ilk temas havuza eklendi`,
+  );
 }
 
 (async () => {

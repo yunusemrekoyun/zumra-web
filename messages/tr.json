@@ -1908,7 +1908,8 @@
       "students": "Öğrencilerim",
       "meetings": "Görüşmeler",
       "offers": "Teklifler",
-      "messages": "Mesajlar"
+      "messages": "Mesajlar",
+      "tasks": "Görevlerim"
     },
     "shell": {
       "searchPlaceholder": "Aday, öğrenci veya görüşme ara..."
@@ -1977,6 +1978,35 @@
       "open": "Aç",
       "emptyTitle": "Teklif masasında kimse yok",
       "emptyDescription": "Teklif aşamasına gelen adaylar burada görünecek."
+    },
+    "tasks": {
+      "title": "Görevlerim",
+      "description": "Havuzdan görev üstlenin, gününüzü buradan yönetin.",
+      "poolTitle": "Havuz — sahipsiz işler",
+      "poolEmpty": "Havuz boş; tüm adaylar sahipli. 👏",
+      "mineTitle": "Açık görevlerim",
+      "mineEmpty": "Açık görev yok.",
+      "doneTitle": "Bugün bitenler",
+      "doneEmpty": "Bugün henüz görev tamamlanmadı.",
+      "todayTitle": "Bugünüm",
+      "todayEmpty": "Bugün için bekleyen iş yok.",
+      "claim": "Üstlen",
+      "complete": "Tamamla",
+      "overdue": "Gecikti",
+      "taken": "Bu görevi az önce başka bir danışman üstlendi.",
+      "error": "İşlem kaydedilemedi, tekrar deneyin.",
+      "seeAll": "Tümü",
+      "kind_appointment_request": "Görüşme talebini yanıtla",
+      "kind_first_contact": "İlk teması kur",
+      "kind_follow_up": "Takip araması yap",
+      "kind_retry_contact": "Tekrar ulaşmayı dene",
+      "newTitle": "Yeni görev",
+      "newHint": "Kendine özel bir iş ekle (ör. tanıtım sunumu hazırlığı).",
+      "titlePlaceholder": "Görev başlığı",
+      "notePlaceholder": "Detay (isteğe bağlı)",
+      "duePlaceholder": "Bitiş tarihi (isteğe bağlı)",
+      "createCta": "Görev Ekle",
+      "privacyNote": "Kişisel görevleri yalnızca sen ve yönetici görebilir."
     }
   },
   "teacher": {

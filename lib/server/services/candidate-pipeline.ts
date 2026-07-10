@@ -16,6 +16,11 @@ import {
   AuthorizationDeniedError,
   PublicFlowError,
 } from '@/lib/server/http/errors';
+import {
+  closeSystemTasks,
+  reassignPoolTasks,
+  spawnSystemTask,
+} from '@/lib/server/services/advisor-tasks';
 import { notificationService } from '@/lib/server/services/notifications';
 
 export const candidateStages = [
@@ -40,7 +45,11 @@ function assertStaff(principal: WorkspacePrincipal) {
 
 async function requireCandidate(candidateId: string) {
   const [row] = await database
-    .select({ id: candidateProfiles.id, stage: candidateProfiles.stage })
+    .select({
+      advisorId: candidateProfiles.advisorId,
+      id: candidateProfiles.id,
+      stage: candidateProfiles.stage,
+    })
     .from(candidateProfiles)
     .where(eq(candidateProfiles.id, candidateId))
     .limit(1);
@@ -109,6 +118,9 @@ export async function assignCandidateAdvisor(
     type: 'candidate.advisor_assigned',
     metadata: { advisorId: advisorId ?? null },
   });
+  if (advisorId) {
+    await reassignPoolTasks(candidateId, advisorId);
+  }
 }
 
 export async function addCandidateNote(
@@ -295,6 +307,11 @@ export async function scheduleAppointment(
     metadata: { startsAt: startsAt.toISOString() },
   });
   await bumpNewToContacted(candidateId);
+  await closeSystemTasks(
+    candidateId,
+    ['appointment_request', 'first_contact', 'follow_up', 'retry_contact'],
+    principal.id,
+  );
   await sendAppointmentMail(candidateId, appointmentId, startsAt, 'scheduled');
 }
 
@@ -351,6 +368,11 @@ export async function createAppointment(
     metadata: { by: principal.id, startsAt: startsAt.toISOString() },
   });
   await bumpNewToContacted(candidateId);
+  await closeSystemTasks(
+    candidateId,
+    ['appointment_request', 'first_contact', 'follow_up', 'retry_contact'],
+    principal.id,
+  );
   await sendAppointmentMail(candidateId, created.id, startsAt, 'scheduled');
 }
 
@@ -422,7 +444,7 @@ export async function resolveAppointment(
   },
 ): Promise<void> {
   assertStaff(principal);
-  await requireCandidate(candidateId);
+  const candidate = await requireCandidate(candidateId);
   if (!appointmentOutcomes.includes(input.outcome)) {
     throw new PublicFlowError('invalid_request');
   }
@@ -486,6 +508,18 @@ export async function resolveAppointment(
       result,
     },
   });
+
+  // "Thinking" keeps the lead alive as a follow-up task — with or without a
+  // date, so nobody silently falls off the radar.
+  if (result === 'thinking') {
+    await spawnSystemTask({
+      appointmentId,
+      assigneeUserId: candidate.advisorId ?? principal.id,
+      candidateId,
+      dueAt: followUpAt,
+      kind: 'follow_up',
+    });
+  }
 }
 
 /** Quick contact log: the advisor called / emailed / could not reach the lead. */
@@ -495,7 +529,7 @@ export async function logCandidateTouchpoint(
   input: { kind: CandidateTouchpoint; note?: string },
 ): Promise<void> {
   assertStaff(principal);
-  await requireCandidate(candidateId);
+  const candidate = await requireCandidate(candidateId);
   if (!candidateTouchpoints.includes(input.kind)) {
     throw new PublicFlowError('invalid_request');
   }
@@ -512,5 +546,18 @@ export async function logCandidateTouchpoint(
   });
   if (input.kind === 'called' || input.kind === 'emailed') {
     await bumpNewToContacted(candidateId);
+    await closeSystemTasks(
+      candidateId,
+      ['first_contact', 'retry_contact'],
+      principal.id,
+    );
+  } else {
+    // No answer: queue a retry for the owner (or whoever just tried).
+    await spawnSystemTask({
+      assigneeUserId: candidate.advisorId ?? principal.id,
+      candidateId,
+      dueAt: new Date(now.getTime() + 24 * 60 * 60 * 1000),
+      kind: 'retry_contact',
+    });
   }
 }

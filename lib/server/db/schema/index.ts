@@ -10,3 +10,4 @@ export * from './notifications';
 export * from './programs';
 export * from './schedule';
 export * from './settings';
+export * from './tasks';

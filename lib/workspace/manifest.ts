@@ -120,6 +120,7 @@ export const workspaceModules = [
   { scope: 'student', kind: 'nav', labelKey: 'student.nav.profile', path: '/ogrenci/profil', iconKey: 'profile', mobile: 'tab' },
 
   { scope: 'advisor', kind: 'nav', labelKey: 'advisor.nav.overview', path: '/danisman', iconKey: 'dashboard', mobile: 'tab' },
+  { scope: 'advisor', kind: 'nav', labelKey: 'advisor.nav.tasks', path: '/danisman/gorevlerim', iconKey: 'clipboard', mobile: 'tab' },
   { scope: 'advisor', kind: 'nav', labelKey: 'advisor.nav.leads', path: '/danisman/leadler', iconKey: 'users', mobile: 'tab' },
   { scope: 'advisor', kind: 'nav', labelKey: 'advisor.nav.students', path: '/danisman/ogrenciler', iconKey: 'students', mobile: 'tab' },
   { scope: 'advisor', kind: 'nav', labelKey: 'advisor.nav.meetings', path: '/danisman/gorusmeler', iconKey: 'calendar', mobile: 'tab' },

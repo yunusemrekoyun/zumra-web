@@ -27,6 +27,7 @@ import {
   contacts,
   programs,
   type LocalizedText,
+  advisorTasks,
 } from '@/lib/server/db/schema';
 import { normalizePhoneNumber, phoneNumberIsValid } from '@/lib/domain/phone';
 import { PublicFlowError } from '@/lib/server/http/errors';
@@ -494,6 +495,27 @@ export async function createPublicLead(
         type: 'candidate.inquiry_received',
       },
     ]);
+
+    // Fresh unowned lead → pool task so somebody makes the first touch.
+    const [profile] = await transaction
+      .select({
+        advisorId: candidateProfiles.advisorId,
+        stage: candidateProfiles.stage,
+      })
+      .from(candidateProfiles)
+      .where(eq(candidateProfiles.id, candidate.id))
+      .limit(1);
+    if (profile && !profile.advisorId && profile.stage === 'new') {
+      await transaction
+        .insert(advisorTasks)
+        .values({
+          assigneeUserId: null,
+          candidateId: candidate.id,
+          kind: 'first_contact',
+          visibility: 'staff',
+        })
+        .onConflictDoNothing();
+    }
   });
 
   if (created) {
@@ -692,6 +714,18 @@ export async function startPublicAssessment(
         type: 'candidate.inquiry_received',
       },
     ]);
+
+    if (!existingCandidate) {
+      await transaction
+        .insert(advisorTasks)
+        .values({
+          assigneeUserId: null,
+          candidateId: candidate.id,
+          kind: 'first_contact',
+          visibility: 'staff',
+        })
+        .onConflictDoNothing();
+    }
 
     return attempt.id;
   });
@@ -1021,6 +1055,11 @@ export async function requestPublicAppointment(
       );
 
       const activityAt = new Date();
+      const [ownerProfile] = await transaction
+        .select({ advisorId: candidateProfiles.advisorId })
+        .from(candidateProfiles)
+        .where(eq(candidateProfiles.id, context.candidateId))
+        .limit(1);
       await Promise.all([
         transaction.insert(candidateActivities).values({
           candidateId: context.candidateId,
@@ -1032,6 +1071,19 @@ export async function requestPublicAppointment(
           .update(candidateProfiles)
           .set({ lastActivityAt: activityAt, updatedAt: activityAt })
           .where(eq(candidateProfiles.id, context.candidateId)),
+        // The lead picked times → answering this is now a work item: the
+        // owner's if the candidate has one, otherwise the shared pool's.
+        transaction
+          .insert(advisorTasks)
+          .values({
+            appointmentId: request.id,
+            assigneeUserId: ownerProfile?.advisorId ?? null,
+            candidateId: context.candidateId,
+            dueAt: preferences[0] ?? null,
+            kind: 'appointment_request',
+            visibility: 'staff',
+          })
+          .onConflictDoNothing(),
       ]);
     });
   }

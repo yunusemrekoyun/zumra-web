@@ -1908,7 +1908,8 @@
       "students": "My Students",
       "meetings": "Meetings",
       "offers": "Offers",
-      "messages": "Messages"
+      "messages": "Messages",
+      "tasks": "My Tasks"
     },
     "shell": {
       "searchPlaceholder": "Search candidates, students or meetings..."
@@ -1977,6 +1978,35 @@
       "open": "Open",
       "emptyTitle": "No one at the offer desk",
       "emptyDescription": "Candidates reaching the offer stage will appear here."
+    },
+    "tasks": {
+      "title": "My Tasks",
+      "description": "Claim work from the pool and run your day from here.",
+      "poolTitle": "Pool — unowned work",
+      "poolEmpty": "Pool is empty; every lead has an owner. 👏",
+      "mineTitle": "My open tasks",
+      "mineEmpty": "No open tasks.",
+      "doneTitle": "Done today",
+      "doneEmpty": "Nothing completed yet today.",
+      "todayTitle": "My day",
+      "todayEmpty": "Nothing pending for today.",
+      "claim": "Claim",
+      "complete": "Complete",
+      "overdue": "Overdue",
+      "taken": "Another advisor just claimed this task.",
+      "error": "Could not save, try again.",
+      "seeAll": "See all",
+      "kind_appointment_request": "Answer the consultation request",
+      "kind_first_contact": "Make the first contact",
+      "kind_follow_up": "Make the follow-up call",
+      "kind_retry_contact": "Try reaching again",
+      "newTitle": "New task",
+      "newHint": "Add a personal to-do (e.g. preparing a presentation).",
+      "titlePlaceholder": "Task title",
+      "notePlaceholder": "Details (optional)",
+      "duePlaceholder": "Due date (optional)",
+      "createCta": "Add Task",
+      "privacyNote": "Personal tasks are visible only to you and admins."
     }
   },
   "teacher": {

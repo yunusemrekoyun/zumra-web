@@ -8,6 +8,8 @@ import {
   type AppointmentOverviewRow,
   getAdvisorOverview,
 } from '@/lib/server/services/advisor-overview';
+import { listAdvisorTasks } from '@/lib/server/services/advisor-tasks';
+import { TaskQuickPanel } from './gorevlerim/tasks-client';
 
 type AdvisorDashboardPageProps = {
   params: Promise<{ locale: string }>;
@@ -27,11 +29,22 @@ export default async function AdvisorDashboardPage({
 }: AdvisorDashboardPageProps) {
   const { locale } = await params;
   const principal = await requireWorkspaceRole('advisor', locale);
-  const [t, stages, overview] = await Promise.all([
+  const [t, tasks, stages, overview, board] = await Promise.all([
     getTranslations('advisor.dashboard'),
+    getTranslations('advisor.tasks'),
     getTranslations('admin.leads.stages'),
     getAdvisorOverview(principal),
+    listAdvisorTasks(principal),
   ]);
+
+  // "Bugünüm": vadesi geçmiş ya da bugün dolan işler önce, sonra vadesizler.
+  const todayEnd = new Date(new Date().setHours(24, 0, 0, 0));
+  const myToday = [
+    ...board.mine.filter(
+      (task) => task.dueAt && new Date(task.dueAt) <= todayEnd,
+    ),
+    ...board.mine.filter((task) => !task.dueAt),
+  ];
 
   const formatter = new Intl.DateTimeFormat(locale, {
     dateStyle: 'medium',
@@ -90,6 +103,23 @@ export default async function AdvisorDashboardPage({
           ))}
         </div>
       </ModulePanel>
+
+      <div className="grid gap-4 xl:grid-cols-2">
+        <TaskQuickPanel
+          emptyLabel={tasks('poolEmpty')}
+          locale={locale}
+          mode="pool"
+          rows={board.pool}
+          title={tasks('poolTitle')}
+        />
+        <TaskQuickPanel
+          emptyLabel={tasks('todayEmpty')}
+          locale={locale}
+          mode="mine"
+          rows={myToday}
+          title={tasks('todayTitle')}
+        />
+      </div>
 
       <div className="grid gap-4 xl:grid-cols-2">
         <AppointmentListPanel
@@ -165,7 +195,7 @@ function AppointmentListPanel({
           ))}
         </ul>
       ) : (
-        <EmptyState className="mt-4 min-h-[10rem]" title={emptyLabel} />
+        <EmptyState className="mt-4 min-h-[10rem]" title={emptyLabel} description="" />
       )}
     </ModulePanel>
   );
