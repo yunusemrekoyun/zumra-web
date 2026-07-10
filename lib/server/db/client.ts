@@ -22,7 +22,9 @@ function createPool() {
     application_name: 'zumra-web',
     max: env.DATABASE_POOL_MAX,
     idleTimeoutMillis: 30_000,
-    connectionTimeoutMillis: 5_000,
+    // Checkout waits (incl. queueing behind a saturated pool) count against
+    // this; dev compile bursts + a small pool need the extra headroom.
+    connectionTimeoutMillis: 10_000,
     statement_timeout: 15_000,
     query_timeout: 20_000,
     ssl,
