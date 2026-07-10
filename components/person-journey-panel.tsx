@@ -8,9 +8,14 @@ import {
   Lock,
   Route,
   StickyNote,
-  UserRound,
 } from 'lucide-react';
-import { Avatar, ModulePanel, StatusChip, TimelineItem } from '@/components/ui';
+import {
+  Avatar,
+  EntityPicker,
+  ModulePanel,
+  StatusChip,
+  TimelineItem,
+} from '@/components/ui';
 import { APP_TIME_ZONE } from '@/lib/datetime';
 import { useRouter } from '@/i18n/navigation';
 import type { AdvisorOption } from '@/lib/server/services/candidate-pipeline';
@@ -163,62 +168,40 @@ export function PersonJourneyPanel({
         </div>
       </div>
 
-      {transferOpen && (
-        <div className="mt-4 rounded-2xl bg-white p-4 ring-1 ring-[#533089]/10">
-          <div className="flex items-center justify-between gap-3">
-            <div className="text-[11px] font-bold uppercase tracking-wider text-[#533089]">
-              {t('transferTitle')}
-            </div>
-            <div className="flex items-center gap-3">
-              {journey.advisorId && (
-                <button
-                  type="button"
-                  disabled={busy}
-                  onClick={() => transferAdvisor('')}
-                  className="text-[11px] font-bold text-red-600/80 hover:text-red-700 disabled:opacity-50"
-                >
-                  {t('unassign')}
-                </button>
-              )}
-              <button
-                type="button"
-                onClick={() => setTransferOpen(false)}
-                className="text-[11px] font-bold text-[#2E286C]/50 hover:text-[#2E286C]"
-              >
-                {t('cancel')}
-              </button>
-            </div>
-          </div>
-          {transferTargets.length ? (
-            <div className="mt-3 grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
-              {transferTargets.map((advisor) => (
-                <button
-                  key={advisor.id}
-                  type="button"
-                  disabled={busy}
-                  onClick={() => transferAdvisor(advisor.id)}
-                  className="group flex items-center gap-3 rounded-2xl bg-[#F8F7FB] p-3 text-left ring-1 ring-black/[0.04] transition-all hover:ring-[#533089]/40 disabled:opacity-50"
-                >
-                  <Avatar name={advisor.name} size="md" className="bg-white shadow-sm" />
-                  <div className="min-w-0">
-                    <div className="truncate text-sm font-bold text-[#2E286C] transition-colors group-hover:text-[#533089]">
-                      {advisor.name}
-                    </div>
-                    <div className="flex items-center gap-1 text-[11px] font-semibold text-[#2E286C]/45">
-                      <UserRound className="h-3 w-3" />
-                      {t('advisorRole')}
-                    </div>
-                  </div>
-                </button>
-              ))}
-            </div>
-          ) : (
-            <p className="mt-3 text-sm text-[#2E286C]/50">
-              {t('noOtherAdvisors')}
-            </p>
-          )}
-        </div>
-      )}
+      <EntityPicker
+        busy={busy}
+        description={journey.fullName}
+        icon={ArrowLeftRight}
+        items={[
+          ...transferTargets.map((advisor) => ({
+            id: advisor.id,
+            title: advisor.name,
+            subtitle: t('advisorRole'),
+            identity: {
+              kind: 'person' as const,
+              name: advisor.name,
+              photoUrl: advisor.photoUrl,
+            },
+          })),
+          ...(journey.advisorId
+            ? [
+                {
+                  id: '__unassign__',
+                  title: t('unassign'),
+                  subtitle: t('unassignHint'),
+                  identity: { kind: 'person' as const, name: '—' },
+                  meta: { label: '✕', tone: 'red' as const },
+                },
+              ]
+            : []),
+        ]}
+        onClose={() => setTransferOpen(false)}
+        onSelect={(item) =>
+          transferAdvisor(item.id === '__unassign__' ? '' : item.id)
+        }
+        open={transferOpen}
+        title={t('transferTitle')}
+      />
 
       {error && (
         <p className="mt-3 text-sm font-semibold text-red-600">{error}</p>

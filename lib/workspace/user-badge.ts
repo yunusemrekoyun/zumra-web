@@ -4,6 +4,7 @@ export type WorkspaceUserBadgeOverride = {
   handle: string;
   initials: string;
   name: string;
+  photoUrl?: string | null;
 };
 
 /**

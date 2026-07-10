@@ -226,7 +226,28 @@
       "cancel": "Cancel",
       "unassign": "Remove assignment",
       "noOtherAdvisors": "No other advisor to transfer to.",
-      "advisorRole": "Advisor"
+      "advisorRole": "Advisor",
+      "unassignHint": "Leave the lead unowned"
+    },
+    "profilePhoto": {
+      "change": "Change photo",
+      "remove": "Remove photo",
+      "hint": "Tap the photo to change it",
+      "error": "Could not upload the photo, try again."
+    },
+    "profileSettings": {
+      "title": "My Profile",
+      "description": "Manage your photo and account details here.",
+      "email": "Email",
+      "logout": "Sign Out"
+    },
+    "entityPicker": {
+      "search": "Search...",
+      "all": "All",
+      "empty": "No results.",
+      "close": "Close",
+      "choose": "Choose",
+      "change": "Change"
     }
   },
   "public": {

@@ -18,6 +18,7 @@ import {
   messages,
   studentProfiles,
 } from '@/lib/server/db/schema';
+import { isProfilePhotoAsset } from '@/lib/server/services/profile-photo';
 
 const activeEnrollmentStatuses = ['active', 'paused'] as const;
 
@@ -206,6 +207,12 @@ export const mediaAuthorizationService: MediaAuthorizationService = {
     }
 
     if (asset.ownerUserId === principal.id) {
+      return true;
+    }
+
+    // Profile photos are identity, not content: any active session may see
+    // them (they render in lists, chat and pickers across every role).
+    if (await isProfilePhotoAsset(asset.id)) {
       return true;
     }
 

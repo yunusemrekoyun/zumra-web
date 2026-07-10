@@ -16,6 +16,7 @@ import {
   StatusChip,
 } from '@/components/ui';
 import { PersonJourneyPanel } from '@/components/person-journey-panel';
+import { ProfilePhotoUploader } from '@/components/profile-photo-uploader';
 import type { AdvisorOption } from '@/lib/server/services/candidate-pipeline';
 import type { PersonJourney } from '@/lib/server/services/person-journey';
 import type {
@@ -41,6 +42,8 @@ export async function StudentDetailView({
   journey,
   locale,
   messagesHref,
+  photoManageEndpoint,
+  photoUrl,
 }: {
   activity: Activity;
   advisors: AdvisorOption[];
@@ -50,6 +53,8 @@ export async function StudentDetailView({
   journey: PersonJourney | null;
   locale: string;
   messagesHref?: string;
+  photoManageEndpoint?: string;
+  photoUrl?: string | null;
 }) {
   const [t, studentsT, status, attendance, domain] = await Promise.all([
     getTranslations('admin.studentDetail'),
@@ -110,8 +115,20 @@ export async function StudentDetailView({
       <div className="flex flex-col gap-6 lg:flex-row">
         <div className="flex w-full shrink-0 flex-col gap-6 lg:w-80">
           <ModulePanel className="flex flex-col items-center text-center">
-            <div className="mx-auto mb-4 flex h-24 w-24 items-center justify-center rounded-full border-4 border-white bg-[#533089]/10 text-3xl font-bold text-[#533089] shadow-md">
-              {getInitials(detail.fullName)}
+            <div className="mx-auto mb-4">
+              {photoManageEndpoint ? (
+                <ProfilePhotoUploader
+                  endpoint={photoManageEndpoint}
+                  name={detail.fullName}
+                  photoUrl={photoUrl ?? null}
+                />
+              ) : (
+                <ProfilePhotoUploader
+                  editable={false}
+                  name={detail.fullName}
+                  photoUrl={photoUrl ?? null}
+                />
+              )}
             </div>
             <h2 className="text-center text-xl font-bold text-[#2E286C]">
               {detail.fullName}
@@ -370,12 +387,3 @@ function attendanceLabel(
   return '—';
 }
 
-function getInitials(name: string) {
-  return name
-    .split(' ')
-    .filter(Boolean)
-    .map((part) => part[0])
-    .join('')
-    .slice(0, 2)
-    .toUpperCase();
-}

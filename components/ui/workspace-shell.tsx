@@ -175,9 +175,18 @@ export function WorkspaceShell({
                   <div className="text-xs text-[#2E286C]/50 font-medium">{userBadge.handle}</div>
                 </div>
                 <div className="w-9 h-9 lg:w-10 lg:h-10 rounded-full bg-[#533089]/10 border-2 border-white shadow-sm overflow-hidden flex items-center justify-center">
-                  <span className="text-[#533089] font-bold text-xs lg:text-sm">
-                    {userBadge.initials}
-                  </span>
+                  {userBadge.photoUrl ? (
+                    // eslint-disable-next-line @next/next/no-img-element -- auth-gated media URL
+                    <img
+                      src={userBadge.photoUrl}
+                      alt={userBadge.name}
+                      className="h-full w-full object-cover"
+                    />
+                  ) : (
+                    <span className="text-[#533089] font-bold text-xs lg:text-sm">
+                      {userBadge.initials}
+                    </span>
+                  )}
                 </div>
               </div>
             </div>

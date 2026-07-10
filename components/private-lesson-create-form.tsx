@@ -3,7 +3,8 @@
 import { useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { AlertTriangle, CalendarPlus, GraduationCap, Pencil } from 'lucide-react';
-import { Button, FormField, Input, ModulePanel } from '@/components/ui';
+import { Button, EntityPickerField,
+  FormField, Input, ModulePanel } from '@/components/ui';
 import { DateTimePicker } from '@/components/ui/date-picker';
 import type { SchedulablePrivateEnrollment } from '@/lib/server/services/lesson-schedules';
 import { cn } from '@/lib/utils';
@@ -155,19 +156,39 @@ export function PrivateLessonCreateForm({
   return (
     <ModulePanel className="space-y-5 rounded-3xl">
       <FormField label={t('studentLabel')} required>
-        <select
-          value={enrollmentId}
-          onChange={(event) => setEnrollmentId(event.target.value)}
-          className="h-10 w-full rounded-xl border border-transparent bg-[#F8F9FC] px-4 text-sm font-medium text-[#2E286C] outline-none transition-all focus:border-[#533089]/30"
-        >
-          <option value="">{t('studentPlaceholder')}</option>
-          {enrollments.map((enrollment) => (
-            <option key={enrollment.enrollmentId} value={enrollment.enrollmentId}>
-              {enrollment.studentName}
-              {showTeacher ? ` — ${enrollment.instructorName}` : ''}
-            </option>
-          ))}
-        </select>
+        <EntityPickerField
+          icon={GraduationCap}
+          items={enrollments.map((enrollment) => ({
+            id: enrollment.enrollmentId,
+            title: enrollment.studentName,
+            subtitle: showTeacher ? enrollment.instructorName : undefined,
+            identity: {
+              kind: 'person' as const,
+              name: enrollment.studentName,
+              photoUrl: enrollment.studentPhotoUrl,
+            },
+          }))}
+          onSelect={(item) => setEnrollmentId(item.id)}
+          placeholder={t('studentPlaceholder')}
+          title={t('studentLabel')}
+          value={(() => {
+            const current = enrollments.find(
+              (enrollment) => enrollment.enrollmentId === enrollmentId,
+            );
+            return current
+              ? {
+                  id: current.enrollmentId,
+                  title: current.studentName,
+                  subtitle: showTeacher ? current.instructorName : undefined,
+                  identity: {
+                    kind: 'person' as const,
+                    name: current.studentName,
+                    photoUrl: current.studentPhotoUrl,
+                  },
+                }
+              : null;
+          })()}
+        />
       </FormField>
 
       <div className="flex gap-2">

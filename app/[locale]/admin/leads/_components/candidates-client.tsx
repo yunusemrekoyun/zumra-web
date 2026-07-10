@@ -19,6 +19,7 @@ import {
 import {
   EmptyState,
   Button,
+  EntityPickerField,
   FilterTabs,
   InfoField,
   ListItemCard,
@@ -404,23 +405,58 @@ function CandidateProfile({
           />
           <div className="rounded-2xl border border-black/[0.03] p-4">
             <UserRound className="h-5 w-5 text-[#533089]" />
-            <div className="mt-4 text-[10px] font-bold uppercase tracking-wider text-[#2E286C]/35">
+            <div className="mb-1 mt-4 text-[10px] font-bold uppercase tracking-wider text-[#2E286C]/35">
               {t('assignedAdvisor')}
             </div>
-            <select
-              value={candidate.advisorId ?? ''}
-              onChange={(event) =>
-                patchCandidate({ advisorId: event.target.value || null })
+            <EntityPickerField
+              icon={UserRound}
+              items={[
+                ...advisors
+                  .filter((advisor) => advisor.id !== candidate.advisorId)
+                  .map((advisor) => ({
+                    id: advisor.id,
+                    title: advisor.name,
+                    identity: {
+                      kind: 'person' as const,
+                      name: advisor.name,
+                      photoUrl: advisor.photoUrl,
+                    },
+                  })),
+                ...(candidate.advisorId
+                  ? [
+                      {
+                        id: '__unassign__',
+                        title: t('noAdvisor'),
+                        identity: { kind: 'person' as const, name: '—' },
+                        meta: { label: '✕', tone: 'red' as const },
+                      },
+                    ]
+                  : []),
+              ]}
+              onSelect={(item) =>
+                patchCandidate({
+                  advisorId: item.id === '__unassign__' ? null : item.id,
+                })
               }
-              className="mt-1 w-full rounded-lg border border-black/10 bg-white px-2 py-1.5 text-sm font-bold text-[#2E286C] outline-none focus:border-[#533089]/40"
-            >
-              <option value="">{t('noAdvisor')}</option>
-              {advisors.map((advisor) => (
-                <option key={advisor.id} value={advisor.id}>
-                  {advisor.name}
-                </option>
-              ))}
-            </select>
+              placeholder={t('noAdvisor')}
+              title={t('assignedAdvisor')}
+              value={
+                candidate.advisorId
+                  ? {
+                      id: candidate.advisorId,
+                      title: candidate.advisorName ?? '',
+                      identity: {
+                        kind: 'person' as const,
+                        name: candidate.advisorName ?? '',
+                        photoUrl:
+                          advisors.find(
+                            (advisor) => advisor.id === candidate.advisorId,
+                          )?.photoUrl ?? null,
+                      },
+                    }
+                  : null
+              }
+            />
           </div>
         </div>
 

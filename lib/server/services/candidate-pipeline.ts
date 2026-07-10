@@ -10,6 +10,7 @@ import {
   candidateNotes,
   candidateProfiles,
   contacts,
+  mediaAssets,
   users,
 } from '@/lib/server/db/schema';
 import {
@@ -33,7 +34,7 @@ export const candidateStages = [
 ] as const;
 export type CandidateStage = (typeof candidateStages)[number];
 
-export type AdvisorOption = { id: string; name: string };
+export type AdvisorOption = { id: string; name: string; photoUrl: string | null };
 
 function assertStaff(principal: WorkspacePrincipal) {
   if (principal.role !== 'admin' && principal.role !== 'advisor') {
@@ -61,11 +62,27 @@ export async function listAdvisors(
   principal: WorkspacePrincipal,
 ): Promise<AdvisorOption[]> {
   assertStaff(principal);
-  return database
-    .select({ id: users.id, name: users.name })
+  const rows = await database
+    .select({
+      id: users.id,
+      name: users.name,
+      photoAssetId: mediaAssets.id,
+    })
     .from(users)
+    .leftJoin(
+      mediaAssets,
+      and(
+        eq(mediaAssets.id, users.photoMediaAssetId),
+        eq(mediaAssets.status, 'ready'),
+      ),
+    )
     .where(eq(users.role, 'advisor'))
     .orderBy(asc(users.name));
+  return rows.map((row) => ({
+    id: row.id,
+    name: row.name,
+    photoUrl: row.photoAssetId ? `/api/media/${row.photoAssetId}` : null,
+  }));
 }
 
 export async function updateCandidateStage(

@@ -24,12 +24,14 @@ import {
 import type { LucideIcon } from 'lucide-react';
 import { Link } from '@/i18n/navigation';
 import { LogoutButton } from '@/components/auth/logout-button';
+import { ProfilePhotoUploader } from '@/components/profile-photo-uploader';
 import { GoogleAccountCard } from '@/components/auth/google-account-card';
 import {
   getSessionPrincipal,
   requireWorkspaceRole,
 } from '@/lib/server/authorization';
 import { googleIdentityService } from '@/lib/server/services/google-identities';
+import { getProfilePhotoUrl } from '@/lib/server/services/profile-photo';
 import { getStudentWorkspaceData } from '@/lib/server/services/student-workspace';
 
 const KNOWN_STATUS = new Set([
@@ -50,7 +52,10 @@ export default async function StudentProfilePage({
   const { locale } = await params;
   const uiLocale = locale === 'en' ? 'en' : 'tr';
   const principal = await requireWorkspaceRole('student', locale);
-  const data = await getStudentWorkspaceData(principal);
+  const [data, photoUrl] = await Promise.all([
+    getStudentWorkspaceData(principal),
+    getProfilePhotoUrl(principal.id),
+  ]);
   const [t, workspace, nav, commonStatus, calendar] = await Promise.all([
     getTranslations('student.profilePage'),
     getTranslations('workspace.more'),
@@ -88,11 +93,12 @@ export default async function StudentProfilePage({
       {/* Profile header */}
       <StaggerItem>
         <Card padded className="flex flex-col items-center text-center">
-          <Avatar
-            name={data.student.fullName}
-            size="xl"
-            className="border-4 border-white shadow-lg mb-4"
-          />
+          <div className="mb-4">
+            <ProfilePhotoUploader
+              name={data.student.fullName}
+              photoUrl={photoUrl}
+            />
+          </div>
           <h1 className="text-xl font-bold text-[#2E286C]">
             {data.student.fullName}
           </h1>

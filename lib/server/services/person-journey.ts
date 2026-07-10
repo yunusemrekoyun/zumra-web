@@ -155,6 +155,7 @@ export type AdvisorStudentSummary = {
   fullName: string;
   status: string;
   studentId: string;
+  userId: string | null;
 };
 
 /** Bridge: a student profile back to their candidate record (staff view). */
@@ -172,6 +173,7 @@ export async function getStudentJourneyContext(
       lastName: contacts.lastName,
       status: studentProfiles.status,
       studentId: studentProfiles.id,
+      userId: studentProfiles.userId,
     })
     .from(studentProfiles)
     .innerJoin(contacts, eq(contacts.id, studentProfiles.contactId))
@@ -185,5 +187,6 @@ export async function getStudentJourneyContext(
     fullName: `${student.firstName} ${student.lastName}`.trim(),
     status: student.status,
     studentId: student.studentId,
+    userId: student.userId,
   };
 }

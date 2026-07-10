@@ -28,6 +28,8 @@ import {
   programs,
   instructorProfiles,
   studentProfiles,
+  mediaAssets,
+  users,
 } from '@/lib/server/db/schema';
 import {
   AuthorizationDeniedError,
@@ -987,6 +989,7 @@ async function resolveInstructorProfileId(
 export type SchedulablePrivateEnrollment = {
   enrollmentId: string;
   studentName: string;
+  studentPhotoUrl: string | null;
   instructorProfileId: string;
   instructorName: string;
 };
@@ -1015,6 +1018,7 @@ export async function listSchedulablePrivateEnrollments(
       enrollmentId: enrollments.id,
       studentFirst: contacts.firstName,
       studentLast: contacts.lastName,
+      studentPhotoAssetId: mediaAssets.id,
       instructorProfileId: enrollments.selectedInstructorProfileId,
       instructorFirst: instructorProfiles.firstName,
       instructorLast: instructorProfiles.lastName,
@@ -1022,6 +1026,14 @@ export async function listSchedulablePrivateEnrollments(
     .from(enrollments)
     .innerJoin(studentProfiles, eq(studentProfiles.id, enrollments.studentId))
     .innerJoin(contacts, eq(contacts.id, studentProfiles.contactId))
+    .leftJoin(users, eq(users.id, studentProfiles.userId))
+    .leftJoin(
+      mediaAssets,
+      and(
+        eq(mediaAssets.id, users.photoMediaAssetId),
+        eq(mediaAssets.status, 'ready'),
+      ),
+    )
     .innerJoin(
       instructorProfiles,
       eq(instructorProfiles.id, enrollments.selectedInstructorProfileId),
@@ -1032,6 +1044,9 @@ export async function listSchedulablePrivateEnrollments(
   return rows.map((row) => ({
     enrollmentId: row.enrollmentId,
     studentName: fullName(row.studentFirst, row.studentLast),
+    studentPhotoUrl: row.studentPhotoAssetId
+      ? `/api/media/${row.studentPhotoAssetId}`
+      : null,
     instructorProfileId: row.instructorProfileId as string,
     instructorName: fullName(row.instructorFirst, row.instructorLast),
   }));

@@ -226,7 +226,28 @@
       "cancel": "Vazgeç",
       "unassign": "Atamayı kaldır",
       "noOtherAdvisors": "Devredilecek başka danışman yok.",
-      "advisorRole": "Danışman"
+      "advisorRole": "Danışman",
+      "unassignHint": "Adayı sahipsiz bırak"
+    },
+    "profilePhoto": {
+      "change": "Fotoğrafı değiştir",
+      "remove": "Fotoğrafı kaldır",
+      "hint": "Fotoğrafa dokunarak değiştir",
+      "error": "Fotoğraf yüklenemedi, tekrar deneyin."
+    },
+    "profileSettings": {
+      "title": "Profilim",
+      "description": "Fotoğrafını ve hesap bilgilerini buradan yönet.",
+      "email": "E-posta",
+      "logout": "Çıkış Yap"
+    },
+    "entityPicker": {
+      "search": "Ara...",
+      "all": "Tümü",
+      "empty": "Sonuç bulunamadı.",
+      "close": "Kapat",
+      "choose": "Seç",
+      "change": "Değiştir"
     }
   },
   "public": {

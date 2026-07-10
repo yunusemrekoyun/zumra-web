@@ -111,6 +111,10 @@ async function referencedMediaIds(): Promise<Set<string>> {
       .select({ id: instructorProfiles.photoMediaAssetId })
       .from(instructorProfiles)
       .where(isNotNull(instructorProfiles.photoMediaAssetId)),
+    database
+      .select({ id: users.photoMediaAssetId })
+      .from(users)
+      .where(isNotNull(users.photoMediaAssetId)),
   ]);
   const referenced = new Set<string>();
   for (const list of lists) {

@@ -1,4 +1,7 @@
 export { Avatar } from './avatar';
+export { EntityGlyph } from './entity-glyph';
+export { EntityPicker, type EntityPickerItem } from './entity-picker';
+export { EntityPickerField } from './entity-picker-field';
 export { ActionBar } from './action-bar';
 export { Button } from './button';
 export { CalendarBoard } from './calendar-board';

@@ -3,6 +3,7 @@ import { PageHeader } from '@/components/ui';
 import { getRuntimeEnv } from '@/lib/server/env';
 import { withWorkspacePage } from '@/lib/server/workspace-page';
 import { BackgroundJobsCard } from './background-jobs-card';
+import { MyProfileCard } from './my-profile-card';
 import { DevResetCard } from './dev-reset-card';
 import { MailModeCard } from './mail-mode-card';
 import { RuntimeSettingsCard } from './runtime-settings-card';
@@ -18,6 +19,7 @@ function SettingsPage() {
         description={t('description')}
       />
       <div className="grid gap-6">
+        <MyProfileCard />
         <RuntimeSettingsCard />
         <MailModeCard />
         <BackgroundJobsCard />

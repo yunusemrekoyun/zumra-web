@@ -6,6 +6,7 @@ import {
   text,
   timestamp,
   uniqueIndex,
+  uuid,
 } from 'drizzle-orm/pg-core';
 
 export const userRoleEnum = pgEnum('user_role', [
@@ -47,6 +48,9 @@ export const users = pgTable(
     banReason: text('ban_reason'),
     banExpires: timestamp('ban_expires', { withTimezone: true }),
     twoFactorEnabled: boolean('two_factor_enabled').notNull().default(false),
+    // Self-service profile photo (scanned + re-encoded media asset). Kept
+    // separate from Better Auth's 'image' (external OAuth avatar URL).
+    photoMediaAssetId: uuid('photo_media_asset_id'),
   },
   (table) => [
     uniqueIndex('users_email_unique').on(table.email),

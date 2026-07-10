@@ -27,6 +27,8 @@ import {
 } from '@/lib/server/authorization';
 import { googleIdentityService } from '@/lib/server/services/google-identities';
 import { getTeacherWorkspaceData } from '@/lib/server/services/teacher-workspace';
+import { getProfilePhotoUrl } from '@/lib/server/services/profile-photo';
+import { ProfilePhotoUploader } from '@/components/profile-photo-uploader';
 
 type TeacherProfilePageProps = {
   params: Promise<{ locale: string }>;
@@ -38,7 +40,10 @@ export default async function TeacherProfilePage({
   const { locale } = await params;
   const uiLocale = locale === 'en' ? 'en' : 'tr';
   const principal = await requireWorkspaceRole('teacher', locale);
-  const data = await getTeacherWorkspaceData(principal);
+  const [data, photoUrl] = await Promise.all([
+    getTeacherWorkspaceData(principal),
+    getProfilePhotoUrl(principal.id),
+  ]);
   const [t, workspace, nav, calendar] = await Promise.all([
     getTranslations('teacher.profilePage'),
     getTranslations('workspace.more'),
@@ -59,11 +64,12 @@ export default async function TeacherProfilePage({
   return (
     <div className="workspace-page space-y-4">
       <Card padded className="flex flex-col items-center text-center">
-        <Avatar
-          name={data.instructor.fullName}
-          size="xl"
-          className="border-4 border-white shadow-lg mb-4"
-        />
+        <div className="mb-4">
+          <ProfilePhotoUploader
+            name={data.instructor.fullName}
+            photoUrl={photoUrl}
+          />
+        </div>
         <h1 className="text-xl font-bold text-[#2E286C]">
           {data.instructor.fullName}
         </h1>

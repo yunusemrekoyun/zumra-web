@@ -5,6 +5,36 @@
 
 const READY_KINDS_NEED_WAIT = new Set(['image', 'video']);
 
+type MediaKind = 'audio' | 'document' | 'image' | 'video';
+
+/**
+ * Upload a file to /api/media and wait until it is attachable. Returns the
+ * media asset id. Single shared implementation — screens must not hand-roll
+ * their own fetch (the header contract lives here).
+ */
+export async function uploadMedia(
+  file: File,
+  kind: MediaKind,
+  { visibility = 'private' }: { visibility?: 'private' | 'public' } = {},
+): Promise<string> {
+  const response = await fetch('/api/media', {
+    body: file,
+    credentials: 'same-origin',
+    headers: {
+      'x-file-name': encodeURIComponent(file.name),
+      'x-media-kind': kind,
+      'x-media-visibility': visibility,
+    },
+    method: 'POST',
+  });
+  const body = (await response.json().catch(() => ({}))) as { id?: string };
+  if (!response.ok || !body.id) {
+    throw new Error('media_upload_failed');
+  }
+  await waitForMediaReady(body.id, kind);
+  return body.id;
+}
+
 export async function waitForMediaReady(
   mediaAssetId: string,
   kind: string,

@@ -6,6 +6,7 @@ import {
   getPersonJourney,
   getStudentJourneyContext,
 } from '@/lib/server/services/person-journey';
+import { getProfilePhotoUrl } from '@/lib/server/services/profile-photo';
 import {
   getAdminStudentActivity,
   getAdminStudentDetail,
@@ -34,6 +35,9 @@ export default async function StudentDetailPage({
   const journey = journeyContext
     ? await getPersonJourney(principal, journeyContext.candidateId)
     : null;
+  const photoUrl = journeyContext?.userId
+    ? await getProfilePhotoUrl(journeyContext.userId)
+    : null;
 
   return (
     <StudentDetailView
@@ -45,6 +49,12 @@ export default async function StudentDetailPage({
       journey={journey}
       locale={locale}
       messagesHref={`/admin/messages?q=${encodeURIComponent(detail.fullName)}`}
+      photoManageEndpoint={
+        journeyContext?.userId
+          ? `/api/admin/users/${journeyContext.userId}/photo`
+          : undefined
+      }
+      photoUrl={photoUrl}
     />
   );
 }

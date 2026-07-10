@@ -1,0 +1,1 @@
+ALTER TABLE "users" ADD COLUMN "photo_media_asset_id" uuid;
