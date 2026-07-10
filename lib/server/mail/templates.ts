@@ -177,13 +177,18 @@ export function renderMailTemplate(input: TemplateInput) {
   }
 
   if (input.templateKey === 'appointment-scheduled') {
+    const rescheduled = input.payload.kind === 'rescheduled';
     const when = escapeHtml(
       formatDate(String(input.payload.startsAt ?? ''), english ? 'en-US' : 'tr-TR'),
     );
     const greeting = english ? 'Hello' : 'Merhaba';
-    const intro = english
-      ? 'Your free consultation has been confirmed. Here are the details:'
-      : 'Ücretsiz danışmanlık görüşmeniz onaylandı. Görüşme detayları:';
+    const intro = rescheduled
+      ? english
+        ? 'The time of your consultation has been updated. Here are the new details:'
+        : 'Danışmanlık görüşmenizin saati güncellendi. Yeni görüşme detayları:'
+      : english
+        ? 'Your free consultation has been confirmed. Here are the details:'
+        : 'Ücretsiz danışmanlık görüşmeniz onaylandı. Görüşme detayları:';
     const whenLabel = english ? 'APPOINTMENT TIME' : 'GÖRÜŞME ZAMANI';
     const closing = english
       ? 'Our advisor will reach out to you at the scheduled time. See you soon!'
@@ -219,12 +224,20 @@ export function renderMailTemplate(input: TemplateInput) {
 
     return {
       html,
-      subject: english
-        ? 'Your consultation is confirmed'
-        : 'Görüşmeniz onaylandı',
-      text: english
-        ? `Your free consultation is confirmed for ${when}.`
-        : `Ücretsiz danışmanlık görüşmeniz ${when} için onaylandı.`,
+      subject: rescheduled
+        ? english
+          ? 'Your consultation time was updated'
+          : 'Görüşme saatiniz güncellendi'
+        : english
+          ? 'Your consultation is confirmed'
+          : 'Görüşmeniz onaylandı',
+      text: rescheduled
+        ? english
+          ? `Your consultation was moved to ${when}.`
+          : `Danışmanlık görüşmeniz ${when} olarak güncellendi.`
+        : english
+          ? `Your free consultation is confirmed for ${when}.`
+          : `Ücretsiz danışmanlık görüşmeniz ${when} için onaylandı.`,
     };
   }
 

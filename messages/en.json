@@ -1120,7 +1120,27 @@
         "outcome_no_show": "No-show",
         "outcome_cancelled": "Cancelled",
         "error": "Something went wrong. Please try again.",
-        "stale": "This appointment changed elsewhere. Please refresh the page."
+        "stale": "This appointment changed elsewhere. Please refresh the page.",
+        "planHint": "Book a consultation for this lead directly; the confirmation email is sent automatically.",
+        "planCta": "Book Consultation",
+        "noneClosed": "No consultation can be booked for this lead.",
+        "reschedule": "Reschedule",
+        "rescheduleCta": "Save New Time",
+        "rescheduleReason": "Reason (optional)",
+        "verdictTitle": "How did the meeting go?",
+        "verdict_positive": "Positive",
+        "verdict_thinking": "Thinking it over",
+        "verdict_negative": "Negative",
+        "verdictCta": "Save Result",
+        "back": "Back",
+        "followUpLabel": "Follow-up call date (optional)",
+        "negativeNoteHint": "A reason above is required for a negative result.",
+        "noteRequired": "A note (reason) is required for this result.",
+        "resolveHint": "Write a reason above for no-show and cancellation.",
+        "result_positive": "Positive meeting",
+        "result_thinking": "Thinking it over",
+        "result_negative": "Negative meeting",
+        "followUpAt": "Follow-up call: {when}"
       },
       "noAppointment": "No request yet",
       "source": "Source",
@@ -1186,7 +1206,11 @@
         "enrollment_started": "Enrollment process started",
         "enrollment_completed": "Candidate converted to student",
         "appointment_scheduled": "Appointment scheduled",
-        "appointment_resolved": "Appointment resolved"
+        "appointment_resolved": "Appointment resolved",
+        "appointment_rescheduled": "Consultation rescheduled",
+        "contact_called": "Called by phone",
+        "contact_emailed": "Email sent",
+        "contact_no_answer": "Could not be reached"
       },
       "stages": {
         "new": "New candidate",
@@ -1206,7 +1230,22 @@
         "travel": "Travel",
         "other": "Other"
       },
-      "assignedToMe": "Assigned to me"
+      "assignedToMe": "Assigned to me",
+      "allStages": "All stages",
+      "journey": {
+        "applied": "Applied",
+        "contacted": "Contacted",
+        "meeting": "Meeting",
+        "decision": "Decision",
+        "enrolled": "Enrolled"
+      },
+      "touchpoints": {
+        "title": "Quick contact",
+        "called": "Called",
+        "no_answer": "No answer",
+        "emailed": "Email sent",
+        "error": "Could not save, try again."
+      }
     },
     "enrollment": {
       "title": "Student Enrollment",

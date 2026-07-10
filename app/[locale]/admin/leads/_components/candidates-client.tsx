@@ -4,12 +4,16 @@ import { useMemo, useState } from 'react';
 import { useLocale, useTranslations } from 'next-intl';
 import {
   CalendarClock,
+  Check,
   CheckCircle2,
   ClipboardPenLine,
   Clock3,
   Mail,
   Phone,
+  PhoneCall,
+  PhoneOff,
   Search,
+  Send,
   UserRound,
 } from 'lucide-react';
 import {
@@ -61,6 +65,9 @@ export function CandidatesClient({
   const locale = useLocale();
   const t = useTranslations('admin.leads');
   const [filter, setFilter] = useState<CandidateFilter>('all');
+  const [stageFilter, setStageFilter] = useState<'all' | (typeof STAGES)[number]>(
+    'all',
+  );
   const [query, setQuery] = useState('');
   const visible = useMemo(() => {
     const normalizedQuery = query.trim().toLocaleLowerCase(locale);
@@ -71,6 +78,8 @@ export function CandidatesClient({
         `${candidate.fullName} ${candidate.email} ${candidate.phone ?? ''}`
           .toLocaleLowerCase(locale)
           .includes(normalizedQuery);
+      const matchesStage =
+        stageFilter === 'all' || candidate.stage === stageFilter;
       const matchesFilter =
         filter === 'all' ||
         (filter === 'mine' && candidate.advisorId === currentUserId) ||
@@ -81,9 +90,9 @@ export function CandidatesClient({
           candidate.assessmentStatus === 'completed') ||
         (filter === 'appointment' &&
           candidate.appointmentStatus === 'requested');
-      return matchesQuery && matchesFilter;
+      return matchesQuery && matchesStage && matchesFilter;
     });
-  }, [candidates, currentUserId, filter, locale, query]);
+  }, [candidates, currentUserId, filter, locale, query, stageFilter]);
   const [selectedId, setSelectedId] = useState(candidates[0]?.id);
   const selected =
     visible.find((candidate) => candidate.id === selectedId) ??
@@ -97,6 +106,17 @@ export function CandidatesClient({
           value={query}
           onChange={(event) => setQuery(event.target.value)}
           placeholder={t('search')}
+        />
+        <FilterTabs
+          activeValue={stageFilter}
+          onChange={(value) => setStageFilter(value as typeof stageFilter)}
+          items={[
+            { label: t('allStages'), value: 'all' },
+            ...STAGES.map((stage) => ({
+              label: t(`stages.${stage}`),
+              value: stage,
+            })),
+          ]}
         />
         <FilterTabs
           activeValue={filter}
@@ -349,6 +369,8 @@ function CandidateProfile({
           </p>
         )}
 
+        <JourneyStrip candidate={candidate} t={t} />
+
         <div className="grid gap-4 py-6 sm:grid-cols-2">
           <ContactRow icon={Mail} label={t('email')} value={candidate.email} />
           <ContactRow
@@ -358,6 +380,8 @@ function CandidateProfile({
             muted={!candidate.phone}
           />
         </div>
+
+        <TouchpointBar candidateId={candidate.id} t={t} />
 
         <div className="grid gap-4 border-t border-black/[0.04] pt-6 sm:grid-cols-2 xl:grid-cols-3">
           <Metric
@@ -439,16 +463,17 @@ function CandidateProfile({
           </div>
         </div>
 
-        {candidate.appointmentStatus && (
-          <AppointmentPanel
-            candidateId={candidate.id}
-            locale={locale}
-            status={candidate.appointmentStatus}
-            preferences={candidate.appointmentPreferences}
-            scheduledStartsAt={candidate.appointmentStartsAt}
-            outcomeNote={candidate.appointmentOutcomeNote}
-          />
-        )}
+        <AppointmentPanel
+          candidateId={candidate.id}
+          locale={locale}
+          status={candidate.appointmentStatus}
+          preferences={candidate.appointmentPreferences}
+          scheduledStartsAt={candidate.appointmentStartsAt}
+          outcomeNote={candidate.appointmentOutcomeNote}
+          outcomeResult={candidate.appointmentOutcomeResult}
+          followUpAt={candidate.appointmentFollowUpAt}
+          canCreate={candidate.stage !== 'enrolled' && candidate.stage !== 'lost'}
+        />
 
         {(candidate.referrer ||
           (candidate.attribution &&
@@ -744,10 +769,14 @@ function activityLabel(
     'candidate.profile_completed',
     'candidate.appointment_requested',
     'candidate.appointment_scheduled',
+    'candidate.appointment_rescheduled',
     'candidate.appointment_resolved',
     'candidate.advisor_assigned',
     'candidate.stage_changed',
     'candidate.note_added',
+    'candidate.contact_called',
+    'candidate.contact_emailed',
+    'candidate.contact_no_answer',
     'candidate.enrollment_started',
     'candidate.enrollment_completed',
   ];
@@ -802,4 +831,147 @@ function initials(name: string) {
     .join('')
     .slice(0, 2)
     .toUpperCase();
+}
+
+/**
+ * Quest-style journey: where this person stands on the application → student
+ * road, derived entirely from data that already exists on the record.
+ */
+function JourneyStrip({
+  candidate,
+  t,
+}: {
+  candidate: CandidateDirectoryRecord;
+  t: ReturnType<typeof useTranslations>;
+}) {
+  const stage = candidate.stage;
+  const appointment = candidate.appointmentStatus;
+  const steps: Array<{ active: boolean; done: boolean; key: string }> = [
+    { active: false, done: true, key: 'applied' },
+    { active: stage === 'new', done: stage !== 'new', key: 'contacted' },
+    {
+      active: appointment === 'requested' || appointment === 'scheduled',
+      done:
+        appointment === 'completed' ||
+        ['qualified', 'offer_pending', 'enrolled'].includes(stage),
+      key: 'meeting',
+    },
+    {
+      active: appointment === 'completed' && !candidate.appointmentOutcomeResult,
+      done:
+        Boolean(candidate.appointmentOutcomeResult) ||
+        ['offer_pending', 'enrolled', 'lost'].includes(stage),
+      key: 'decision',
+    },
+    { active: stage === 'offer_pending', done: stage === 'enrolled', key: 'enrolled' },
+  ];
+
+  return (
+    <div className="mt-6 overflow-x-auto">
+      <div className="flex min-w-[30rem] items-center">
+        {steps.map((step, index) => (
+          <div key={step.key} className="flex flex-1 items-center">
+            <div className="flex flex-col items-center gap-1.5">
+              <div
+                className={`flex h-8 w-8 items-center justify-center rounded-full text-[11px] font-bold transition-colors ${
+                  step.done
+                    ? 'bg-[#533089] text-white'
+                    : step.active
+                      ? 'bg-white text-[#533089] ring-2 ring-[#533089]'
+                      : 'bg-[#F8F7FB] text-[#2E286C]/30 ring-1 ring-black/[0.06]'
+                }`}
+              >
+                {step.done ? <Check className="h-4 w-4" /> : index + 1}
+              </div>
+              <span
+                className={`whitespace-nowrap text-[10px] font-bold uppercase tracking-wider ${
+                  step.done || step.active
+                    ? 'text-[#533089]'
+                    : 'text-[#2E286C]/35'
+                }`}
+              >
+                {t(`journey.${step.key}`)}
+              </span>
+            </div>
+            {index < steps.length - 1 && (
+              <div
+                className={`mx-2 mb-5 h-0.5 flex-1 rounded-full ${
+                  steps[index + 1].done || steps[index + 1].active
+                    ? 'bg-[#533089]/50'
+                    : 'bg-black/[0.06]'
+                }`}
+              />
+            )}
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+/** One-tap contact log: called / no answer / emailed. Feeds the activity feed. */
+function TouchpointBar({
+  candidateId,
+  t,
+}: {
+  candidateId: string;
+  t: ReturnType<typeof useTranslations>;
+}) {
+  const router = useRouter();
+  const [busy, setBusy] = useState<string | null>(null);
+  const [error, setError] = useState(false);
+
+  async function log(kind: 'called' | 'emailed' | 'no_answer') {
+    if (busy) return;
+    setBusy(kind);
+    setError(false);
+    try {
+      const response = await fetch(
+        `/api/admin/candidates/${candidateId}/touchpoints`,
+        {
+          body: JSON.stringify({ kind }),
+          credentials: 'same-origin',
+          headers: { 'content-type': 'application/json' },
+          method: 'POST',
+        },
+      );
+      if (!response.ok) throw new Error('touchpoint_failed');
+      router.refresh();
+    } catch {
+      setError(true);
+    } finally {
+      setBusy(null);
+    }
+  }
+
+  const items = [
+    { icon: PhoneCall, key: 'called' as const },
+    { icon: PhoneOff, key: 'no_answer' as const },
+    { icon: Send, key: 'emailed' as const },
+  ];
+
+  return (
+    <div className="flex flex-wrap items-center gap-2 border-t border-black/[0.04] pt-4">
+      <span className="text-[10px] font-bold uppercase tracking-widest text-[#2E286C]/35">
+        {t('touchpoints.title')}
+      </span>
+      {items.map((item) => (
+        <button
+          key={item.key}
+          type="button"
+          disabled={busy !== null}
+          onClick={() => log(item.key)}
+          className="inline-flex min-h-9 items-center gap-1.5 rounded-xl bg-[#F8F7FB] px-3 text-xs font-bold text-[#2E286C] ring-1 ring-black/[0.05] transition-colors hover:bg-[#533089]/10 hover:text-[#533089] disabled:opacity-50"
+        >
+          <item.icon className="h-3.5 w-3.5" />
+          {t(`touchpoints.${item.key}`)}
+        </button>
+      ))}
+      {error && (
+        <span className="text-xs font-semibold text-red-600">
+          {t('touchpoints.error')}
+        </span>
+      )}
+    </div>
+  );
 }

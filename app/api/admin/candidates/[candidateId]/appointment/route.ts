@@ -11,16 +11,27 @@ import {
 } from '@/lib/server/security/network';
 import { auditService } from '@/lib/server/services/audit';
 import {
+  appointmentOutcomeResults,
   appointmentOutcomes,
+  createAppointment,
+  rescheduleAppointment,
   resolveAppointment,
   scheduleAppointment,
 } from '@/lib/server/services/candidate-pipeline';
 
 const bodySchema = z.discriminatedUnion('action', [
   z.object({ action: z.literal('schedule'), startsAt: z.string().datetime() }),
+  z.object({ action: z.literal('create'), startsAt: z.string().datetime() }),
+  z.object({
+    action: z.literal('reschedule'),
+    startsAt: z.string().datetime(),
+    note: z.string().max(500).optional(),
+  }),
   z.object({
     action: z.literal('resolve'),
     outcome: z.enum(appointmentOutcomes),
+    outcomeResult: z.enum(appointmentOutcomeResults).optional(),
+    followUpAt: z.string().datetime().optional(),
     note: z.string().max(2000).optional(),
   }),
 ]);
@@ -52,10 +63,21 @@ export async function PATCH(
       await scheduleAppointment(principal, candidateId, {
         startsAt: parsed.data.startsAt,
       });
+    } else if (parsed.data.action === 'create') {
+      await createAppointment(principal, candidateId, {
+        startsAt: parsed.data.startsAt,
+      });
+    } else if (parsed.data.action === 'reschedule') {
+      await rescheduleAppointment(principal, candidateId, {
+        note: parsed.data.note,
+        startsAt: parsed.data.startsAt,
+      });
     } else {
       await resolveAppointment(principal, candidateId, {
-        outcome: parsed.data.outcome,
+        followUpAt: parsed.data.followUpAt,
         note: parsed.data.note,
+        outcome: parsed.data.outcome,
+        outcomeResult: parsed.data.outcomeResult,
       });
     }
 

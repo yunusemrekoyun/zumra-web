@@ -1120,7 +1120,27 @@
         "outcome_no_show": "Gelmedi",
         "outcome_cancelled": "İptal",
         "error": "İşlem başarısız. Tekrar deneyin.",
-        "stale": "Bu randevu başka bir yerde güncellenmiş. Sayfayı yenileyin."
+        "stale": "Bu randevu başka bir yerde güncellenmiş. Sayfayı yenileyin.",
+        "planHint": "Bu aday için doğrudan bir görüşme planlayın; onay e-postası otomatik gider.",
+        "planCta": "Görüşme Planla",
+        "noneClosed": "Bu aday için görüşme planlanamaz.",
+        "reschedule": "Ertele",
+        "rescheduleCta": "Yeni Saati Kaydet",
+        "rescheduleReason": "Erteleme sebebi (isteğe bağlı)",
+        "verdictTitle": "Görüşme nasıl geçti?",
+        "verdict_positive": "Olumlu",
+        "verdict_thinking": "Düşünecek",
+        "verdict_negative": "Olumsuz",
+        "verdictCta": "Sonucu Kaydet",
+        "back": "Geri",
+        "followUpLabel": "Takip araması tarihi (isteğe bağlı)",
+        "negativeNoteHint": "Olumsuz sonuç için yukarıya sebep yazmanız gerekir.",
+        "noteRequired": "Bu sonuç için not (sebep) zorunludur.",
+        "resolveHint": "Gelmedi ve iptal için yukarıya sebep yazın.",
+        "result_positive": "Olumlu görüşme",
+        "result_thinking": "Düşünecek",
+        "result_negative": "Olumsuz görüşme",
+        "followUpAt": "Takip araması: {when}"
       },
       "noAppointment": "Henüz talep yok",
       "source": "Kaynak",
@@ -1186,7 +1206,11 @@
         "enrollment_started": "Kayıt süreci başlatıldı",
         "enrollment_completed": "Aday öğrenciye dönüştürüldü",
         "appointment_scheduled": "Randevu planlandı",
-        "appointment_resolved": "Randevu sonuçlandı"
+        "appointment_resolved": "Randevu sonuçlandı",
+        "appointment_rescheduled": "Görüşme ertelendi",
+        "contact_called": "Telefonla arandı",
+        "contact_emailed": "E-posta gönderildi",
+        "contact_no_answer": "Ulaşılamadı"
       },
       "stages": {
         "new": "Yeni aday",
@@ -1206,7 +1230,22 @@
         "travel": "Seyahat",
         "other": "Diğer"
       },
-      "assignedToMe": "Bana atananlar"
+      "assignedToMe": "Bana atananlar",
+      "allStages": "Tüm aşamalar",
+      "journey": {
+        "applied": "Başvuru",
+        "contacted": "İletişim",
+        "meeting": "Görüşme",
+        "decision": "Karar",
+        "enrolled": "Kayıt"
+      },
+      "touchpoints": {
+        "title": "Hızlı temas",
+        "called": "Arandı",
+        "no_answer": "Ulaşılamadı",
+        "emailed": "E-posta gönderildi",
+        "error": "Kaydedilemedi, tekrar deneyin."
+      }
     },
     "enrollment": {
       "title": "Öğrenci Kaydı",

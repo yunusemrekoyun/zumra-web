@@ -46,6 +46,13 @@ export const appointmentRequestStatusEnum = pgEnum(
   ['requested', 'scheduled', 'completed', 'cancelled', 'no_show'],
 );
 
+// Verdict recorded when a consultation completes: positive → offer path,
+// thinking → follow-up call, negative → reason required, stage suggestion lost.
+export const appointmentOutcomeResultEnum = pgEnum(
+  'appointment_outcome_result',
+  ['positive', 'thinking', 'negative'],
+);
+
 export type LocalizedText = {
   en: string;
   tr: string;
@@ -433,6 +440,14 @@ export const appointmentRequests = pgTable(
     scheduledStartsAt: timestamp('scheduled_starts_at', { withTimezone: true }),
     // Free-text note staff records about the consultation outcome.
     outcomeNote: text('outcome_note'),
+    // Verdict for completed consultations; null for public-era rows.
+    outcomeResult: appointmentOutcomeResultEnum('outcome_result'),
+    // "Thinking" verdicts can carry a follow-up call date.
+    followUpAt: timestamp('follow_up_at', { withTimezone: true }),
+    // Staff member who scheduled it directly; null when the lead self-requested.
+    createdByUserId: text('created_by_user_id').references(() => users.id, {
+      onDelete: 'set null',
+    }),
     createdAt: timestamp('created_at', { withTimezone: true })
       .notNull()
       .defaultNow(),
