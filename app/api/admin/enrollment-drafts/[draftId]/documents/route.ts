@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { requireAdminSession } from '@/lib/server/authorization';
+import { requireStaffSession } from '@/lib/server/authorization';
 import {
   apiErrorResponse,
   apiResponse,
@@ -37,7 +37,7 @@ export async function POST(
       return apiResponse({ error: 'invalid_request' }, 400, id);
     }
 
-    const principal = await requireAdminSession();
+    const principal = await requireStaffSession();
     const { draftId } = await params;
     const document = await attachEnrollmentDocument(
       principal,
@@ -66,7 +66,7 @@ export async function DELETE(
       return apiResponse({ error: 'invalid_request' }, 400, id);
     }
 
-    const principal = await requireAdminSession();
+    const principal = await requireStaffSession();
     const { draftId } = await params;
     await removeEnrollmentDocument(principal, draftId, documentId);
     return apiResponse({ removed: true }, 200, id);

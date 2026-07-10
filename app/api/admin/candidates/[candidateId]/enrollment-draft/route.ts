@@ -1,4 +1,4 @@
-import { requireAdminSession } from '@/lib/server/authorization';
+import { requireStaffSession } from '@/lib/server/authorization';
 import {
   apiErrorResponse,
   apiResponse,
@@ -26,7 +26,7 @@ export async function POST(
   const { candidateId } = await params;
 
   try {
-    const principal = await requireAdminSession();
+    const principal = await requireStaffSession();
     const draft = await beginEnrollmentDraft(principal, candidateId);
     await auditService.record({
       action: draft.created

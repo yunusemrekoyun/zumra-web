@@ -14,5 +14,11 @@ export default async function CandidatesPage({ params }: CandidatesPageProps) {
     listCandidateDirectory(),
     listAdvisors(principal),
   ]);
-  return <CandidatesClient advisors={advisors} candidates={candidates} />;
+  return (
+    <CandidatesClient
+      advisors={advisors}
+      candidates={candidates}
+      currentUserId={principal.id}
+    />
+  );
 }

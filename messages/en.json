@@ -1205,7 +1205,8 @@
         "exam": "Exam",
         "travel": "Travel",
         "other": "Other"
-      }
+      },
+      "assignedToMe": "Assigned to me"
     },
     "enrollment": {
       "title": "Student Enrollment",
@@ -1880,7 +1881,18 @@
       "leads": "My Candidates",
       "students": "My Students",
       "meetings": "Meetings",
-      "offers": "Offers"
+      "offers": "Offers",
+      "realDescription": "One view of the candidate pool, appointments and enrollments.",
+      "metricNewWeek": "New leads this week",
+      "metricPending": "Pending appointment requests",
+      "metricToday": "Today's consultations",
+      "metricMine": "Leads assigned to me",
+      "stageTitle": "Pipeline",
+      "requestsTitle": "Awaiting confirmation",
+      "upcomingTitle": "Upcoming consultations",
+      "emptyRequests": "No pending appointment requests.",
+      "emptyUpcoming": "No scheduled consultations.",
+      "goToLeads": "Open lead"
     },
     "empty": {
       "leads": {
@@ -1907,6 +1919,25 @@
         "title": "Advisor Settings",
         "description": "Notification preferences, working hours and profile settings will be managed here."
       }
+    },
+    "meetings": {
+      "title": "Consultations",
+      "description": "Schedule appointment requests and record outcomes.",
+      "requestedTitle": "Awaiting confirmation",
+      "scheduledTitle": "Scheduled",
+      "pastTitle": "Past consultations",
+      "emptyRequested": "No requests awaiting confirmation.",
+      "emptyScheduled": "No scheduled consultations.",
+      "emptyPast": "No resolved consultations yet.",
+      "open": "Open"
+    },
+    "offers": {
+      "title": "Offers",
+      "description": "Candidates at the offer stage and unfinished enrollments.",
+      "draftInProgress": "Draft in progress",
+      "open": "Open",
+      "emptyTitle": "No one at the offer desk",
+      "emptyDescription": "Candidates reaching the offer stage will appear here."
     }
   },
   "teacher": {

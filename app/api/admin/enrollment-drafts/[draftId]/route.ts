@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import { normalizePhoneNumber, phoneNumberIsValid } from '@/lib/domain/phone';
-import { requireAdminSession } from '@/lib/server/authorization';
+import { requireStaffSession } from '@/lib/server/authorization';
 import {
   apiErrorResponse,
   apiResponse,
@@ -239,7 +239,7 @@ export async function PATCH(
       );
     }
 
-    const principal = await requireAdminSession();
+    const principal = await requireStaffSession();
     const { draftId } = await params;
     const result = await updateEnrollmentDraft(
       principal,

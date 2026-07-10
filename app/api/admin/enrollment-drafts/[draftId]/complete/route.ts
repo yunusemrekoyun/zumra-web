@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { requireCriticalAdmin } from '@/lib/server/authorization';
+import { requireCriticalStaff } from '@/lib/server/authorization';
 import {
   apiErrorResponse,
   apiResponse,
@@ -38,7 +38,7 @@ export async function POST(
     if (!parsed.success) {
       return apiResponse({ error: 'invalid_request' }, 400, id);
     }
-    const principal = await requireCriticalAdmin(parsed.data.password);
+    const principal = await requireCriticalStaff(parsed.data.password);
     const enrollment = await completeEnrollment(
       principal,
       draftId,

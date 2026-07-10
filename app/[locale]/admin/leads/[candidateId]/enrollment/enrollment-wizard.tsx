@@ -66,9 +66,11 @@ const stepNumbers = [1, 2, 3, 4, 5, 6, 7, 8, 9] as const;
 export function EnrollmentWizard({
   catalog,
   initial,
+  returnPath = '/admin/leads',
 }: {
   catalog: ProgramManagementData;
   initial: EnrollmentDraftView;
+  returnPath?: string;
 }) {
   const t = useTranslations('admin.enrollment');
   const locale = useLocale();
@@ -259,7 +261,7 @@ export function EnrollmentWizard({
         throw new Error(body.error ?? 'complete_failed');
       }
       setMessage(t('completed'));
-      router.push('/admin/leads');
+      router.push(returnPath);
       router.refresh();
     } catch (error) {
       const code = error instanceof Error ? error.message : '';
@@ -414,7 +416,7 @@ export function EnrollmentWizard({
       <div className="grid gap-6 xl:grid-cols-[18rem_minmax(0,1fr)]">
         <ModulePanel className="h-fit rounded-3xl">
           <Link
-            href="/admin/leads"
+            href={returnPath}
             className="mb-6 inline-flex items-center gap-2 text-xs font-bold text-[#533089]"
           >
             <ArrowLeft className="h-4 w-4" />

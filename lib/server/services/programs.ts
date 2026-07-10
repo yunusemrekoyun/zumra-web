@@ -191,7 +191,7 @@ export type ProgramBranchInput = {
 export async function getProgramManagementData(
   principal: WorkspacePrincipal,
 ): Promise<ProgramManagementData> {
-  assertAdmin(principal);
+  assertStaff(principal);
 
   const [
     programRows,
@@ -1454,6 +1454,14 @@ function cleanOptional(value?: string) {
 function assertAdmin(principal: WorkspacePrincipal) {
   if (principal.role !== 'admin') {
     throw new AuthorizationDeniedError('Admin access is required.');
+  }
+}
+
+// Read-only staff gate: advisors need the program/branch catalog for the
+// enrollment wizard while all program mutations stay admin-only.
+function assertStaff(principal: WorkspacePrincipal) {
+  if (principal.role !== 'admin' && principal.role !== 'advisor') {
+    throw new AuthorizationDeniedError('Staff access is required.');
   }
 }
 

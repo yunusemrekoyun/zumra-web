@@ -43,15 +43,20 @@ type CandidateFilter =
   | 'all'
   | 'appointment'
   | 'level'
+  | 'mine'
   | 'missing'
   | 'not_started';
 
 export function CandidatesClient({
   advisors,
+  basePath = '/admin/leads',
   candidates,
+  currentUserId,
 }: {
   advisors: AdvisorOption[];
+  basePath?: string;
   candidates: CandidateDirectoryRecord[];
+  currentUserId?: string;
 }) {
   const locale = useLocale();
   const t = useTranslations('admin.leads');
@@ -68,6 +73,7 @@ export function CandidatesClient({
           .includes(normalizedQuery);
       const matchesFilter =
         filter === 'all' ||
+        (filter === 'mine' && candidate.advisorId === currentUserId) ||
         (filter === 'missing' && !candidate.communicationComplete) ||
         (filter === 'not_started' &&
           candidate.assessmentStatus === 'not_started') ||
@@ -77,7 +83,7 @@ export function CandidatesClient({
           candidate.appointmentStatus === 'requested');
       return matchesQuery && matchesFilter;
     });
-  }, [candidates, filter, locale, query]);
+  }, [candidates, currentUserId, filter, locale, query]);
   const [selectedId, setSelectedId] = useState(candidates[0]?.id);
   const selected =
     visible.find((candidate) => candidate.id === selectedId) ??
@@ -97,6 +103,9 @@ export function CandidatesClient({
           onChange={(value) => setFilter(value as CandidateFilter)}
           items={[
             { label: t('all'), value: 'all' },
+            ...(currentUserId
+              ? [{ label: t('assignedToMe'), value: 'mine' }]
+              : []),
             { label: t('missingContact'), value: 'missing' },
             { label: t('notStarted'), value: 'not_started' },
             { label: t('levelDetermined'), value: 'level' },
@@ -152,6 +161,7 @@ export function CandidatesClient({
   const profile = selected ? (
     <CandidateProfile
       advisors={advisors}
+      basePath={basePath}
       candidate={selected}
       locale={locale}
       t={t}
@@ -189,11 +199,13 @@ export function CandidatesClient({
 
 function CandidateProfile({
   advisors,
+  basePath,
   candidate,
   locale,
   t,
 }: {
   advisors: AdvisorOption[];
+  basePath: string;
   candidate: CandidateDirectoryRecord;
   locale: string;
   t: ReturnType<typeof useTranslations>;
@@ -264,7 +276,7 @@ function CandidateProfile({
       if (!response.ok) {
         throw new Error('enrollment_start_failed');
       }
-      router.push(`/admin/leads/${candidate.id}/enrollment`);
+      router.push(`${basePath}/${candidate.id}/enrollment`);
     } catch {
       setEnrollmentError(true);
       setStartingEnrollment(false);

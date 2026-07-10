@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { requireAdminSession } from '@/lib/server/authorization';
+import { requireStaffSession } from '@/lib/server/authorization';
 import {
   apiErrorResponse,
   apiResponse,
@@ -36,7 +36,7 @@ export async function PATCH(
   const { candidateId } = await params;
 
   try {
-    const principal = await requireAdminSession();
+    const principal = await requireStaffSession();
     const parsed = patchSchema.safeParse(
       await request.json().catch(() => null),
     );

@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { requireAdminSession } from '@/lib/server/authorization';
+import { requireStaffSession } from '@/lib/server/authorization';
 import {
   apiErrorResponse,
   apiResponse,
@@ -31,7 +31,7 @@ export async function POST(
   const { candidateId } = await params;
 
   try {
-    const principal = await requireAdminSession();
+    const principal = await requireStaffSession();
     const parsed = noteSchema.safeParse(await request.json().catch(() => null));
     if (!parsed.success) {
       return apiResponse({ error: 'invalid_request' }, 400, id);

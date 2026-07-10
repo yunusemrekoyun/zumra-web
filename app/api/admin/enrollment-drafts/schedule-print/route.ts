@@ -1,6 +1,6 @@
 import { eq } from 'drizzle-orm';
 import { z } from 'zod';
-import { requireAdminSession } from '@/lib/server/authorization';
+import { requireStaffSession } from '@/lib/server/authorization';
 import { database } from '@/lib/server/db/client';
 import {
   lessonSessions,
@@ -26,7 +26,7 @@ export async function GET(request: Request) {
       return apiResponse({ error: 'invalid_request' }, 400, id);
     }
 
-    await requireAdminSession();
+    await requireStaffSession();
 
     const [branch] = await database
       .select({

@@ -375,8 +375,9 @@ function mapEnrollmentStatus(status: EnrollmentStatus): AdminStudentStatus {
 }
 
 function assertAdmin(principal: WorkspacePrincipal) {
-  if (principal.role !== 'admin') {
-    throw new AuthorizationDeniedError('Admin access is required.');
+  // Staff scope: advisors run the same CRM/enrollment flows as admins.
+  if (principal.role !== 'admin' && principal.role !== 'advisor') {
+    throw new AuthorizationDeniedError('Staff access is required.');
   }
 }
 

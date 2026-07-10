@@ -1205,7 +1205,8 @@
         "exam": "Sınav",
         "travel": "Seyahat",
         "other": "Diğer"
-      }
+      },
+      "assignedToMe": "Bana atananlar"
     },
     "enrollment": {
       "title": "Öğrenci Kaydı",
@@ -1880,7 +1881,18 @@
       "leads": "Adaylarım",
       "students": "Öğrencilerim",
       "meetings": "Görüşmeler",
-      "offers": "Teklifler"
+      "offers": "Teklifler",
+      "realDescription": "Aday havuzu, randevular ve kayıt süreçlerine tek bakış.",
+      "metricNewWeek": "Bu hafta yeni aday",
+      "metricPending": "Onay bekleyen randevu",
+      "metricToday": "Bugünkü görüşme",
+      "metricMine": "Bana atanan aday",
+      "stageTitle": "Aday hunisi",
+      "requestsTitle": "Onay bekleyen talepler",
+      "upcomingTitle": "Yaklaşan görüşmeler",
+      "emptyRequests": "Bekleyen randevu talebi yok.",
+      "emptyUpcoming": "Planlanmış görüşme yok.",
+      "goToLeads": "Adaya git"
     },
     "empty": {
       "leads": {
@@ -1907,6 +1919,25 @@
         "title": "Danışman Ayarları",
         "description": "Bildirim tercihleri, çalışma saatleri ve profil ayarları burada yönetilecek."
       }
+    },
+    "meetings": {
+      "title": "Görüşmeler",
+      "description": "Randevu taleplerini planlayın, görüşme sonuçlarını işleyin.",
+      "requestedTitle": "Onay bekleyenler",
+      "scheduledTitle": "Planlananlar",
+      "pastTitle": "Geçmiş görüşmeler",
+      "emptyRequested": "Onay bekleyen talep yok.",
+      "emptyScheduled": "Planlanmış görüşme yok.",
+      "emptyPast": "Sonuçlanmış görüşme yok.",
+      "open": "Aç"
+    },
+    "offers": {
+      "title": "Teklifler",
+      "description": "Teklif aşamasındaki adaylar ve yarım kalan kayıtlar.",
+      "draftInProgress": "Kayıt taslağı açık",
+      "open": "Aç",
+      "emptyTitle": "Teklif masasında kimse yok",
+      "emptyDescription": "Teklif aşamasına gelen adaylar burada görünecek."
     }
   },
   "teacher": {

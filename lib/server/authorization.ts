@@ -183,6 +183,92 @@ export async function requireAdminSession() {
   return principal;
 }
 
+// Staff = admin or advisor. Admins keep the full MFA bar; advisors authenticate
+// with password + device verification (they have no TOTP enrollment).
+export async function requireStaffSession() {
+  const principal = await requireSession();
+
+  if (principal.role === 'admin') {
+    if (
+      principal.sessionSecurityLevel !== 'mfa' ||
+      !principal.twoFactorEnabled
+    ) {
+      throw new AuthorizationDeniedError('Admin MFA is required.');
+    }
+    return principal;
+  }
+
+  if (principal.role !== 'advisor') {
+    throw new AuthorizationDeniedError('Staff access is required.');
+  }
+
+  return principal;
+}
+
+export async function requireCriticalStaff(password: string) {
+  const principal = await requireStaffSession();
+
+  const [credential] = await database
+    .select({ password: accounts.password })
+    .from(accounts)
+    .where(
+      and(
+        eq(accounts.userId, principal.id),
+        eq(accounts.providerId, 'credential'),
+      ),
+    )
+    .limit(1);
+
+  const storedHash = credential?.password;
+  const passwordValid =
+    Boolean(storedHash) &&
+    (await verifyPassword({ hash: storedHash as string, password }));
+
+  if (!passwordValid) {
+    // Only failed confirmations consume the rate limit, so legitimate repeated
+    // critical actions are never locked out while brute-force stays bounded.
+    const limit = await consumeRateLimit(
+      `critical-staff:${principal.id}`,
+      5,
+      15 * 60 * 1000,
+    );
+
+    if (!limit.allowed) {
+      throw new AuthorizationDeniedError(
+        'Critical action rate limit exceeded.',
+      );
+    }
+
+    throw new AuthorizationDeniedError('Password confirmation failed.');
+  }
+
+  const verifiedAt = new Date();
+  const sessionConditions = [
+    eq(sessions.id, principal.sessionId),
+    eq(sessions.userId, principal.id),
+  ];
+  if (principal.role === 'admin') {
+    sessionConditions.push(eq(sessions.securityLevel, 'mfa'));
+  }
+  const [refreshedSession] = await database
+    .update(sessions)
+    .set({
+      lastVerifiedAt: verifiedAt,
+      updatedAt: verifiedAt,
+    })
+    .where(and(...sessionConditions))
+    .returning({ id: sessions.id });
+
+  if (!refreshedSession) {
+    throw new AuthorizationDeniedError('Staff session could not be refreshed.');
+  }
+
+  return {
+    ...principal,
+    sessionLastVerifiedAt: verifiedAt.toISOString(),
+  };
+}
+
 export async function requireFreshStudentPassword(
   password: string,
   action: string,

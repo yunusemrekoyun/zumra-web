@@ -40,6 +40,7 @@ type AdminStudentsClientProps = {
     emptyDescription: string;
     noMatches: string;
   };
+  linkToDetail?: boolean;
   students: AdminStudentCard[];
 };
 
@@ -47,6 +48,7 @@ type StatusFilter = 'all' | 'active' | 'paused' | 'graduated';
 
 export function AdminStudentsClient({
   labels,
+  linkToDetail = true,
   students,
 }: AdminStudentsClientProps) {
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
@@ -90,14 +92,15 @@ export function AdminStudentsClient({
 
       {filtered.length ? (
         <div className="grid grid-cols-1 gap-4 p-4 md:grid-cols-2 lg:p-6 xl:grid-cols-3 lg:gap-6">
-          {filtered.map((student) => (
-            <Link
-              href={`/admin/students/${student.studentId}`}
-              key={student.enrollmentId}
-            >
+          {filtered.map((student) => {
+            const card = (
               <ModulePanel
                 variant="muted"
-                className="group flex h-full cursor-pointer flex-col transition-all hover:border-[#533089]/20 hover:shadow-lg"
+                className={`group flex h-full flex-col transition-all ${
+                  linkToDetail
+                    ? 'cursor-pointer hover:border-[#533089]/20 hover:shadow-lg'
+                    : ''
+                }`}
               >
                 <div className="mb-6 flex items-start justify-between">
                   <div className="flex items-center gap-3">
@@ -162,8 +165,18 @@ export function AdminStudentsClient({
                   </div>
                 </div>
               </ModulePanel>
-            </Link>
-          ))}
+            );
+            return linkToDetail ? (
+              <Link
+                href={`/admin/students/${student.studentId}`}
+                key={student.enrollmentId}
+              >
+                {card}
+              </Link>
+            ) : (
+              <div key={student.enrollmentId}>{card}</div>
+            );
+          })}
         </div>
       ) : (
         <EmptyState

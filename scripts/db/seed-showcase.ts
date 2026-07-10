@@ -12,9 +12,12 @@
  *   node --conditions=react-server --import tsx scripts/db/seed-showcase.ts
  */
 import 'dotenv/config';
+import { randomUUID } from 'node:crypto';
+import { hashPassword } from 'better-auth/crypto';
 import { and, asc, eq, gte, inArray, like, sql } from 'drizzle-orm';
 import { database } from '@/lib/server/db/client';
 import {
+  accounts,
   appointmentPreferences,
   appointmentRequests,
   assessmentAttempts,
@@ -89,11 +92,75 @@ const CONSENT_SNAPSHOT =
 const MARKETING_SNAPSHOT =
   'Zümra Akademi kampanya ve duyurularının e-posta ile tarafıma iletilmesine onay veriyorum.';
 
+// Runs even on an already-showcased DB: creates the demo advisor account once
+// and (re)assigns the showcase pipeline candidates to her.
+async function ensureDemoAdvisor() {
+  const [existingAdvisor] = await database
+    .select({ id: users.id })
+    .from(users)
+    .where(eq(users.username, 'aylindanisman'))
+    .limit(1);
+
+  let advisorId = existingAdvisor?.id ?? null;
+  if (!advisorId) {
+    const password = process.env.DEMO_SEED_PASSWORD ?? '';
+    if (password.length < 8) {
+      console.warn(
+        'DEMO_SEED_PASSWORD tanımlı değil — danışman kullanıcısı atlandı.',
+      );
+      return;
+    }
+    advisorId = randomUUID();
+    await database.insert(users).values({
+      id: advisorId,
+      name: 'Aylin Karaca',
+      email: 'aylin@zumra.local',
+      emailVerified: true,
+      username: 'aylindanisman',
+      displayUsername: 'aylindanisman',
+      role: 'advisor',
+      accountStatus: 'active',
+    });
+    await database.insert(accounts).values({
+      id: randomUUID(),
+      accountId: advisorId,
+      providerId: 'credential',
+      userId: advisorId,
+      password: await hashPassword(password),
+    });
+    console.log('Danışman kullanıcısı oluşturuldu: aylindanisman');
+  }
+
+  const showcaseMarkers = [
+    'showcase-selin-acar-1',
+    'showcase-melis-aydin-1',
+    'showcase-derya-polat-1',
+  ];
+  const inquiries = await database
+    .select({ candidateId: candidateInquiries.candidateId })
+    .from(candidateInquiries)
+    .where(inArray(candidateInquiries.idempotencyKey, showcaseMarkers));
+  if (inquiries.length) {
+    await database
+      .update(candidateProfiles)
+      .set({ advisorId, updatedAt: new Date() })
+      .where(
+        inArray(
+          candidateProfiles.id,
+          inquiries.map((inquiry) => inquiry.candidateId),
+        ),
+      );
+    console.log(`${inquiries.length} showcase adayı Aylin'e atandı`);
+  }
+}
+
 (async () => {
   if (process.env.NODE_ENV === 'production' && process.env.ALLOW_DEMO_SEED !== 'true') {
     console.error('Üretimde çalıştırmak için ALLOW_DEMO_SEED=true gerekli.');
     process.exit(1);
   }
+
+  await ensureDemoAdvisor();
 
   const [existing] = await database
     .select({ id: candidateInquiries.id })
@@ -101,7 +168,7 @@ const MARKETING_SNAPSHOT =
     .where(eq(candidateInquiries.idempotencyKey, MARKER))
     .limit(1);
   if (existing) {
-    console.log('Showcase verisi zaten yüklü — çıkılıyor.');
+    console.log('Showcase verisi zaten yüklü — ana blok atlandı.');
     process.exit(0);
   }
 
@@ -226,6 +293,7 @@ const MARKETING_SNAPSHOT =
       .limit(1);
 
     // Clone Ayşe's completed draft/enrollment shells, retargeted to Özel Ders.
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const { id: _d, ...draftBase } = ayseDraft;
     const [privateDraft] = await tx
       .insert(enrollmentDrafts)
@@ -244,6 +312,7 @@ const MARKETING_SNAPSHOT =
       })
       .returning({ id: enrollmentDrafts.id });
 
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const { id: _e, ...enrollmentBase } = ayseEnrollment;
     const [privateEnrollment] = await tx
       .insert(enrollments)
@@ -871,6 +940,9 @@ const MARKETING_SNAPSHOT =
     ]);
     console.log('6 okunmamış zil bildirimi eklendi');
   });
+
+  // Yeni oluşan showcase adaylarını da danışmana bağla.
+  await ensureDemoAdvisor();
 
   console.log('Showcase verisi yüklendi ✅');
   process.exit(0);
