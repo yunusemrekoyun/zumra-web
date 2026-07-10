@@ -264,6 +264,11 @@ export async function claimTask(
   taskId: string,
 ): Promise<void> {
   assertStaff(principal);
+  // Claiming implies ownership, and only advisors can own candidates —
+  // admins steer processes from outside but never take the seat themselves.
+  if (principal.role !== 'advisor') {
+    throw new AuthorizationDeniedError('Only advisors can claim tasks.');
+  }
 
   const now = new Date();
   const [claimed] = await database

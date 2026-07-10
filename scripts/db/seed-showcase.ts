@@ -96,40 +96,48 @@ const MARKETING_SNAPSHOT =
 // Runs even on an already-showcased DB: creates the demo advisor account once
 // and (re)assigns the showcase pipeline candidates to her.
 async function ensureDemoAdvisor() {
-  const [existingAdvisor] = await database
-    .select({ id: users.id })
-    .from(users)
-    .where(eq(users.username, 'aylindanisman'))
-    .limit(1);
+  const demoAdvisors = [
+    { email: 'aylin@zumra.local', name: 'Aylin Karaca', username: 'aylindanisman' },
+    { email: 'selda@zumra.local', name: 'Selda Yıldız', username: 'seldadanisman' },
+  ];
 
-  let advisorId = existingAdvisor?.id ?? null;
-  if (!advisorId) {
-    const password = process.env.DEMO_SEED_PASSWORD ?? '';
-    if (password.length < 8) {
-      console.warn(
-        'DEMO_SEED_PASSWORD tanımlı değil — danışman kullanıcısı atlandı.',
-      );
-      return;
+  let advisorId: string | null = null; // ilk danışman (Aylin) — atamalar ona
+  for (const advisor of demoAdvisors) {
+    const [existingAdvisor] = await database
+      .select({ id: users.id })
+      .from(users)
+      .where(eq(users.username, advisor.username))
+      .limit(1);
+    let id = existingAdvisor?.id ?? null;
+    if (!id) {
+      const password = process.env.DEMO_SEED_PASSWORD ?? '';
+      if (password.length < 8) {
+        console.warn(
+          'DEMO_SEED_PASSWORD tanımlı değil — danışman kullanıcıları atlandı.',
+        );
+        return;
+      }
+      id = randomUUID();
+      await database.insert(users).values({
+        id,
+        name: advisor.name,
+        email: advisor.email,
+        emailVerified: true,
+        username: advisor.username,
+        displayUsername: advisor.username,
+        role: 'advisor',
+        accountStatus: 'active',
+      });
+      await database.insert(accounts).values({
+        id: randomUUID(),
+        accountId: id,
+        providerId: 'credential',
+        userId: id,
+        password: await hashPassword(password),
+      });
+      console.log(`Danışman kullanıcısı oluşturuldu: ${advisor.username}`);
     }
-    advisorId = randomUUID();
-    await database.insert(users).values({
-      id: advisorId,
-      name: 'Aylin Karaca',
-      email: 'aylin@zumra.local',
-      emailVerified: true,
-      username: 'aylindanisman',
-      displayUsername: 'aylindanisman',
-      role: 'advisor',
-      accountStatus: 'active',
-    });
-    await database.insert(accounts).values({
-      id: randomUUID(),
-      accountId: advisorId,
-      providerId: 'credential',
-      userId: advisorId,
-      password: await hashPassword(password),
-    });
-    console.log('Danışman kullanıcısı oluşturuldu: aylindanisman');
+    advisorId = advisorId ?? id;
   }
 
   const showcaseMarkers = [

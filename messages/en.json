@@ -220,7 +220,13 @@
       "notePlaceholder": "Leave a note for the team...",
       "noteCta": "Add",
       "timeline": "Timeline",
-      "error": "Could not save, try again."
+      "error": "Could not save, try again.",
+      "transferCta": "Transfer",
+      "transferTitle": "Who should take over?",
+      "cancel": "Cancel",
+      "unassign": "Remove assignment",
+      "noOtherAdvisors": "No other advisor to transfer to.",
+      "advisorRole": "Advisor"
     }
   },
   "public": {

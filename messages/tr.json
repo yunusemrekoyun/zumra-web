@@ -220,7 +220,13 @@
       "notePlaceholder": "Ekip için not bırak...",
       "noteCta": "Ekle",
       "timeline": "Zaman çizelgesi",
-      "error": "İşlem kaydedilemedi, tekrar deneyin."
+      "error": "İşlem kaydedilemedi, tekrar deneyin.",
+      "transferCta": "Transfer Et",
+      "transferTitle": "Öğrenci kime devredilsin?",
+      "cancel": "Vazgeç",
+      "unassign": "Atamayı kaldır",
+      "noOtherAdvisors": "Devredilecek başka danışman yok.",
+      "advisorRole": "Danışman"
     }
   },
   "public": {

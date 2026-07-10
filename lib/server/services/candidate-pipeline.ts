@@ -33,8 +33,6 @@ export const candidateStages = [
 ] as const;
 export type CandidateStage = (typeof candidateStages)[number];
 
-const STAFF_ROLES = ['admin', 'advisor'] as const;
-
 export type AdvisorOption = { id: string; name: string };
 
 function assertStaff(principal: WorkspacePrincipal) {
@@ -57,6 +55,8 @@ async function requireCandidate(candidateId: string) {
   return row;
 }
 
+// Only real advisors can OWN candidates; admins intervene in flows but are
+// never assignable, so they are excluded from every assignment surface.
 export async function listAdvisors(
   principal: WorkspacePrincipal,
 ): Promise<AdvisorOption[]> {
@@ -64,7 +64,7 @@ export async function listAdvisors(
   return database
     .select({ id: users.id, name: users.name })
     .from(users)
-    .where(inArray(users.role, [...STAFF_ROLES]))
+    .where(eq(users.role, 'advisor'))
     .orderBy(asc(users.name));
 }
 
@@ -101,9 +101,7 @@ export async function assignCandidateAdvisor(
     const [advisor] = await database
       .select({ id: users.id })
       .from(users)
-      .where(
-        and(eq(users.id, advisorId), inArray(users.role, [...STAFF_ROLES])),
-      )
+      .where(and(eq(users.id, advisorId), eq(users.role, 'advisor')))
       .limit(1);
     if (!advisor) throw new PublicFlowError('invalid_request');
   }
@@ -514,7 +512,9 @@ export async function resolveAppointment(
   if (result === 'thinking') {
     await spawnSystemTask({
       appointmentId,
-      assigneeUserId: candidate.advisorId ?? principal.id,
+      assigneeUserId:
+        candidate.advisorId ??
+        (principal.role === 'advisor' ? principal.id : null),
       candidateId,
       dueAt: followUpAt,
       kind: 'follow_up',
@@ -554,7 +554,9 @@ export async function logCandidateTouchpoint(
   } else {
     // No answer: queue a retry for the owner (or whoever just tried).
     await spawnSystemTask({
-      assigneeUserId: candidate.advisorId ?? principal.id,
+      assigneeUserId:
+        candidate.advisorId ??
+        (principal.role === 'advisor' ? principal.id : null),
       candidateId,
       dueAt: new Date(now.getTime() + 24 * 60 * 60 * 1000),
       kind: 'retry_contact',

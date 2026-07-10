@@ -2,8 +2,15 @@
 
 import { useState } from 'react';
 import { useTranslations } from 'next-intl';
-import { CalendarCheck, Lock, Route, StickyNote } from 'lucide-react';
-import { ModulePanel, StatusChip, TimelineItem } from '@/components/ui';
+import {
+  ArrowLeftRight,
+  CalendarCheck,
+  Lock,
+  Route,
+  StickyNote,
+  UserRound,
+} from 'lucide-react';
+import { Avatar, ModulePanel, StatusChip, TimelineItem } from '@/components/ui';
 import { APP_TIME_ZONE } from '@/lib/datetime';
 import { useRouter } from '@/i18n/navigation';
 import type { AdvisorOption } from '@/lib/server/services/candidate-pipeline';
@@ -28,8 +35,13 @@ export function PersonJourneyPanel({
   const appointment = useTranslations('admin.leads.appointment');
   const router = useRouter();
   const [noteBody, setNoteBody] = useState('');
+  const [transferOpen, setTransferOpen] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
+
+  const transferTargets = advisors.filter(
+    (advisor) => advisor.id !== journey.advisorId,
+  );
 
   const formatter = new Intl.DateTimeFormat(locale, {
     dateStyle: 'medium',
@@ -52,6 +64,7 @@ export function PersonJourneyPanel({
         },
       );
       if (!response.ok) throw new Error('transfer_failed');
+      setTransferOpen(false);
       router.refresh();
     } catch {
       setError(t('error'));
@@ -119,21 +132,93 @@ export function PersonJourneyPanel({
           <div className="text-[10px] font-bold uppercase tracking-wider text-[#2E286C]/40">
             {t('advisor')}
           </div>
-          <select
-            value={journey.advisorId ?? ''}
-            disabled={busy}
-            onChange={(event) => transferAdvisor(event.target.value)}
-            className="mt-1 w-full rounded-lg border border-black/10 bg-white px-2 py-1.5 text-sm font-bold text-[#2E286C] outline-none focus:border-[#533089]/40"
-          >
-            <option value="">{leads('noAdvisor')}</option>
-            {advisors.map((advisor) => (
-              <option key={advisor.id} value={advisor.id}>
-                {advisor.name}
-              </option>
-            ))}
-          </select>
+          <div className="mt-1.5 flex items-center justify-between gap-2">
+            <div className="flex min-w-0 items-center gap-2">
+              {journey.advisorName ? (
+                <>
+                  <Avatar name={journey.advisorName} size="sm" />
+                  <span className="truncate text-sm font-bold text-[#2E286C]">
+                    {journey.advisorName}
+                  </span>
+                </>
+              ) : (
+                <span className="text-sm font-semibold text-[#2E286C]/45">
+                  {leads('noAdvisor')}
+                </span>
+              )}
+            </div>
+            <button
+              type="button"
+              disabled={busy}
+              onClick={() => {
+                setTransferOpen(!transferOpen);
+                setError('');
+              }}
+              className="inline-flex min-h-8 flex-none items-center gap-1.5 rounded-xl bg-white px-2.5 text-[11px] font-bold text-[#533089] ring-1 ring-[#533089]/20 transition-colors hover:bg-[#533089]/10 disabled:opacity-50"
+            >
+              <ArrowLeftRight className="h-3 w-3" />
+              {t('transferCta')}
+            </button>
+          </div>
         </div>
       </div>
+
+      {transferOpen && (
+        <div className="mt-4 rounded-2xl bg-white p-4 ring-1 ring-[#533089]/10">
+          <div className="flex items-center justify-between gap-3">
+            <div className="text-[11px] font-bold uppercase tracking-wider text-[#533089]">
+              {t('transferTitle')}
+            </div>
+            <div className="flex items-center gap-3">
+              {journey.advisorId && (
+                <button
+                  type="button"
+                  disabled={busy}
+                  onClick={() => transferAdvisor('')}
+                  className="text-[11px] font-bold text-red-600/80 hover:text-red-700 disabled:opacity-50"
+                >
+                  {t('unassign')}
+                </button>
+              )}
+              <button
+                type="button"
+                onClick={() => setTransferOpen(false)}
+                className="text-[11px] font-bold text-[#2E286C]/50 hover:text-[#2E286C]"
+              >
+                {t('cancel')}
+              </button>
+            </div>
+          </div>
+          {transferTargets.length ? (
+            <div className="mt-3 grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
+              {transferTargets.map((advisor) => (
+                <button
+                  key={advisor.id}
+                  type="button"
+                  disabled={busy}
+                  onClick={() => transferAdvisor(advisor.id)}
+                  className="group flex items-center gap-3 rounded-2xl bg-[#F8F7FB] p-3 text-left ring-1 ring-black/[0.04] transition-all hover:ring-[#533089]/40 disabled:opacity-50"
+                >
+                  <Avatar name={advisor.name} size="md" className="bg-white shadow-sm" />
+                  <div className="min-w-0">
+                    <div className="truncate text-sm font-bold text-[#2E286C] transition-colors group-hover:text-[#533089]">
+                      {advisor.name}
+                    </div>
+                    <div className="flex items-center gap-1 text-[11px] font-semibold text-[#2E286C]/45">
+                      <UserRound className="h-3 w-3" />
+                      {t('advisorRole')}
+                    </div>
+                  </div>
+                </button>
+              ))}
+            </div>
+          ) : (
+            <p className="mt-3 text-sm text-[#2E286C]/50">
+              {t('noOtherAdvisors')}
+            </p>
+          )}
+        </div>
+      )}
 
       {error && (
         <p className="mt-3 text-sm font-semibold text-red-600">{error}</p>
