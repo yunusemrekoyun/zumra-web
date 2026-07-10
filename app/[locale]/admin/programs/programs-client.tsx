@@ -145,12 +145,6 @@ export function ProgramsClient({
   const compatibleTeacherExists = initial.instructors.some((instructor) =>
     isInstructorCompatible(instructor, branchProgram),
   );
-  const rateInstructor = initial.instructors.find(
-    (instructor) => instructor.id === instructorProfileId,
-  );
-  const rateLanguageSupported = (language: string) =>
-    !rateInstructor ||
-    rateInstructor.competencies.some((c) => c.language === language);
   const [scheduleDraft, setScheduleDraft] = useState<ScheduleDraft>(
     emptyScheduleDraft(),
   );
@@ -158,6 +152,12 @@ export function ProgramsClient({
   const [instructorProfileId, setInstructorProfileId] = useState(
     initial.instructors[0]?.id ?? '',
   );
+  const rateInstructor = initial.instructors.find(
+    (instructor) => instructor.id === instructorProfileId,
+  );
+  const rateLanguageSupported = (language: string) =>
+    !rateInstructor ||
+    rateInstructor.competencies.some((c) => c.language === language);
   const [rateLanguage, setRateLanguage] =
     useState<ProgramLanguage>('english');
   const [hourlyPriceCents, setHourlyPriceCents] = useState(0);
