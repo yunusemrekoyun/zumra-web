@@ -207,6 +207,20 @@
         "instructor": "Teacher",
         "candidate": "Lead"
       }
+    },
+    "journey": {
+      "title": "Journey",
+      "staffOnly": "Staff only",
+      "firstSeen": "First contact",
+      "stage": "Stage",
+      "advisor": "Advisor",
+      "meetings": "Consultation history",
+      "noTime": "No time set",
+      "notes": "Advisor notes",
+      "notePlaceholder": "Leave a note for the team...",
+      "noteCta": "Add",
+      "timeline": "Timeline",
+      "error": "Could not save, try again."
     }
   },
   "public": {
@@ -1140,7 +1154,9 @@
         "result_positive": "Positive meeting",
         "result_thinking": "Thinking it over",
         "result_negative": "Negative meeting",
-        "followUpAt": "Follow-up call: {when}"
+        "followUpAt": "Follow-up call: {when}",
+        "statusRequested": "Requested",
+        "statusScheduled": "Scheduled"
       },
       "noAppointment": "No request yet",
       "source": "Source",

@@ -45,7 +45,7 @@ export default async function AdvisorStudentsPage({
       />
 
       <AdminStudentsClient
-        linkToDetail={false}
+        detailBasePath="/danisman/ogrenciler"
         students={cards}
         labels={{
           all: t('all'),

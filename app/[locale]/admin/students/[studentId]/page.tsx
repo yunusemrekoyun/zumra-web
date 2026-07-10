@@ -16,7 +16,13 @@ import {
   ModulePanel,
   StatusChip,
 } from '@/components/ui';
+import { PersonJourneyPanel } from '@/components/person-journey-panel';
 import { requireWorkspaceRole } from '@/lib/server/authorization';
+import { listAdvisors } from '@/lib/server/services/candidate-pipeline';
+import {
+  getPersonJourney,
+  getStudentJourneyContext,
+} from '@/lib/server/services/person-journey';
 import {
   getAdminStudentActivity,
   getAdminStudentDetail,
@@ -31,7 +37,7 @@ export default async function StudentDetailPage({
 }: StudentDetailPageProps) {
   const { locale, studentId } = await params;
   const principal = await requireWorkspaceRole('admin', locale);
-  const [detail, activity, t, studentsT, status, attendance, domain] =
+  const [detail, activity, t, studentsT, status, attendance, domain, journeyContext, advisors] =
     await Promise.all([
       getAdminStudentDetail(principal, studentId),
       getAdminStudentActivity(principal, studentId),
@@ -40,7 +46,12 @@ export default async function StudentDetailPage({
       getTranslations('common.status'),
       getTranslations('common.attendance'),
       getTranslations('domain'),
+      getStudentJourneyContext(principal, studentId),
+      listAdvisors(principal),
     ]);
+  const journey = journeyContext
+    ? await getPersonJourney(principal, journeyContext.candidateId)
+    : null;
 
   if (!detail) {
     notFound();
@@ -279,6 +290,14 @@ export default async function StudentDetailPage({
           </ModulePanel>
         </div>
       </div>
+
+      {journey && (
+        <PersonJourneyPanel
+          advisors={advisors}
+          journey={journey}
+          locale={locale}
+        />
+      )}
     </div>
   );
 }

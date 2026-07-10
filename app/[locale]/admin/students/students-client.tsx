@@ -40,6 +40,7 @@ type AdminStudentsClientProps = {
     emptyDescription: string;
     noMatches: string;
   };
+  detailBasePath?: string;
   linkToDetail?: boolean;
   students: AdminStudentCard[];
 };
@@ -47,6 +48,7 @@ type AdminStudentsClientProps = {
 type StatusFilter = 'all' | 'active' | 'paused' | 'graduated';
 
 export function AdminStudentsClient({
+  detailBasePath = '/admin/students',
   labels,
   linkToDetail = true,
   students,
@@ -168,7 +170,7 @@ export function AdminStudentsClient({
             );
             return linkToDetail ? (
               <Link
-                href={`/admin/students/${student.studentId}`}
+                href={`${detailBasePath}/${student.studentId}`}
                 key={student.enrollmentId}
               >
                 {card}

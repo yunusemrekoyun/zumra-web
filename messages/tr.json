@@ -207,6 +207,20 @@
         "instructor": "Öğretmen",
         "candidate": "Aday"
       }
+    },
+    "journey": {
+      "title": "Yolculuk",
+      "staffOnly": "Yalnızca personel görür",
+      "firstSeen": "İlk temas",
+      "stage": "Aşama",
+      "advisor": "Danışman",
+      "meetings": "Görüşme geçmişi",
+      "noTime": "Saat belirlenmedi",
+      "notes": "Danışman notları",
+      "notePlaceholder": "Ekip için not bırak...",
+      "noteCta": "Ekle",
+      "timeline": "Zaman çizelgesi",
+      "error": "İşlem kaydedilemedi, tekrar deneyin."
     }
   },
   "public": {
@@ -1140,7 +1154,9 @@
         "result_positive": "Olumlu görüşme",
         "result_thinking": "Düşünecek",
         "result_negative": "Olumsuz görüşme",
-        "followUpAt": "Takip araması: {when}"
+        "followUpAt": "Takip araması: {when}",
+        "statusRequested": "Talep edildi",
+        "statusScheduled": "Planlandı"
       },
       "noAppointment": "Henüz talep yok",
       "source": "Kaynak",
