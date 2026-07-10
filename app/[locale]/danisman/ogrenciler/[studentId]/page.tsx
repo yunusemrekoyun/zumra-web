@@ -1,15 +1,15 @@
 import { notFound } from 'next/navigation';
-import { getTranslations } from 'next-intl/server';
-import { ArrowLeft } from 'lucide-react';
-import { Link } from '@/i18n/navigation';
-import { Avatar, PageHeader } from '@/components/ui';
-import { PersonJourneyPanel } from '@/components/person-journey-panel';
+import { StudentDetailView } from '@/components/student-detail-view';
 import { requireWorkspaceRole } from '@/lib/server/authorization';
 import { listAdvisors } from '@/lib/server/services/candidate-pipeline';
 import {
   getPersonJourney,
   getStudentJourneyContext,
 } from '@/lib/server/services/person-journey';
+import {
+  getAdminStudentActivity,
+  getAdminStudentDetail,
+} from '@/lib/server/services/students';
 
 type AdvisorStudentDetailPageProps = {
   params: Promise<{ locale: string; studentId: string }>;
@@ -20,38 +20,29 @@ export default async function AdvisorStudentDetailPage({
 }: AdvisorStudentDetailPageProps) {
   const { locale, studentId } = await params;
   const principal = await requireWorkspaceRole('advisor', locale);
-  const context = await getStudentJourneyContext(principal, studentId);
-  if (!context) notFound();
-
-  const [t, common, journey, advisors] = await Promise.all([
-    getTranslations('admin.students'),
-    getTranslations('common.status'),
-    getPersonJourney(principal, context.candidateId),
+  const [detail, activity, journeyContext, advisors] = await Promise.all([
+    getAdminStudentDetail(principal, studentId),
+    getAdminStudentActivity(principal, studentId),
+    getStudentJourneyContext(principal, studentId),
     listAdvisors(principal),
   ]);
-  if (!journey) notFound();
+
+  if (!detail) {
+    notFound();
+  }
+
+  const journey = journeyContext
+    ? await getPersonJourney(principal, journeyContext.candidateId)
+    : null;
 
   return (
-    <div className="workspace-page">
-      <Link
-        href="/danisman/ogrenciler"
-        className="inline-flex items-center gap-2 text-xs font-bold text-[#533089]"
-      >
-        <ArrowLeft className="h-4 w-4" />
-        {t('title')}
-      </Link>
-
-      <PageHeader
-        title={context.fullName}
-        description={`${context.currentLevel ?? '-'} · ${common(context.status as 'active' | 'cancelled' | 'graduated' | 'paused')}`}
-        action={<Avatar name={context.fullName} size="lg" />}
-      />
-
-      <PersonJourneyPanel
-        advisors={advisors}
-        journey={journey}
-        locale={locale}
-      />
-    </div>
+    <StudentDetailView
+      activity={activity}
+      advisors={advisors}
+      backHref="/danisman/ogrenciler"
+      detail={detail}
+      journey={journey}
+      locale={locale}
+    />
   );
 }
