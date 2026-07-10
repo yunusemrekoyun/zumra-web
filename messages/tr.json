@@ -1099,6 +1099,7 @@
       "notStarted": "Sınava girmedi",
       "assessmentInProgress": "Sınav devam ediyor",
       "levelDetermined": "Seviyesi belirlendi",
+      "appointmentLabel": "Randevu",
       "appointmentRequested": "Randevu talep etti",
       "noCandidates": "Bu filtrede aday bulunmuyor.",
       "noCandidatesDescription": "Public formlar veya personel girişleriyle oluşan adaylar burada görünecek.",

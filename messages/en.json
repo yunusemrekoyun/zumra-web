@@ -1099,6 +1099,7 @@
       "notStarted": "Assessment not started",
       "assessmentInProgress": "Assessment in progress",
       "levelDetermined": "Level determined",
+      "appointmentLabel": "Consultation",
       "appointmentRequested": "Consultation requested",
       "noCandidates": "No candidates match this filter.",
       "noCandidatesDescription": "Candidates created by public forms or staff entry will appear here.",

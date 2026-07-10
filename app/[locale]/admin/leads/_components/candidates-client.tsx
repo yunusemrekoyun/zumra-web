@@ -359,7 +359,7 @@ function CandidateProfile({
           />
           <Metric
             icon={CalendarClock}
-            label={t('appointment')}
+            label={t('appointmentLabel')}
             value={
               candidate.appointmentStatus === 'requested'
                 ? t('appointmentRequested')
