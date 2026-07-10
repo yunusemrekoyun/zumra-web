@@ -265,10 +265,11 @@ const MARKETING_SNAPSHOT =
       .returning({ id: enrollments.id });
 
     // 3 completed past + today 17:00 + next two weeks, all Friday 17:00.
-    const privateSlots = [-21, -14, -7].map((d) => ({
-      startsAt: istDay(d, 17),
-      status: 'completed' as const,
-    }));
+    const privateSlots: Array<{ startsAt: Date; status: 'completed' | 'scheduled' }> =
+      [-21, -14, -7].map((d) => ({
+        startsAt: istDay(d, 17),
+        status: 'completed' as const,
+      }));
     privateSlots.push({ startsAt: istToday(17), status: 'scheduled' as const });
     privateSlots.push({ startsAt: istDay(7, 17), status: 'scheduled' as const });
     privateSlots.push({ startsAt: istDay(14, 17), status: 'scheduled' as const });
