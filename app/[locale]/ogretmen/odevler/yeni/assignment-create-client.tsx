@@ -4,7 +4,13 @@ import { useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { Send } from 'lucide-react';
 import { type Attachment, AttachmentInput } from '@/components/attachment-input';
-import { Button, FormField, Input, ModulePanel } from '@/components/ui';
+import {
+  Button,
+  EntityPickerField,
+  FormField,
+  Input,
+  ModulePanel,
+} from '@/components/ui';
 import { istanbulWallClockToISO } from '@/lib/datetime';
 import type { AssignableLesson } from '@/lib/server/services/assignments';
 import { cn } from '@/lib/utils';
@@ -148,38 +154,62 @@ export function AssignmentCreateClient({
       </FormField>
 
       <FormField label={t('create.targetLabel')} required>
-        <select
-          value={target}
-          onChange={(event) => {
-            setTarget(event.target.value);
+        <EntityPickerField
+          filters={[
+            ...(branches.length
+              ? [{ label: t('create.targetBranches'), value: 'branch' }]
+              : []),
+            ...(students.length
+              ? [{ label: t('create.targetStudents'), value: 'student' }]
+              : []),
+          ]}
+          items={[
+            ...branches.map((branch) => ({
+              id: `branch:${branch.id}`,
+              title: branch.name,
+              subtitle: t('create.targetBranches'),
+              group: 'branch',
+              identity: { kind: 'entity' as const, name: branch.name },
+            })),
+            ...students.map((student) => ({
+              id: `student:${student.enrollmentId}`,
+              title: student.name,
+              subtitle: student.branchName,
+              group: 'student',
+              identity: { kind: 'person' as const, name: student.name },
+            })),
+          ]}
+          onSelect={(item) => {
+            setTarget(item.id);
             setLessonSessionId('');
           }}
-          className="h-10 w-full rounded-xl border border-transparent bg-[#F8F9FC] px-4 text-sm font-medium text-[#2E286C] outline-none transition-all focus:border-[#533089]/30"
-        >
-          <option value="">{t('create.targetPlaceholder')}</option>
-          {branches.length > 0 && (
-            <optgroup label={t('create.targetBranches')}>
-              {branches.map((branch) => (
-                <option key={branch.id} value={`branch:${branch.id}`}>
-                  {branch.name}
-                </option>
-              ))}
-            </optgroup>
-          )}
-          {students.length > 0 && (
-            <optgroup label={t('create.targetStudents')}>
-              {students.map((student) => (
-                <option
-                  key={student.enrollmentId}
-                  value={`student:${student.enrollmentId}`}
-                >
-                  {student.name}
-                  {student.branchName ? ` — ${student.branchName}` : ''}
-                </option>
-              ))}
-            </optgroup>
-          )}
-        </select>
+          placeholder={t('create.targetPlaceholder')}
+          title={t('create.targetLabel')}
+          value={(() => {
+            if (!target) return null;
+            if (targetKind === 'branch') {
+              const branch = branches.find((item) => item.id === targetId);
+              return branch
+                ? {
+                    id: target,
+                    title: branch.name,
+                    identity: { kind: 'entity' as const, name: branch.name },
+                  }
+                : null;
+            }
+            const student = students.find(
+              (item) => item.enrollmentId === targetId,
+            );
+            return student
+              ? {
+                  id: target,
+                  title: student.name,
+                  subtitle: student.branchName,
+                  identity: { kind: 'person' as const, name: student.name },
+                }
+              : null;
+          })()}
+        />
       </FormField>
 
       {lessonOptions.length > 0 && (
@@ -187,18 +217,48 @@ export function AssignmentCreateClient({
           label={t('create.lessonLabel')}
           optionalLabel={t('optional')}
         >
-          <select
-            value={lessonSessionId}
-            onChange={(event) => setLessonSessionId(event.target.value)}
-            className="h-10 w-full rounded-xl border border-transparent bg-[#F8F9FC] px-4 text-sm font-medium text-[#2E286C] outline-none transition-all focus:border-[#533089]/30"
-          >
-            <option value="">{t('create.lessonNone')}</option>
-            {lessonOptions.map((lesson) => (
-              <option key={lesson.id} value={lesson.id}>
-                {lessonFormatter.format(new Date(lesson.startsAt))}
-              </option>
-            ))}
-          </select>
+          <EntityPickerField
+            items={[
+              ...lessonOptions.map((lesson) => ({
+                id: lesson.id,
+                title: lessonFormatter.format(new Date(lesson.startsAt)),
+                identity: {
+                  kind: 'entity' as const,
+                  name: lessonFormatter.format(new Date(lesson.startsAt)),
+                },
+              })),
+              ...(lessonSessionId
+                ? [
+                    {
+                      id: '__none__',
+                      title: t('create.lessonNone'),
+                      identity: { kind: 'entity' as const, name: '—' },
+                      meta: { label: '✕', tone: 'red' as const },
+                    },
+                  ]
+                : []),
+            ]}
+            onSelect={(item) =>
+              setLessonSessionId(item.id === '__none__' ? '' : item.id)
+            }
+            placeholder={t('create.lessonNone')}
+            title={t('create.lessonLabel')}
+            value={(() => {
+              const lesson = lessonOptions.find(
+                (item) => item.id === lessonSessionId,
+              );
+              return lesson
+                ? {
+                    id: lesson.id,
+                    title: lessonFormatter.format(new Date(lesson.startsAt)),
+                    identity: {
+                      kind: 'entity' as const,
+                      name: lessonFormatter.format(new Date(lesson.startsAt)),
+                    },
+                  }
+                : null;
+            })()}
+          />
         </FormField>
       )}
 

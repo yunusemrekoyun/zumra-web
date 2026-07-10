@@ -1,6 +1,5 @@
 import { getTranslations } from 'next-intl/server';
 import {
-  Avatar,
   Card,
   EmptyState,
   InfoField,

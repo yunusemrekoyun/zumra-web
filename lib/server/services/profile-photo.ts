@@ -95,7 +95,13 @@ export async function getProfilePhotoUrls(
  * visible to every active session (photos appear in shared lists, chat and
  * pickers across roles).
  */
+const UUID_PATTERN =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
 export async function isProfilePhotoAsset(assetId: string): Promise<boolean> {
+  // Non-UUID ids can reach authorization checks (crafted URLs); they can
+  // never be photo references, and postgres would reject the cast anyway.
+  if (!UUID_PATTERN.test(assetId)) return false;
   const [userRef] = await database
     .select({ id: users.id })
     .from(users)

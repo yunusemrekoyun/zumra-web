@@ -24,6 +24,7 @@ import {
   X,
 } from 'lucide-react';
 import {
+  EntityPickerField,
   Button,
   DateRangePicker,
   Input,
@@ -1376,30 +1377,66 @@ export function ProgramsClient({
                     />
                   </FormField>
                   <FormField label={t('fields.teacher')}>
-                    <Select
-                      value={branchDraft.instructorProfileId}
-                      onChange={(instructorProfileId) =>
-                        setBranchDraft((current) => ({
-                          ...current,
-                          instructorProfileId,
-                        }))
-                      }
-                      options={[
-                        ['', t('teacherAssignmentPending')],
+                    <EntityPickerField
+                      items={[
                         ...initial.instructors.map((instructor) => {
                           const compatible = isInstructorCompatible(
                             instructor,
                             branchProgram,
                           );
-                          return [
-                            instructor.id,
-                            compatible
-                              ? instructor.name
-                              : `${instructor.name} — ${t('branchTeacherIncompatible')}`,
-                            !compatible,
-                          ] as const;
+                          return {
+                            id: instructor.id,
+                            title: instructor.name,
+                            identity: {
+                              kind: 'person' as const,
+                              name: instructor.name,
+                            },
+                            disabled: !compatible,
+                            disabledReason: t('branchTeacherIncompatible'),
+                          };
                         }),
+                        ...(branchDraft.instructorProfileId
+                          ? [
+                              {
+                                id: '__unassign__',
+                                title: t('teacherAssignmentPending'),
+                                identity: {
+                                  kind: 'person' as const,
+                                  name: '—',
+                                },
+                                meta: {
+                                  label: '✕',
+                                  tone: 'red' as const,
+                                },
+                              },
+                            ]
+                          : []),
                       ]}
+                      onSelect={(item) =>
+                        setBranchDraft((current) => ({
+                          ...current,
+                          instructorProfileId:
+                            item.id === '__unassign__' ? '' : item.id,
+                        }))
+                      }
+                      placeholder={t('teacherAssignmentPending')}
+                      title={t('fields.teacher')}
+                      value={(() => {
+                        const current = initial.instructors.find(
+                          (instructor) =>
+                            instructor.id === branchDraft.instructorProfileId,
+                        );
+                        return current
+                          ? {
+                              id: current.id,
+                              title: current.name,
+                              identity: {
+                                kind: 'person' as const,
+                                name: current.name,
+                              },
+                            }
+                          : null;
+                      })()}
                     />
                     <p
                       className={
@@ -1512,13 +1549,23 @@ export function ProgramsClient({
             {initial.instructors.length ? (
               <form className="space-y-4" onSubmit={saveRate}>
                 <FormField label={t('fields.teacher')}>
-                  <Select
-                    value={instructorProfileId}
-                    onChange={(nextId) => {
-                      setInstructorProfileId(nextId);
+                  <EntityPickerField
+                    items={initial.instructors.map((instructor) => ({
+                      id: instructor.id,
+                      title: instructor.name,
+                      subtitle: instructor.competencies
+                        .map((c) => t(`languages.${c.language}`))
+                        .join(' · '),
+                      identity: {
+                        kind: 'person' as const,
+                        name: instructor.name,
+                      },
+                    }))}
+                    onSelect={(item) => {
+                      setInstructorProfileId(item.id);
                       // Keep the language selection valid for the new teacher.
                       const next = initial.instructors.find(
-                        (i) => i.id === nextId,
+                        (i) => i.id === item.id,
                       );
                       if (
                         next &&
@@ -1528,10 +1575,23 @@ export function ProgramsClient({
                         if (firstLang) setRateLanguage(firstLang as ProgramLanguage);
                       }
                     }}
-                    options={initial.instructors.map((instructor) => [
-                      instructor.id,
-                      instructor.name,
-                    ])}
+                    placeholder={t('teacherAssignmentPending')}
+                    title={t('fields.teacher')}
+                    value={(() => {
+                      const current = initial.instructors.find(
+                        (instructor) => instructor.id === instructorProfileId,
+                      );
+                      return current
+                        ? {
+                            id: current.id,
+                            title: current.name,
+                            identity: {
+                              kind: 'person' as const,
+                              name: current.name,
+                            },
+                          }
+                        : null;
+                    })()}
                   />
                 </FormField>
                 <FormField label={t('fields.language')}>

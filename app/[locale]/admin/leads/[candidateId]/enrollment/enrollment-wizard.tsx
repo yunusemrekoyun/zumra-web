@@ -20,6 +20,7 @@ import {
   UserRoundCheck,
 } from 'lucide-react';
 import {
+  EntityPickerField,
   ActionBar,
   Button,
   CountrySelect,
@@ -1305,25 +1306,51 @@ function ProgramStep({
 
   return (
     <div className="space-y-6">
-      <SelectField
+      <EntityPickerField
         error={errors.programReferenceId}
-        id="programReferenceId"
         label={t('fields.program')}
-        required
-        value={draft.programReferenceId ?? ''}
-        onChange={chooseProgram}
-        options={[
-          ['', t('select')],
-          ...catalog.programs.map(
-            (program) =>
-              [
-                program.id,
-                program.systemKey === 'private-lesson'
-                  ? t('options.private')
-                  : program.name,
-              ] as const,
-          ),
-        ]}
+        items={catalog.programs.map((program) => ({
+          id: program.id,
+          title:
+            program.systemKey === 'private-lesson'
+              ? t('options.private')
+              : program.name,
+          subtitle: program.language
+            ? t(`languages.${program.language}`)
+            : undefined,
+          identity: {
+            kind: 'entity' as const,
+            name: program.name,
+            language: program.language,
+            programKind: program.kind,
+          },
+          meta: program.listPriceCents
+            ? { label: formatTry(program.listPriceCents, locale) }
+            : undefined,
+        }))}
+        onSelect={(item) => chooseProgram(item.id)}
+        placeholder={t('select')}
+        title={t('fields.program')}
+        value={
+          selectedProgram
+            ? {
+                id: selectedProgram.id,
+                title:
+                  selectedProgram.systemKey === 'private-lesson'
+                    ? t('options.private')
+                    : selectedProgram.name,
+                subtitle: selectedProgram.language
+                  ? t(`languages.${selectedProgram.language}`)
+                  : undefined,
+                identity: {
+                  kind: 'entity' as const,
+                  name: selectedProgram.name,
+                  language: selectedProgram.language,
+                  programKind: selectedProgram.kind,
+                },
+              }
+            : null
+        }
       />
 
       {selectedProgram?.kind === 'group' && (
@@ -1349,15 +1376,31 @@ function ProgramStep({
 
           {availableBranches.length ? (
             <>
-              <SelectField
+              <EntityPickerField
                 error={errors.branchId}
-                id="branchId"
                 label={t('fields.branch')}
-                required
-                value={draft.branchId ?? ''}
-                onChange={(branchId) => {
+                items={availableBranches.map((branch) => ({
+                  id: branch.id,
+                  title: branch.name,
+                  subtitle:
+                    branch.instructorName ?? t('teacherAssignmentPending'),
+                  identity: {
+                    kind: 'entity' as const,
+                    name: branch.name,
+                    language: selectedProgram?.language,
+                    tintSeed: selectedProgram?.name ?? branch.name,
+                  },
+                  meta: {
+                    label: `${branch.currentEnrollmentCount}/${branch.maximumCapacity}`,
+                    tone:
+                      branch.currentEnrollmentCount >= branch.maximumCapacity
+                        ? ('amber' as const)
+                        : ('default' as const),
+                  },
+                }))}
+                onSelect={(item) => {
                   const branch = catalog.branches.find(
-                    (item) => item.id === branchId,
+                    (candidate) => candidate.id === item.id,
                   );
                   setDraft((current) => ({
                     ...current,
@@ -1367,16 +1410,23 @@ function ProgramStep({
                     capacityOverrideNote: undefined,
                   }));
                 }}
-                options={[
-                  ['', t('select')],
-                  ...availableBranches.map(
-                    (branch) =>
-                      [
-                        branch.id,
-                        `${branch.name} · ${branch.currentEnrollmentCount}/${branch.maximumCapacity}`,
-                      ] as const,
-                  ),
-                ]}
+                placeholder={t('select')}
+                title={t('fields.branch')}
+                value={
+                  selectedBranch
+                    ? {
+                        id: selectedBranch.id,
+                        title: selectedBranch.name,
+                        subtitle: `${selectedBranch.currentEnrollmentCount}/${selectedBranch.maximumCapacity}`,
+                        identity: {
+                          kind: 'entity' as const,
+                          name: selectedBranch.name,
+                          language: selectedProgram?.language,
+                          tintSeed: selectedProgram?.name ?? selectedBranch.name,
+                        },
+                      }
+                    : null
+                }
               />
 
               {selectedBranch && (
@@ -1467,22 +1517,42 @@ function ProgramStep({
                 ),
               ]}
             />
-            <SelectField
+            <EntityPickerField
               error={errors.privateLesson}
-              id="selectedInstructorProfileId"
               label={t('fields.teacher')}
-              required
-              value={draft.selectedInstructorProfileId ?? ''}
-              onChange={(value) =>
-                updatePrivateSelection({ selectedInstructorProfileId: value })
+              items={privateRates.map((rate) => ({
+                id: rate.instructorProfileId,
+                title: rate.instructorName,
+                identity: {
+                  kind: 'person' as const,
+                  name: rate.instructorName,
+                },
+                meta: {
+                  label: formatTry(rate.hourlyPriceCents, locale),
+                },
+              }))}
+              onSelect={(item) =>
+                updatePrivateSelection({ selectedInstructorProfileId: item.id })
               }
-              options={[
-                ['', t('select')],
-                ...privateRates.map(
+              placeholder={t('select')}
+              title={t('fields.teacher')}
+              value={(() => {
+                const current = privateRates.find(
                   (rate) =>
-                    [rate.instructorProfileId, rate.instructorName] as const,
-                ),
-              ]}
+                    rate.instructorProfileId ===
+                    draft.selectedInstructorProfileId,
+                );
+                return current
+                  ? {
+                      id: current.instructorProfileId,
+                      title: current.instructorName,
+                      identity: {
+                        kind: 'person' as const,
+                        name: current.instructorName,
+                      },
+                    }
+                  : null;
+              })()}
             />
             <Field
               error={errors.privateLesson}
