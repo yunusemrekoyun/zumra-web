@@ -13,7 +13,7 @@ export async function getStudentPrincipalOrNotFound(options?: {
 
   if (
     !principal ||
-    principal.role !== 'student' ||
+    (principal.role !== 'student' && principal.role !== 'teacher') ||
     principal.accountStatus !== 'active' ||
     (!options?.allowPending &&
       principal.sessionSecurityLevel === 'pending')

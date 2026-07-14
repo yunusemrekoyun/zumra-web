@@ -461,6 +461,11 @@ export const appointmentRequests = pgTable(
       table.createdAt,
     ),
     index('appointment_requests_status_idx').on(table.status),
+    // One ACTIVE consultation per candidate — double submits and concurrent
+    // staff bookings collapse into a conflict instead of orphaned requests.
+    uniqueIndex('appointment_requests_active_candidate_unique')
+      .on(table.candidateId)
+      .where(sql`${table.status} in ('requested', 'scheduled')`),
   ],
 );
 

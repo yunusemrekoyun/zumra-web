@@ -19,6 +19,7 @@ import {
   Underline as UnderlineIcon,
   Undo2,
 } from 'lucide-react';
+import { useTranslations } from 'next-intl';
 import type { ReactNode } from 'react';
 
 const CONTENT_CLASS =
@@ -80,6 +81,7 @@ export function RichTextEditor({
   onChange,
   ariaLabel,
 }: RichTextEditorProps) {
+  const t = useTranslations('admin.legal.editor');
   const editor = useEditor({
     immediatelyRender: false,
     extensions: [
@@ -112,7 +114,7 @@ export function RichTextEditor({
 
   const promptLink = () => {
     const previous = editor.getAttributes('link').href as string | undefined;
-    const url = window.prompt('Bağlantı adresi (URL)', previous ?? 'https://');
+    const url = window.prompt(t('linkPrompt'), previous ?? 'https://');
     if (url === null) return;
     if (url.trim() === '') {
       editor.chain().focus().extendMarkRange('link').unsetLink().run();
@@ -127,7 +129,7 @@ export function RichTextEditor({
   };
 
   const promptImage = () => {
-    const url = window.prompt('Görsel adresi (https://...)');
+    const url = window.prompt(t('imagePrompt'));
     if (url && url.trim() !== '') {
       editor.chain().focus().setImage({ src: url.trim() }).run();
     }
@@ -137,21 +139,21 @@ export function RichTextEditor({
     <div className="overflow-hidden rounded-xl border border-black/10 bg-white focus-within:border-[#533089]/40 focus-within:ring-2 focus-within:ring-[#533089]/10">
       <div className="flex flex-wrap items-center gap-0.5 border-b border-black/10 bg-[#FAFAFC] px-2 py-1.5">
         <ToolButton
-          title="Kalın"
+          title={t('bold')}
           active={editor.isActive('bold')}
           onClick={() => editor.chain().focus().toggleBold().run()}
         >
           <Bold className="h-4 w-4" />
         </ToolButton>
         <ToolButton
-          title="İtalik"
+          title={t('italic')}
           active={editor.isActive('italic')}
           onClick={() => editor.chain().focus().toggleItalic().run()}
         >
           <Italic className="h-4 w-4" />
         </ToolButton>
         <ToolButton
-          title="Altı çizili"
+          title={t('underline')}
           active={editor.isActive('underline')}
           onClick={() => editor.chain().focus().toggleUnderline().run()}
         >
@@ -159,7 +161,7 @@ export function RichTextEditor({
         </ToolButton>
         <Divider />
         <ToolButton
-          title="Başlık"
+          title={t('heading')}
           active={editor.isActive('heading', { level: 2 })}
           onClick={() =>
             editor.chain().focus().toggleHeading({ level: 2 }).run()
@@ -168,7 +170,7 @@ export function RichTextEditor({
           <Heading2 className="h-4 w-4" />
         </ToolButton>
         <ToolButton
-          title="Alt başlık"
+          title={t('subheading')}
           active={editor.isActive('heading', { level: 3 })}
           onClick={() =>
             editor.chain().focus().toggleHeading({ level: 3 }).run()
@@ -177,21 +179,21 @@ export function RichTextEditor({
           <Heading3 className="h-4 w-4" />
         </ToolButton>
         <ToolButton
-          title="Madde listesi"
+          title={t('bulletList')}
           active={editor.isActive('bulletList')}
           onClick={() => editor.chain().focus().toggleBulletList().run()}
         >
           <List className="h-4 w-4" />
         </ToolButton>
         <ToolButton
-          title="Numaralı liste"
+          title={t('orderedList')}
           active={editor.isActive('orderedList')}
           onClick={() => editor.chain().focus().toggleOrderedList().run()}
         >
           <ListOrdered className="h-4 w-4" />
         </ToolButton>
         <ToolButton
-          title="Alıntı"
+          title={t('blockquote')}
           active={editor.isActive('blockquote')}
           onClick={() => editor.chain().focus().toggleBlockquote().run()}
         >
@@ -199,25 +201,25 @@ export function RichTextEditor({
         </ToolButton>
         <Divider />
         <ToolButton
-          title="Bağlantı ekle"
+          title={t('link')}
           active={editor.isActive('link')}
           onClick={promptLink}
         >
           <Link2 className="h-4 w-4" />
         </ToolButton>
-        <ToolButton title="Görsel ekle" onClick={promptImage}>
+        <ToolButton title={t('image')} onClick={promptImage}>
           <ImageIcon className="h-4 w-4" />
         </ToolButton>
         <Divider />
         <ToolButton
-          title="Geri al"
+          title={t('undo')}
           disabled={!editor.can().undo()}
           onClick={() => editor.chain().focus().undo().run()}
         >
           <Undo2 className="h-4 w-4" />
         </ToolButton>
         <ToolButton
-          title="Yinele"
+          title={t('redo')}
           disabled={!editor.can().redo()}
           onClick={() => editor.chain().focus().redo().run()}
         >

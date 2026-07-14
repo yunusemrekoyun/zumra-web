@@ -6,6 +6,7 @@ import {
   count as drizzleCount,
   eq,
   gt,
+  gte,
   inArray,
   isNotNull,
   lt,
@@ -207,8 +208,18 @@ export async function replaceBranchLessonSchedule(
       throw new PublicFlowError('branch_schedule_instructor_required', 409);
     }
 
-    const lessonInputs = normalizeLessonInputs(branch, input);
     const now = new Date();
+    // Replacing a schedule only touches FUTURE open lessons. Anything already
+    // taught (or otherwise in the past / terminal) is course history: its
+    // attendance records and assignment links must survive a re-plan.
+    const lessonInputs = normalizeLessonInputs(branch, input).filter(
+      (lesson) =>
+        zonedDateTimeToUtc(lesson.date, lesson.startTime, branch.timezone) >=
+        now,
+    );
+    if (!lessonInputs.length) {
+      throw new PublicFlowError('branch_schedule_empty', 400);
+    }
 
     await transaction
       .delete(lessonSessions)
@@ -216,6 +227,8 @@ export async function replaceBranchLessonSchedule(
         and(
           eq(lessonSessions.source, 'branch'),
           eq(lessonSessions.branchId, branch.id),
+          inArray(lessonSessions.status, ['scheduled', 'postponed']),
+          gte(lessonSessions.startsAt, now),
         ),
       );
     await transaction

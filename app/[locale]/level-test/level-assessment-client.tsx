@@ -82,9 +82,16 @@ export function LevelAssessmentClient() {
     fetch(`/api/public/assessment?locale=${locale}`, {
       credentials: 'same-origin',
     })
-      .then((response) => response.json() as Promise<ApiResult>)
-      .then((result) => {
-        if (active) setState(result.state ?? null);
+      .then(async (response) => {
+        const result = (await response.json()) as ApiResult;
+        if (!active) return;
+        // A server error still returns JSON, so it must not be rendered as a
+        // fresh "start" screen — mirror the error handling in submit().
+        if (!response.ok) {
+          setError(t('genericError'));
+          return;
+        }
+        setState(result.state ?? null);
       })
       .catch(() => {
         if (active) setError(t('genericError'));
@@ -119,7 +126,9 @@ export function LevelAssessmentClient() {
         setError(
           result.error === 'assessment_session_expired'
             ? t('expired')
-            : t('genericError'),
+            : result.error === 'appointment_exists'
+              ? t('appointment.alreadyExists')
+              : t('genericError'),
         );
         return null;
       }

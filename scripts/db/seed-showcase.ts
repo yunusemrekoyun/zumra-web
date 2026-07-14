@@ -94,8 +94,10 @@ const MARKETING_SNAPSHOT =
   'Zümra Akademi kampanya ve duyurularının e-posta ile tarafıma iletilmesine onay veriyorum.';
 
 // Runs even on an already-showcased DB: creates the demo advisor account once
-// and (re)assigns the showcase pipeline candidates to her.
-async function ensureDemoAdvisor() {
+// and (re)assigns the showcase pipeline candidates to her. Returns the first
+// advisor's user id (Aylin) so the main block can honor the advisor-only
+// ownership rule — candidates must never be owned by the admin.
+async function ensureDemoAdvisor(): Promise<string | null> {
   const demoAdvisors = [
     { email: 'aylin@zumra.local', name: 'Aylin Karaca', username: 'aylindanisman' },
     { email: 'selda@zumra.local', name: 'Selda Yıldız', username: 'seldadanisman' },
@@ -115,7 +117,7 @@ async function ensureDemoAdvisor() {
         console.warn(
           'DEMO_SEED_PASSWORD tanımlı değil — danışman kullanıcıları atlandı.',
         );
-        return;
+        return advisorId;
       }
       id = randomUUID();
       await database.insert(users).values({
@@ -207,6 +209,7 @@ async function ensureDemoAdvisor() {
   console.log(
     `Görev backfill: ${pendingRequest ? 1 : 0} talep + ${unowned.length} ilk temas havuza eklendi`,
   );
+  return advisorId;
 }
 
 (async () => {
@@ -215,7 +218,12 @@ async function ensureDemoAdvisor() {
     process.exit(1);
   }
 
-  await ensureDemoAdvisor();
+  const showcaseAdvisorId = await ensureDemoAdvisor();
+  if (!showcaseAdvisorId) {
+    console.warn(
+      'Danışman hesabı yok — showcase adayları SAHİPSİZ (havuzda) bırakılacak; admin asla aday sahibi yapılmaz.',
+    );
+  }
 
   const [existing] = await database
     .select({ id: candidateInquiries.id })
@@ -282,12 +290,50 @@ async function ensureDemoAdvisor() {
       .from(contacts)
       .where(like(contacts.email, '%@example.com'));
     if (junkContacts.length) {
-      const junkIds = junkContacts.map((c) => c.id);
+      let contactIds = junkContacts.map((c) => c.id);
       const junkCandidates = await tx
-        .select({ id: candidateProfiles.id })
+        .select({
+          id: candidateProfiles.id,
+          contactId: candidateProfiles.contactId,
+        })
         .from(candidateProfiles)
-        .where(inArray(candidateProfiles.contactId, junkIds));
-      const candIds = junkCandidates.map((c) => c.id);
+        .where(inArray(candidateProfiles.contactId, contactIds));
+      let candIds = junkCandidates.map((c) => c.id);
+      if (candIds.length) {
+        // enrollment_drafts / student_profiles reference candidate + contact
+        // with restrict — a test candidate that grew real enrollment data
+        // cannot be junk-deleted, so keep it (and its contact) with a warning.
+        const draftOwners = await tx
+          .select({ candidateId: enrollmentDrafts.candidateId })
+          .from(enrollmentDrafts)
+          .where(inArray(enrollmentDrafts.candidateId, candIds));
+        const studentOwners = await tx
+          .select({ candidateId: studentProfiles.candidateId })
+          .from(studentProfiles)
+          .where(inArray(studentProfiles.candidateId, candIds));
+        const blocked = new Set(
+          [...draftOwners, ...studentOwners].map((row) => row.candidateId),
+        );
+        if (blocked.size) {
+          console.warn(
+            `Temizlik: ${blocked.size} test adayı kayıt/öğrenci verisi taşıdığı için atlandı`,
+          );
+          const blockedContactIds = new Set(
+            junkCandidates
+              .filter((c) => blocked.has(c.id))
+              .map((c) => c.contactId),
+          );
+          candIds = candIds.filter((id) => !blocked.has(id));
+          contactIds = contactIds.filter((id) => !blockedContactIds.has(id));
+        }
+      }
+      // Consents restrict both contact and inquiry — key on the contact so
+      // rows without an inquiry are covered too, before either parent delete.
+      if (contactIds.length) {
+        await tx
+          .delete(candidateConsents)
+          .where(inArray(candidateConsents.contactId, contactIds));
+      }
       if (candIds.length) {
         const junkInquiries = await tx
           .select({ id: candidateInquiries.id })
@@ -301,7 +347,11 @@ async function ensureDemoAdvisor() {
             .where(inArray(assessmentAttempts.inquiryId, inqIds));
           if (attempts.length) {
             const attemptIds = attempts.map((a) => a.id);
-            // assessment_results FK'si attempt'e restrict — önce sonuçlar.
+            // assessment_answers + assessment_results both restrict on the
+            // attempt — delete the children before the attempts themselves.
+            await tx.execute(
+              sql`DELETE FROM assessment_answers WHERE attempt_id = ANY(${attemptIds}::uuid[])`,
+            );
             await tx.execute(
               sql`DELETE FROM assessment_results WHERE attempt_id = ANY(${attemptIds}::uuid[])`,
             );
@@ -312,9 +362,6 @@ async function ensureDemoAdvisor() {
           await tx
             .delete(appointmentRequests)
             .where(inArray(appointmentRequests.inquiryId, inqIds));
-          await tx
-            .delete(candidateConsents)
-            .where(inArray(candidateConsents.inquiryId, inqIds));
         }
         await tx
           .delete(candidateActivities)
@@ -322,8 +369,10 @@ async function ensureDemoAdvisor() {
         await tx.delete(candidateInquiries).where(inArray(candidateInquiries.candidateId, candIds));
         await tx.delete(candidateProfiles).where(inArray(candidateProfiles.id, candIds));
       }
-      await tx.delete(contacts).where(inArray(contacts.id, junkIds));
-      console.log(`Temizlik: ${junkContacts.length} test adayı silindi`);
+      if (contactIds.length) {
+        await tx.delete(contacts).where(inArray(contacts.id, contactIds));
+      }
+      console.log(`Temizlik: ${contactIds.length} test adayı silindi`);
     }
 
     // ---- 1) legal pages: publish the 4 drafts ------------------------------
@@ -519,55 +568,76 @@ async function ensureDemoAdvisor() {
     const sabahNext = await nextOf(sabah.id);
     const b1Next = await nextOf(b1Hafta.id);
 
-    const [linkedA] = await tx
-      .insert(assignments)
-      .values({
-        instructorProfileId: elif.id,
-        targetType: 'branch' as const,
-        targetBranchId: sabah.id,
-        lessonSessionId: sabahNext.id,
-        title: 'Konuşma Pratiği: Kendini Tanıtma',
-        description:
-          'Yarınki dersimize hazırlık: kendinizi tanıtan 8-10 cümlelik bir konuşma hazırlayın ve sesli kaydını yükleyin.',
-        requiresSubmission: true,
-        maxScore: 100,
-        dueAt: sabahNext.startsAt,
-        createdByUserId: elifUser.id,
-        createdAt: new Date(now.getTime() - day),
-        updatedAt: new Date(now.getTime() - day),
-      })
-      .returning({ id: assignments.id, title: assignments.title });
+    // seed-demo only generates six weeks of future lessons — on an older demo
+    // DB nextOf() can come back empty, so skip the lesson-linked pieces
+    // instead of crashing the whole seed on undefined.
+    let linkedA: { id: string; title: string } | null = null;
+    if (sabahNext) {
+      const [row] = await tx
+        .insert(assignments)
+        .values({
+          instructorProfileId: elif.id,
+          targetType: 'branch' as const,
+          targetBranchId: sabah.id,
+          lessonSessionId: sabahNext.id,
+          title: 'Konuşma Pratiği: Kendini Tanıtma',
+          description:
+            'Yarınki dersimize hazırlık: kendinizi tanıtan 8-10 cümlelik bir konuşma hazırlayın ve sesli kaydını yükleyin.',
+          requiresSubmission: true,
+          maxScore: 100,
+          dueAt: sabahNext.startsAt,
+          createdByUserId: elifUser.id,
+          createdAt: new Date(now.getTime() - day),
+          updatedAt: new Date(now.getTime() - day),
+        })
+        .returning({ id: assignments.id, title: assignments.title });
+      linkedA = row;
 
-    await tx.insert(assignmentSubmissions).values({
-      assignmentId: linkedA.id,
-      studentProfileId: ayse.id,
-      status: 'submitted' as const,
-      body: 'Öğretmenim merhaba, kendimi tanıttığım konuşma metnini hazırladım. Ses kaydını da ekledim.',
-      isLate: false,
-      submittedAt: istToday(10),
-      createdAt: istToday(10),
-      updatedAt: istToday(10),
-    });
+      await tx.insert(assignmentSubmissions).values({
+        assignmentId: row.id,
+        studentProfileId: ayse.id,
+        status: 'submitted' as const,
+        body: 'Öğretmenim merhaba, kendimi tanıttığım konuşma metnini hazırladım. Ses kaydını da ekledim.',
+        isLate: false,
+        submittedAt: istToday(10),
+        createdAt: istToday(10),
+        updatedAt: istToday(10),
+      });
+    } else {
+      console.warn(
+        'Sabah grubunda gelecek ders bulunamadı — derse bağlı ödev + teslim atlandı.',
+      );
+    }
 
-    const [linkedB] = await tx
-      .insert(assignments)
-      .values({
-        instructorProfileId: zeynep.id,
-        targetType: 'branch' as const,
-        targetBranchId: b1Hafta.id,
-        lessonSessionId: b1Next.id,
-        title: 'Günlük Rutin Paragrafı (Present Simple)',
-        description:
-          'Bir sonraki dersimizle bağlantılı: günlük rutininizi anlatan 120 kelimelik bir paragraf yazın.',
-        requiresSubmission: true,
-        maxScore: 100,
-        dueAt: new Date(b1Next.startsAt.getTime() + 4 * day),
-        createdByUserId: zeynepUser.id,
-        createdAt: new Date(now.getTime() - 2 * hour),
-        updatedAt: new Date(now.getTime() - 2 * hour),
-      })
-      .returning({ id: assignments.id });
-    console.log('2 derse bağlı ödev + 1 bekleyen teslim eklendi');
+    let linkedB: { id: string } | null = null;
+    if (b1Next) {
+      const [row] = await tx
+        .insert(assignments)
+        .values({
+          instructorProfileId: zeynep.id,
+          targetType: 'branch' as const,
+          targetBranchId: b1Hafta.id,
+          lessonSessionId: b1Next.id,
+          title: 'Günlük Rutin Paragrafı (Present Simple)',
+          description:
+            'Bir sonraki dersimizle bağlantılı: günlük rutininizi anlatan 120 kelimelik bir paragraf yazın.',
+          requiresSubmission: true,
+          maxScore: 100,
+          dueAt: new Date(b1Next.startsAt.getTime() + 4 * day),
+          createdByUserId: zeynepUser.id,
+          createdAt: new Date(now.getTime() - 2 * hour),
+          updatedAt: new Date(now.getTime() - 2 * hour),
+        })
+        .returning({ id: assignments.id });
+      linkedB = row;
+    } else {
+      console.warn(
+        'B1–B2 grubunda gelecek ders bulunamadı — derse bağlı ödev atlandı.',
+      );
+    }
+    console.log(
+      `${(linkedA ? 1 : 0) + (linkedB ? 1 : 0)} derse bağlı ödev + ${linkedA ? 1 : 0} bekleyen teslim eklendi`,
+    );
 
     // ---- 6) chat threads ----------------------------------------------------
     async function thread(
@@ -664,6 +734,8 @@ async function ensureDemoAdvisor() {
         preferences?: Date[];
         scheduledStartsAt?: Date;
         outcomeNote?: string;
+        outcomeResult?: 'positive' | 'thinking' | 'negative';
+        followUpAt?: Date;
       };
       activities: Array<{ type: string; metadata?: Record<string, unknown>; hoursAgo: number }>;
     }) {
@@ -689,7 +761,9 @@ async function ensureDemoAdvisor() {
         .values({
           contactId: contact.id,
           stage: input.stage,
-          advisorId: input.advisor ? admin.id : null,
+          // Advisor-only ownership: without a demo advisor the candidate stays
+          // unowned (pool) — the admin must never own candidates.
+          advisorId: input.advisor ? showcaseAdvisorId : null,
           lastActivityAt: input.lastActivityAt,
           createdAt,
           updatedAt: input.lastActivityAt,
@@ -757,6 +831,7 @@ async function ensureDemoAdvisor() {
           createdAt: input.lastActivityAt,
         });
       }
+      let appointmentId: string | null = null;
       if (input.appointment) {
         const [request] = await tx
           .insert(appointmentRequests)
@@ -767,10 +842,13 @@ async function ensureDemoAdvisor() {
             status: input.appointment.status,
             scheduledStartsAt: input.appointment.scheduledStartsAt ?? null,
             outcomeNote: input.appointment.outcomeNote ?? null,
+            outcomeResult: input.appointment.outcomeResult ?? null,
+            followUpAt: input.appointment.followUpAt ?? null,
             createdAt,
             updatedAt: input.lastActivityAt,
           })
           .returning({ id: appointmentRequests.id });
+        appointmentId = request.id;
         if (input.appointment.preferences) {
           await tx.insert(appointmentPreferences).values(
             input.appointment.preferences.map((startsAt, index) => ({
@@ -791,7 +869,11 @@ async function ensureDemoAdvisor() {
           occurredAt: new Date(now.getTime() - a.hoursAgo * hour),
         })),
       );
-      return { profileId: profile.id, name: `${input.firstName} ${input.lastName}` };
+      return {
+        appointmentId,
+        profileId: profile.id,
+        name: `${input.firstName} ${input.lastName}`,
+      };
     }
 
     // Bugün gelen taze lead — admin ziline düşer.
@@ -856,7 +938,7 @@ async function ensureDemoAdvisor() {
       note: 'Telefonla ulaşıldı; Almanca A1 grubunu düşünüyor, hafta sonu saatleri uygun.',
       activities: [
         { type: 'candidate.inquiry_received', hoursAgo: 72 },
-        { type: 'candidate.advisor_assigned', metadata: { advisorId: admin.id }, hoursAgo: 50 },
+        { type: 'candidate.advisor_assigned', metadata: { advisorId: showcaseAdvisorId }, hoursAgo: 50 },
         { type: 'candidate.note_added', hoursAgo: 49 },
         { type: 'candidate.stage_changed', metadata: { from: 'new', to: 'contacted' }, hoursAgo: 48 },
       ],
@@ -887,7 +969,10 @@ async function ensureDemoAdvisor() {
       ],
     });
 
-    await candidate({
+    // "Thinking" verdict — matches her outcome note and puts the new
+    // outcome_result + follow_up badges on display in the panel.
+    const deryaFollowUpAt = istDay(2, 14);
+    const derya = await candidate({
       firstName: 'Derya',
       lastName: 'Polat',
       email: 'derya.polat@ornekmail.com',
@@ -906,15 +991,30 @@ async function ensureDemoAdvisor() {
         scheduledStartsAt: istDay(-1, 15),
         outcomeNote:
           'Görüşme olumlu geçti; A1–A2 Sabah Grubu ve 3 taksitli ödeme planı önerildi. Eşiyle konuşup dönecek.',
+        outcomeResult: 'thinking',
+        followUpAt: deryaFollowUpAt,
       },
       note: 'Fiyat konusunda hassas; taksit seçeneği kararını olumlu etkileyebilir.',
       activities: [
         { type: 'candidate.inquiry_received', hoursAgo: 144 },
         { type: 'candidate.appointment_scheduled', metadata: { startsAt: istDay(-1, 15).toISOString() }, hoursAgo: 40 },
-        { type: 'candidate.appointment_resolved', metadata: { outcome: 'completed' }, hoursAgo: 20 },
+        { type: 'candidate.appointment_resolved', metadata: { followUpAt: deryaFollowUpAt.toISOString(), outcome: 'completed', result: 'thinking' }, hoursAgo: 20 },
         { type: 'candidate.stage_changed', metadata: { from: 'qualified', to: 'offer_pending' }, hoursAgo: 19 },
       ],
     });
+    // Mirror resolveAppointment: a "thinking" verdict keeps the lead alive as
+    // an open follow-up task (duplicate-safe via the partial unique index).
+    await tx
+      .insert(advisorTasks)
+      .values({
+        appointmentId: derya.appointmentId,
+        assigneeUserId: showcaseAdvisorId,
+        candidateId: derya.profileId,
+        dueAt: deryaFollowUpAt,
+        kind: 'follow_up',
+        visibility: 'staff',
+      })
+      .onConflictDoNothing();
 
     await candidate({
       firstName: 'Nazlı',
@@ -941,14 +1041,7 @@ async function ensureDemoAdvisor() {
     console.log('6 aday (pipeline + randevu tüm durumları) eklendi');
 
     // ---- 8) unread bell notifications (bell-only; outbox'a asla yazma) -----
-    await tx.insert(notifications).values([
-      {
-        userId: elifUser.id,
-        type: 'assignment_submitted',
-        payload: { assignmentTitle: linkedA.title, studentName: 'Ayşe Yılmaz' },
-        href: `/ogretmen/odevler/${linkedA.id}`,
-        createdAt: istToday(10),
-      },
+    const bellRows: (typeof notifications.$inferInsert)[] = [
       {
         userId: elifUser.id,
         type: 'chat_message',
@@ -961,13 +1054,6 @@ async function ensureDemoAdvisor() {
         createdAt: new Date(now.getTime() - 45 * minute),
       },
       {
-        userId: need('ayseyilmaz').id,
-        type: 'assignment_assigned',
-        payload: { title: linkedA.title },
-        href: `/ogrenci/odevler/${linkedA.id}`,
-        createdAt: new Date(now.getTime() - day),
-      },
-      {
         userId: need('zehraaydin').id,
         type: 'chat_message',
         payload: {
@@ -978,22 +1064,49 @@ async function ensureDemoAdvisor() {
         href: `/ogrenci/mesajlar?with=${zeynep.id}`,
         createdAt: new Date(now.getTime() - 2 * hour),
       },
-      {
+    ];
+    if (linkedA) {
+      bellRows.push(
+        {
+          userId: elifUser.id,
+          type: 'assignment_submitted',
+          payload: { assignmentTitle: linkedA.title, studentName: 'Ayşe Yılmaz' },
+          href: `/ogretmen/odevler/${linkedA.id}`,
+          createdAt: istToday(10),
+        },
+        {
+          userId: need('ayseyilmaz').id,
+          type: 'assignment_assigned',
+          payload: { title: linkedA.title },
+          href: `/ogrenci/odevler/${linkedA.id}`,
+          createdAt: new Date(now.getTime() - day),
+        },
+      );
+    }
+    if (linkedB) {
+      bellRows.push({
         userId: need('zehraaydin').id,
         type: 'assignment_assigned',
         payload: { title: 'Günlük Rutin Paragrafı (Present Simple)' },
         href: `/ogrenci/odevler/${linkedB.id}`,
         createdAt: new Date(now.getTime() - 2 * hour),
-      },
-      {
-        userId: admin.id,
+      });
+    }
+    // Mirror notifyLeadReceived: the fresh lead rings every advisor + admin
+    // bell, advisors landing on their own leads screen.
+    for (const staff of allUsers.filter(
+      (u) => u.role === 'admin' || u.role === 'advisor',
+    )) {
+      bellRows.push({
+        userId: staff.id,
         type: 'lead_received',
         payload: { kind: 'program', name: 'Gamze Öztürk', program: ingA1.name },
-        href: '/admin/leads',
+        href: staff.role === 'advisor' ? '/danisman/leadler' : '/admin/leads',
         createdAt: new Date(now.getTime() - 40 * minute),
-      },
-    ]);
-    console.log('6 okunmamış zil bildirimi eklendi');
+      });
+    }
+    await tx.insert(notifications).values(bellRows);
+    console.log(`${bellRows.length} okunmamış zil bildirimi eklendi`);
   });
 
   // Yeni oluşan showcase adaylarını da danışmana bağla.

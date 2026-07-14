@@ -56,6 +56,9 @@ import {
 } from './google-meet-client';
 
 const ATTENDANCE_SYNC_DELAY_MS = 15 * 60 * 1000;
+// A conference that is still live at sync time re-arms itself, but only up to
+// this long past the scheduled end — beyond it we finalize with what we have.
+const ATTENDANCE_SYNC_MAX_EXTENSION_MS = 6 * 60 * 60 * 1000;
 const PRESENT_THRESHOLD_SECONDS = 35 * 60;
 const LATE_THRESHOLD_MS = 10 * 60 * 1000;
 
@@ -356,13 +359,52 @@ export async function syncLessonAttendanceFromMeet(lessonSessionId: string) {
     return;
   }
 
+  // A cancelled lesson never happened: no drafts, and disarm the sweep so it
+  // stops re-enqueueing this session.
+  if (context.status === 'cancelled') {
+    await database
+      .update(lessonSessionMeetings)
+      .set({ nextSyncAt: null, updatedAt: new Date() })
+      .where(eq(lessonSessionMeetings.id, meeting.id));
+    return;
+  }
+
+  // Stale queue jobs (enqueued before a postpone) fire long before the CURRENT
+  // end time; finalizing then would draft the whole class absent. Leave
+  // nextSyncAt armed — the reconciliation sweep re-fires at the right moment.
+  if (context.endsAt.getTime() + ATTENDANCE_SYNC_DELAY_MS > Date.now()) {
+    return;
+  }
+
   const expectedStudents = await loadExpectedStudents(context);
   const absenceReports = await loadAbsenceReports(lessonSessionId);
+  // No endedAfter filter: the space is lesson-specific anyway, and Google's
+  // end_time filter would silently drop a conference that is still running.
   const records = await listGoogleMeetConferenceRecords({
-    endedAfter: new Date(context.startsAt.getTime() - 30 * 60_000),
     spaceName: meeting.spaceName,
     startedBefore: new Date(context.endsAt.getTime() + 4 * 60 * 60_000),
   });
+
+  // Class ran long: the conference is still live, so postpone finalization
+  // instead of marking everyone absent — bounded by the extension cap.
+  const conferenceOngoing = records.some((record) => !record.endTime);
+  if (
+    conferenceOngoing &&
+    Date.now() <
+      context.endsAt.getTime() + ATTENDANCE_SYNC_MAX_EXTENSION_MS
+  ) {
+    await database
+      .update(lessonSessionMeetings)
+      .set({
+        nextSyncAt: new Date(Date.now() + ATTENDANCE_SYNC_DELAY_MS),
+        updatedAt: new Date(),
+      })
+      .where(eq(lessonSessionMeetings.id, meeting.id));
+    return;
+  }
+  const expectedIds = new Set(
+    expectedStudents.map((student) => student.studentProfileId),
+  );
   const attendanceByStudent = new Map<
     string,
     {
@@ -383,14 +425,20 @@ export async function syncLessonAttendanceFromMeet(lessonSessionId: string) {
       for (const participantSession of sessions) {
         const matchedStudent = await matchParticipantToStudent(participant);
         const normalized = normalizeParticipantSession(participantSession);
-        const attendanceRecordId = matchedStudent
+        // A Google-matched account that is NOT on this lesson's roster must
+        // not get an invisible attendance record — surface it as unmatched.
+        const rosterStudent =
+          matchedStudent && expectedIds.has(matchedStudent)
+            ? matchedStudent
+            : null;
+        const attendanceRecordId = rosterStudent
           ? await upsertDraftAttendance({
               firstJoinedAt: normalized.joinedAt,
               lastLeftAt: normalized.leftAt,
               lessonSessionId,
               source: 'google_meet',
               status: 'needs_review',
-              studentProfileId: matchedStudent,
+              studentProfileId: rosterStudent,
               suggestedStatus: 'needs_review',
               totalSeconds: normalized.durationSeconds,
             })
@@ -410,8 +458,8 @@ export async function syncLessonAttendanceFromMeet(lessonSessionId: string) {
             joinedAt: normalized.joinedAt,
             leftAt: normalized.leftAt,
             lessonSessionId,
-            matchConfidence: matchedStudent ? 'matched' : 'unmatched',
-            matchedStudentProfileId: matchedStudent ?? null,
+            matchConfidence: rosterStudent ? 'matched' : 'unmatched',
+            matchedStudentProfileId: rosterStudent ?? null,
             raw: {
               participant,
               participantSession,
@@ -427,8 +475,8 @@ export async function syncLessonAttendanceFromMeet(lessonSessionId: string) {
               googleUser: participant.signedinUser?.user ?? null,
               joinedAt: normalized.joinedAt,
               leftAt: normalized.leftAt,
-              matchConfidence: matchedStudent ? 'matched' : 'unmatched',
-              matchedStudentProfileId: matchedStudent ?? null,
+              matchConfidence: rosterStudent ? 'matched' : 'unmatched',
+              matchedStudentProfileId: rosterStudent ?? null,
               raw: {
                 participant,
                 participantSession,
@@ -437,8 +485,8 @@ export async function syncLessonAttendanceFromMeet(lessonSessionId: string) {
             },
           });
 
-        if (matchedStudent) {
-          const aggregate = attendanceByStudent.get(matchedStudent) ?? {
+        if (rosterStudent) {
+          const aggregate = attendanceByStudent.get(rosterStudent) ?? {
             totalSeconds: 0,
           };
           aggregate.totalSeconds += normalized.durationSeconds;
@@ -452,7 +500,7 @@ export async function syncLessonAttendanceFromMeet(lessonSessionId: string) {
                 ? aggregate.lastLeftAt
                 : normalized.leftAt;
           }
-          attendanceByStudent.set(matchedStudent, aggregate);
+          attendanceByStudent.set(rosterStudent, aggregate);
         }
       }
     }
@@ -499,6 +547,15 @@ export async function submitLessonAbsenceReport(
   const context = await getLessonSessionContext(lessonSessionId);
   if (!context) {
     throw new PublicFlowError('lesson_session_not_found', 404);
+  }
+
+  // Absence reports belong to upcoming/open lessons; once the lesson ended
+  // the teacher owns the attendance sheet and a report can't rewrite it.
+  if (
+    (context.status !== 'scheduled' && context.status !== 'postponed') ||
+    context.endsAt.getTime() <= Date.now()
+  ) {
+    throw new PublicFlowError('lesson_session_not_open', 409);
   }
 
   const student = await getStudentProfileForPrincipal(principal.id);
@@ -774,6 +831,8 @@ export async function updateLessonSessionOperationalStatus(
     }
   }
 
+  // The status filter makes the transition atomic: a concurrent request that
+  // already moved the lesson to a terminal state cannot be overwritten here.
   const [updated] = await database
     .update(lessonSessions)
     .set({
@@ -782,7 +841,12 @@ export async function updateLessonSessionOperationalStatus(
       status: input.status,
       updatedAt: new Date(),
     })
-    .where(eq(lessonSessions.id, lessonSessionId))
+    .where(
+      and(
+        eq(lessonSessions.id, lessonSessionId),
+        inArray(lessonSessions.status, ['scheduled', 'postponed']),
+      ),
+    )
     .returning({
       endsAt: lessonSessions.endsAt,
       id: lessonSessions.id,
@@ -791,20 +855,29 @@ export async function updateLessonSessionOperationalStatus(
     });
 
   if (!updated) {
-    throw new PublicFlowError('lesson_session_not_found', 404);
+    throw new PublicFlowError('lesson_session_not_open', 409);
   }
 
   // Re-arm attendance sync for the new end time so the reconciliation sweep
   // doesn't fire against the old (now-past) time and mark everyone absent.
   if (updatedStartsAt) {
+    const nextSyncAt = new Date(
+      updated.endsAt.getTime() + ATTENDANCE_SYNC_DELAY_MS,
+    );
     await database
       .update(lessonSessionMeetings)
-      .set({
-        nextSyncAt: new Date(
-          updated.endsAt.getTime() + ATTENDANCE_SYNC_DELAY_MS,
-        ),
-        updatedAt: new Date(),
-      })
+      .set({ nextSyncAt, updatedAt: new Date() })
+      .where(eq(lessonSessionMeetings.lessonSessionId, lessonSessionId));
+    await enqueueMeetAttendanceSync(lessonSessionId, nextSyncAt).catch(
+      () => undefined,
+    );
+  }
+
+  // A cancelled lesson has nothing to reconcile — disarm its sync entirely.
+  if (updated.status === 'cancelled') {
+    await database
+      .update(lessonSessionMeetings)
+      .set({ nextSyncAt: null, updatedAt: new Date() })
       .where(eq(lessonSessionMeetings.lessonSessionId, lessonSessionId));
   }
 
@@ -1202,22 +1275,8 @@ async function upsertDraftAttendance(input: {
   suggestedStatus: AttendanceStatus;
   totalSeconds: number;
 }) {
-  const [existing] = await database
-    .select({
-      confirmedAt: lessonAttendanceRecords.confirmedAt,
-      id: lessonAttendanceRecords.id,
-    })
-    .from(lessonAttendanceRecords)
-    .where(
-      and(
-        eq(lessonAttendanceRecords.lessonSessionId, input.lessonSessionId),
-        eq(lessonAttendanceRecords.studentProfileId, input.studentProfileId),
-      ),
-    )
-    .limit(1);
-
-  if (existing?.confirmedAt) return existing.id;
-
+  // The confirmed guard lives in SQL (setWhere), not in a read-then-write:
+  // a teacher confirming at the exact moment the sync fires must win.
   const [record] = await database
     .insert(lessonAttendanceRecords)
     .values({
@@ -1245,10 +1304,24 @@ async function upsertDraftAttendance(input: {
         totalSeconds: input.totalSeconds,
         updatedAt: new Date(),
       },
+      setWhere: isNull(lessonAttendanceRecords.confirmedAt),
     })
     .returning({ id: lessonAttendanceRecords.id });
 
-  return record?.id;
+  if (record) return record.id;
+
+  // Conflict hit a confirmed row: report its id without touching it.
+  const [existing] = await database
+    .select({ id: lessonAttendanceRecords.id })
+    .from(lessonAttendanceRecords)
+    .where(
+      and(
+        eq(lessonAttendanceRecords.lessonSessionId, input.lessonSessionId),
+        eq(lessonAttendanceRecords.studentProfileId, input.studentProfileId),
+      ),
+    )
+    .limit(1);
+  return existing?.id;
 }
 
 async function assertCanJoinLesson(
@@ -1456,7 +1529,9 @@ async function notifyLessonSessionStatusChange(input: {
     Array.from(recipients).map((recipient) =>
       notificationService.enqueue({
         channel: 'email',
-        idempotencyKey: `lesson-status:${input.lessonSessionId}:${input.status}:${recipient}`,
+        // startsAt is part of the key: a second postpone (new time) must send
+        // a fresh email instead of being swallowed as a duplicate.
+        idempotencyKey: `lesson-status:${input.lessonSessionId}:${input.status}:${input.context.startsAt.getTime()}:${recipient}`,
         locale: 'tr',
         payload: {
           lessonDate: input.context.startsAt.toISOString(),

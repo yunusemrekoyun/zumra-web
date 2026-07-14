@@ -18,6 +18,7 @@ import { mediaAssets } from '@/lib/server/db/schema';
 import {
   AuthorizationDeniedError,
   PayloadTooLargeError,
+  PublicFlowError,
   UnsafeMediaError,
 } from '@/lib/server/http/errors';
 import { enqueueMediaProcessing } from '@/lib/server/queues/media';
@@ -121,7 +122,10 @@ export async function receiveMediaUpload(input: {
 
     const inspected = await inspectUploadedFile(absoluteSource, input.kind);
     await assertUserQuota(input.owner.id, inspected.sizeBytes);
-    await database
+    // Guarded transitions: the stale-upload sweeper may have failed this row
+    // (and deleted its file) while the stream was still coming in — a plain
+    // id-match update would resurrect that corpse as 'uploaded'.
+    const [markedUploaded] = await database
       .update(mediaAssets)
       .set({
         checksumSha256: hash.digest('hex'),
@@ -131,12 +135,20 @@ export async function receiveMediaUpload(input: {
         status: 'uploaded',
         updatedAt: new Date(),
       })
-      .where(eq(mediaAssets.id, asset.id));
+      .where(
+        and(eq(mediaAssets.id, asset.id), eq(mediaAssets.status, 'uploading')),
+      )
+      .returning({ id: mediaAssets.id });
+    if (!markedUploaded) {
+      throw new PublicFlowError('upload_processing_failed', 409);
+    }
 
     await database
       .update(mediaAssets)
       .set({ status: 'scanning', updatedAt: new Date() })
-      .where(eq(mediaAssets.id, asset.id));
+      .where(
+        and(eq(mediaAssets.id, asset.id), eq(mediaAssets.status, 'uploaded')),
+      );
     await scanWithClamAv(absoluteSource);
 
     if (input.kind === 'video' || input.kind === 'image') {

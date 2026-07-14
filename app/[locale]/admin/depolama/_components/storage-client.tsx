@@ -51,11 +51,18 @@ export function StorageClient({ overview }: { overview: StorageOverview }) {
   const router = useRouter();
   const [tab, setTab] = useState<'biggest' | 'oldest' | 'orphans'>('orphans');
   const [deleting, setDeleting] = useState<string | null>(null);
+  const [deleteError, setDeleteError] = useState(false);
   const [userRole, setUserRole] = useState<string>('all');
   const [userDetail, setUserDetail] = useState<UserStorageDetail | null>(null);
   const [loadingUser, setLoadingUser] = useState(false);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const [selected, setSelected] = useState<Set<string>>(new Set());
+  // Errors raised from inside the detail modal must render inside it — the
+  // panel-level message would be hidden behind the overlay.
+  const [detailError, setDetailError] = useState<'delete' | 'notReady' | null>(
+    null,
+  );
+  const [downloadingId, setDownloadingId] = useState<string | null>(null);
 
   const { disk } = overview;
   const otherBytes = Math.max(0, disk.usedBytes - overview.managedBytes);
@@ -65,6 +72,7 @@ export function StorageClient({ overview }: { overview: StorageOverview }) {
   async function deleteFile(id: string) {
     if (deleting || !window.confirm(t('deleteConfirm'))) return;
     setDeleting(id);
+    setDeleteError(false);
     try {
       const response = await fetch(`/api/admin/media/${id}`, {
         credentials: 'same-origin',
@@ -72,6 +80,8 @@ export function StorageClient({ overview }: { overview: StorageOverview }) {
       });
       if (!response.ok) throw new Error('delete_failed');
       router.refresh();
+    } catch {
+      setDeleteError(true);
     } finally {
       setDeleting(null);
     }
@@ -82,6 +92,7 @@ export function StorageClient({ overview }: { overview: StorageOverview }) {
     setLoadingUser(true);
     setCurrentUserId(userId);
     setSelected(new Set());
+    setDetailError(null);
     try {
       const response = await fetch(`/api/admin/storage/users/${userId}`, {
         credentials: 'same-origin',
@@ -97,13 +108,43 @@ export function StorageClient({ overview }: { overview: StorageOverview }) {
 
   async function deleteInDetail(fileId: string) {
     if (!window.confirm(t('deleteConfirm'))) return;
-    const response = await fetch(`/api/admin/media/${fileId}`, {
-      credentials: 'same-origin',
-      method: 'DELETE',
-    });
-    if (response.ok) {
+    setDetailError(null);
+    try {
+      const response = await fetch(`/api/admin/media/${fileId}`, {
+        credentials: 'same-origin',
+        method: 'DELETE',
+      });
+      if (!response.ok) throw new Error('delete_failed');
       if (currentUserId) await openUser(currentUserId);
       router.refresh();
+    } catch {
+      setDetailError('delete');
+    }
+  }
+
+  // Files that are still processing (or failed/quarantined) 404 on the media
+  // endpoint; probe first so the admin sees a message in the modal instead of
+  // a raw JSON error tab.
+  async function downloadInDetail(file: StorageFile) {
+    if (downloadingId) return;
+    setDownloadingId(file.id);
+    setDetailError(null);
+    try {
+      const response = await fetch(`/api/media/${file.id}`, {
+        credentials: 'same-origin',
+        method: 'HEAD',
+      });
+      if (!response.ok) throw new Error('not_ready');
+      const link = document.createElement('a');
+      link.href = `/api/media/${file.id}`;
+      link.download = file.name;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+    } catch {
+      setDetailError('notReady');
+    } finally {
+      setDownloadingId(null);
     }
   }
 
@@ -306,6 +347,12 @@ export function StorageClient({ overview }: { overview: StorageOverview }) {
           </p>
         )}
 
+        {deleteError && (
+          <p className="mt-4 text-xs font-semibold text-red-600">
+            {t('deleteFailed')}
+          </p>
+        )}
+
         <div className="mt-4 space-y-2">
           {files[tab].map((file) => {
             const meta = kindMeta(file.kind);
@@ -402,6 +449,14 @@ export function StorageClient({ overview }: { overview: StorageOverview }) {
               ))}
             </div>
 
+            {detailError && (
+              <p className="mt-4 text-xs font-semibold text-red-600">
+                {detailError === 'delete'
+                  ? t('deleteFailed')
+                  : t('fileNotReady')}
+              </p>
+            )}
+
             {userDetail.files.length > 0 && (
               <div className="mt-4 flex flex-wrap items-center justify-between gap-2">
                 <button
@@ -468,14 +523,15 @@ export function StorageClient({ overview }: { overview: StorageOverview }) {
                         {formatBytes(file.sizeBytes)}
                       </div>
                     </div>
-                    <a
-                      href={`/api/media/${file.id}`}
-                      download={file.name}
+                    <button
+                      type="button"
+                      onClick={() => downloadInDetail(file)}
+                      disabled={downloadingId === file.id}
                       aria-label={t('download')}
-                      className="shrink-0 rounded-lg p-1.5 text-[#2E286C]/50 transition-colors hover:bg-[#F1F0F7] hover:text-[#533089]"
+                      className="shrink-0 rounded-lg p-1.5 text-[#2E286C]/50 transition-colors hover:bg-[#F1F0F7] hover:text-[#533089] disabled:opacity-40"
                     >
                       <Download className="h-4 w-4" />
-                    </a>
+                    </button>
                     {file.referenced ? (
                       <span className="shrink-0 rounded-full bg-[#F1F0F7] px-2 py-1 text-[10px] font-bold text-[#2E286C]/40">
                         {t('inUse')}

@@ -3,6 +3,7 @@ import { notFound } from 'next/navigation';
 import { ChevronRight } from 'lucide-react';
 import { ModulePanel, PageHeader } from '@/components/ui';
 import { Link } from '@/i18n/navigation';
+import { APP_TIME_ZONE } from '@/lib/datetime';
 import { requireWorkspaceRole } from '@/lib/server/authorization';
 import { listAssignmentsForLesson } from '@/lib/server/services/assignments';
 import { getLessonAttendanceDraft } from '@/lib/server/services/lesson-meetings';
@@ -61,6 +62,7 @@ export default async function TeacherAttendancePage({
                         {new Intl.DateTimeFormat(locale, {
                           day: 'numeric',
                           month: 'long',
+                          timeZone: APP_TIME_ZONE,
                         }).format(new Date(assignment.dueAt))}
                       </span>
                     ) : null}

@@ -232,6 +232,20 @@
       "when": 1783696705393,
       "tag": "0032_careful_wendigo",
       "breakpoints": true
+    },
+    {
+      "idx": 33,
+      "version": "7",
+      "when": 1783971153517,
+      "tag": "0033_active_appointment_unique",
+      "breakpoints": true
+    },
+    {
+      "idx": 34,
+      "version": "7",
+      "when": 1784051165692,
+      "tag": "0034_user_photo_fk",
+      "breakpoints": true
     }
   ]
 }

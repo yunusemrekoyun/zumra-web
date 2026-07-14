@@ -10,6 +10,7 @@ import {
   Users,
   Video,
 } from 'lucide-react';
+import { isoToIstanbulWallClock } from '@/lib/datetime';
 import { cn } from '@/lib/utils';
 import type {
   CalendarEventKind,
@@ -689,8 +690,11 @@ function getDisplayMonth(events: CalendarEventView[], requestedMonthKey?: string
   const requestedMonth = parseMonth(requestedMonthKey);
   if (requestedMonth) return requestedMonth;
 
-  const now = new Date();
-  const currentMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+  // Event date keys are Istanbul wall-clock days, so resolve "today" in the
+  // same frame instead of the server's local timezone.
+  const todayKey = isoToIstanbulWallClock(new Date().toISOString()).slice(0, 10);
+  const [todayYear, todayMonth] = todayKey.split('-').map(Number);
+  const currentMonth = new Date(todayYear, todayMonth - 1, 1);
   const currentMonthKey = serializeMonth(currentMonth);
   const hasCurrentMonthEvent = events.some((event) =>
     event.date.startsWith(currentMonthKey),
@@ -701,7 +705,6 @@ function getDisplayMonth(events: CalendarEventView[], requestedMonthKey?: string
   // upcoming one if any, otherwise the most recent past one (events are
   // sorted ascending). Falling back to events[0] would jump a year back on
   // accounts whose history starts long ago.
-  const todayKey = serializeDate(now);
   const nearest =
     events.find((event) => event.date >= todayKey)?.date ??
     events[events.length - 1]?.date;

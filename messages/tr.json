@@ -170,7 +170,8 @@
       "submit": "Görüşme talebini gönder",
       "successTitle": "Talebini aldık.",
       "successDescription": "Danışman ekibimiz uygunluklarını değerlendirip seninle iletişime geçecek.",
-      "status": "Talep edildi"
+      "status": "Talep edildi",
+      "alreadyExists": "Zaten bekleyen bir görüşme talebiniz var; ekibimiz sizinle iletişime geçecek."
     }
   },
   "workspace": {
@@ -227,7 +228,8 @@
       "unassign": "Atamayı kaldır",
       "noOtherAdvisors": "Devredilecek başka danışman yok.",
       "advisorRole": "Danışman",
-      "unassignHint": "Adayı sahipsiz bırak"
+      "unassignHint": "Adayı sahipsiz bırak",
+      "transferError": "Danışman aktarımı başarısız oldu. Lütfen tekrar deneyin."
     },
     "profilePhoto": {
       "change": "Fotoğrafı değiştir",
@@ -622,6 +624,7 @@
       "orphansHint": "Bu dosyalar hiçbir mesaj, ödev veya profile bağlı değil — güvenle silebilirsin.",
       "noOrphans": "Atıl dosya yok — her şey kullanımda 🎉",
       "delete": "Sil",
+      "deleteFailed": "Dosya silinemedi. Lütfen tekrar deneyin.",
       "close": "Kapat",
       "userFileCount": "{count} dosya",
       "download": "İndir",
@@ -636,7 +639,8 @@
         "advisor": "Danışman",
         "admin": "Admin"
       },
-      "deleteConfirm": "Bu dosya kalıcı olarak silinsin mi?"
+      "deleteConfirm": "Bu dosya kalıcı olarak silinsin mi?",
+      "fileNotReady": "Dosya henüz hazır değil (işleniyor ya da kullanılamıyor), indirilemedi."
     },
     "shell": {
       "searchPlaceholder": "Öğrenci, eğitmen veya mesaj ara..."
@@ -711,7 +715,9 @@
         "save": "Kaydet",
         "saving": "Kaydediliyor...",
         "success": "Ayarlar kaydedildi.",
-        "error": "Ayarlar kaydedilemedi. Tekrar deneyin."
+        "error": "Ayarlar kaydedilemedi. Tekrar deneyin.",
+        "loadError": "Ayarlar yüklenemedi. Tekrar deneyin.",
+        "retry": "Yeniden dene"
       },
       "mailMode": {
         "badge": "Mail",
@@ -959,7 +965,11 @@
       "rateErrors": {
         "languageMismatch": "Seçilen eğitmenin bu dil için aktif yetkinliği yok. Eğitmenler sayfasından ekleyin.",
         "invalidRate": "Ücret geçersiz. Saatlik tutarı kontrol edin."
-      }
+      },
+      "scheduleHistoryTitle": "Ders programı geçmişi",
+      "scheduleHistoryHint": "İşlenmiş ve geçmiş dersler program değişikliklerinde korunur; yeni plan yalnızca gelecekteki dersleri günceller.",
+      "scheduleHistoryShow": "Göster",
+      "scheduleHistoryHide": "Gizle"
     },
     "instructors": {
       "title": "Eğitmenler",
@@ -1164,6 +1174,8 @@
         "stale": "Bu randevu başka bir yerde güncellenmiş. Sayfayı yenileyin.",
         "planHint": "Bu aday için doğrudan bir görüşme planlayın; onay e-postası otomatik gider.",
         "planCta": "Görüşme Planla",
+        "planAgain": "Yeni görüşme planla",
+        "planAgainHint": "Görüşme sonuçlandı; süreç devam ediyorsa yeni bir görüşme planlayabilirsiniz.",
         "noneClosed": "Bu aday için görüşme planlanamaz.",
         "reschedule": "Ertele",
         "rescheduleCta": "Yeni Saati Kaydet",
@@ -1183,7 +1195,8 @@
         "result_negative": "Olumsuz görüşme",
         "followUpAt": "Takip araması: {when}",
         "statusRequested": "Talep edildi",
-        "statusScheduled": "Planlandı"
+        "statusScheduled": "Planlandı",
+        "invalidTime": "Seçilen saat geçersiz — geçmiş bir zaman olamaz."
       },
       "noAppointment": "Henüz talep yok",
       "source": "Kaynak",
@@ -1205,6 +1218,8 @@
       "noNotes": "Henüz not yok.",
       "contactCaptured": "İletişim tamam",
       "publicLevelTest": "Public seviye tespiti",
+      "programInquiry": "Program bilgi talebi",
+      "callbackRequest": "Geri arama talebi",
       "startEnrollment": "Kayıt Başlat",
       "continueEnrollment": "Kayda Devam Et",
       "enrollmentOpening": "Açılıyor...",
@@ -1288,7 +1303,8 @@
         "no_answer": "Ulaşılamadı",
         "emailed": "E-posta gönderildi",
         "error": "Kaydedilemedi, tekrar deneyin."
-      }
+      },
+      "lostCloseConfirm": "Adayın planlı görüşmesi veya açık görevleri varsa kapatılsın mı? \"Tamam\" kapatır, \"İptal\" olduğu gibi bırakır (aday yine kaybedildi olarak işaretlenir)."
     },
     "enrollment": {
       "title": "Öğrenci Kaydı",
@@ -1567,7 +1583,9 @@
         "guardian": "veli"
       },
       "reviewSummary": "{parties} sözleşme tarafı ve {documents} evrak kayıtla ilişkilendirilecek.",
-      "documentProcessing": "Belge işleniyor, birkaç saniye sonra tekrar deneyin."
+      "documentProcessing": "Belge işleniyor, birkaç saniye sonra tekrar deneyin.",
+      "closeOpenItemsLabel": "Açık görev ve randevuları kapat",
+      "closeOpenItemsHint": "Kayıt tamamlanınca adayın bekleyen görüşmesi iptal edilir, açık sistem görevleri kapanır."
     },
     "empty": {
       "calendar": {
@@ -1713,6 +1731,22 @@
         "titleRequired": "Türkçe başlık gerekli.",
         "slugReserved": "Bu adres sistem tarafından kullanılıyor, başka bir slug seçin.",
         "slugTaken": "Bu slug zaten kullanımda."
+      },
+      "editor": {
+        "bold": "Kalın",
+        "italic": "İtalik",
+        "underline": "Altı çizili",
+        "heading": "Başlık",
+        "subheading": "Alt başlık",
+        "bulletList": "Madde listesi",
+        "orderedList": "Numaralı liste",
+        "blockquote": "Alıntı",
+        "link": "Bağlantı ekle",
+        "image": "Görsel ekle",
+        "undo": "Geri al",
+        "redo": "Yinele",
+        "linkPrompt": "Bağlantı adresi (URL)",
+        "imagePrompt": "Görsel adresi (https://...)"
       }
     }
   },
@@ -1747,7 +1781,9 @@
     "error": "Mesaj gönderilemedi. Tekrar dene.",
     "attachmentsAdd": "Dosya",
     "attachmentsUploading": "Yükleniyor...",
-    "attachmentsError": "Dosya yüklenemedi"
+    "attachmentsError": "Dosya yüklenemedi",
+    "searchClear": "Aramayı temizle",
+    "voiceError": "Ses kaydı yüklenemedi. Tekrar deneyin."
   },
   "student": {
     "nav": {

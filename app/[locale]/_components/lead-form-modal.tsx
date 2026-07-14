@@ -131,6 +131,12 @@ function LeadFormModal({
     'idle',
   );
   const [formStartedAt] = useState(() => Date.now());
+  // One key per form session: retries after a failed attempt reuse it so the
+  // server dedupes (no duplicate inquiry/mail); a fresh key is only minted
+  // after a successful send, i.e. for a genuinely new lead.
+  const [idempotencyKey, setIdempotencyKey] = useState(() =>
+    crypto.randomUUID(),
+  );
 
   const isProgram = config.kind === 'program';
 
@@ -164,7 +170,7 @@ function LeadFormModal({
           email,
           firstName,
           formStartedAt,
-          idempotencyKey: crypto.randomUUID(),
+          idempotencyKey,
           kind: config.kind,
           language:
             config.kind === 'callback' ? language || undefined : undefined,
@@ -185,6 +191,7 @@ function LeadFormModal({
       const body = await response.json().catch(() => ({}));
       if (!response.ok) throw new Error(String(body.error ?? 'lead_failed'));
       setStatus('success');
+      setIdempotencyKey(crypto.randomUUID());
     } catch (error) {
       const code = error instanceof Error ? error.message : '';
       if (code === 'invalid_phone') {

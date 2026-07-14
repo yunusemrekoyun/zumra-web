@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useTransition } from 'react';
 import { useTranslations } from 'next-intl';
 import {
   CalendarClock,
@@ -26,7 +26,12 @@ export function TasksClient({
   const t = useTranslations('advisor.tasks');
   const router = useRouter();
   const [busyId, setBusyId] = useState<string | null>(null);
+  // Keeps the board disabled until the refreshed data lands; releasing the
+  // buttons on the stale board lets a second click hit the already-claimed
+  // task and show a misleading "task taken" error.
+  const [refreshing, startRefresh] = useTransition();
   const [error, setError] = useState('');
+  const acting = busyId !== null || refreshing;
 
   const formatter = new Intl.DateTimeFormat(locale, {
     dateStyle: 'medium',
@@ -35,7 +40,7 @@ export function TasksClient({
   });
 
   async function act(taskId: string, action: 'claim' | 'complete') {
-    if (busyId) return;
+    if (acting) return;
     setBusyId(taskId);
     setError('');
     try {
@@ -49,7 +54,7 @@ export function TasksClient({
         setError(response.status === 409 ? t('taken') : t('error'));
         return;
       }
-      router.refresh();
+      startRefresh(() => router.refresh());
     } catch {
       setError(t('error'));
     } finally {
@@ -76,7 +81,7 @@ export function TasksClient({
                   action={
                     <button
                       type="button"
-                      disabled={busyId !== null}
+                      disabled={acting}
                       onClick={() => act(task.id, 'claim')}
                       className="inline-flex min-h-9 items-center gap-1.5 rounded-xl bg-[#533089] px-3 text-xs font-bold uppercase tracking-wider text-white transition-colors hover:bg-[#462878] disabled:opacity-50"
                     >
@@ -105,7 +110,7 @@ export function TasksClient({
                   action={
                     <button
                       type="button"
-                      disabled={busyId !== null}
+                      disabled={acting}
                       onClick={() => act(task.id, 'complete')}
                       className="inline-flex min-h-9 items-center gap-1.5 rounded-xl bg-white px-3 text-xs font-bold text-[#1E7F5C] ring-1 ring-[#1E7F5C]/25 transition-colors hover:bg-[#1E7F5C]/10 disabled:opacity-50"
                     >
@@ -168,7 +173,10 @@ export function TaskQuickPanel({
   const t = useTranslations('advisor.tasks');
   const router = useRouter();
   const [busyId, setBusyId] = useState<string | null>(null);
+  // Same guard as TasksClient: stay disabled until the refresh lands.
+  const [refreshing, startRefresh] = useTransition();
   const [error, setError] = useState('');
+  const acting = busyId !== null || refreshing;
 
   const formatter = new Intl.DateTimeFormat(locale, {
     dateStyle: 'medium',
@@ -177,7 +185,7 @@ export function TaskQuickPanel({
   });
 
   async function act(taskId: string, action: 'claim' | 'complete') {
-    if (busyId) return;
+    if (acting) return;
     setBusyId(taskId);
     setError('');
     try {
@@ -191,7 +199,7 @@ export function TaskQuickPanel({
         setError(response.status === 409 ? t('taken') : t('error'));
         return;
       }
-      router.refresh();
+      startRefresh(() => router.refresh());
     } catch {
       setError(t('error'));
     } finally {
@@ -222,7 +230,7 @@ export function TaskQuickPanel({
                 mode === 'pool' ? (
                   <button
                     type="button"
-                    disabled={busyId !== null}
+                    disabled={acting}
                     onClick={() => act(task.id, 'claim')}
                     className="inline-flex min-h-9 items-center gap-1.5 rounded-xl bg-[#533089] px-3 text-xs font-bold uppercase tracking-wider text-white transition-colors hover:bg-[#462878] disabled:opacity-50"
                   >
@@ -232,7 +240,7 @@ export function TaskQuickPanel({
                 ) : (
                   <button
                     type="button"
-                    disabled={busyId !== null}
+                    disabled={acting}
                     onClick={() => act(task.id, 'complete')}
                     className="inline-flex min-h-9 items-center gap-1.5 rounded-xl bg-white px-3 text-xs font-bold text-[#1E7F5C] ring-1 ring-[#1E7F5C]/25 transition-colors hover:bg-[#1E7F5C]/10 disabled:opacity-50"
                   >

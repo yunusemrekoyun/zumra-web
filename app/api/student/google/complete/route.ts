@@ -63,7 +63,7 @@ export async function POST(request: Request) {
       targetType: 'external_identity',
     });
 
-    return apiResponse({ identity, status: 'ready' }, 200, id);
+    return apiResponse({ identity, role: principal.role, status: 'ready' }, 200, id);
   } catch (error) {
     if (parsed.data.mode === 'signin') {
       await auth.api.signOut({ headers: request.headers }).catch(() => undefined);

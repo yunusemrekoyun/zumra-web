@@ -18,6 +18,7 @@ import {
 
 const patchSchema = z.object({
   advisorId: z.string().min(1).nullable().optional(),
+  closeOpenItems: z.boolean().optional(),
   stage: z.enum(candidateStages).optional(),
 });
 
@@ -48,7 +49,9 @@ export async function PATCH(
     }
 
     if (parsed.data.stage !== undefined) {
-      await updateCandidateStage(principal, candidateId, parsed.data.stage);
+      await updateCandidateStage(principal, candidateId, parsed.data.stage, {
+        closeOpenItems: parsed.data.closeOpenItems,
+      });
     }
     if (parsed.data.advisorId !== undefined) {
       await assignCandidateAdvisor(

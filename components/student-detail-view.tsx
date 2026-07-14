@@ -8,6 +8,7 @@ import {
 } from 'lucide-react';
 import { getTranslations } from 'next-intl/server';
 import { Link } from '@/i18n/navigation';
+import { APP_TIME_ZONE } from '@/lib/datetime';
 import {
   ActionBar,
   Card,
@@ -357,6 +358,7 @@ function formatDate(value: string, locale: string) {
     day: 'numeric',
     month: 'long',
     year: 'numeric',
+    timeZone: APP_TIME_ZONE,
   }).format(new Date(value));
 }
 
@@ -367,6 +369,7 @@ function formatDateTime(value: string | undefined, locale: string) {
     hour: '2-digit',
     minute: '2-digit',
     month: 'long',
+    timeZone: APP_TIME_ZONE,
   }).format(new Date(value));
 }
 

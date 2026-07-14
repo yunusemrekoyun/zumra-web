@@ -2,6 +2,7 @@
 
 import { useRef, useState } from 'react';
 import { Loader2, Paperclip, X } from 'lucide-react';
+import { uploadMedia } from '@/lib/media-upload-client';
 
 export type Attachment = { mediaAssetId: string; name: string };
 
@@ -10,22 +11,6 @@ function mediaKind(file: File): 'image' | 'video' | 'audio' | 'document' {
   if (file.type.startsWith('video/')) return 'video';
   if (file.type.startsWith('audio/')) return 'audio';
   return 'document';
-}
-
-async function uploadMedia(file: File): Promise<string> {
-  const response = await fetch('/api/media', {
-    body: file,
-    credentials: 'same-origin',
-    headers: {
-      'x-file-name': encodeURIComponent(file.name),
-      'x-media-kind': mediaKind(file),
-      'x-media-visibility': 'private',
-    },
-    method: 'POST',
-  });
-  const body = await response.json().catch(() => ({}));
-  if (!response.ok || !body.id) throw new Error('upload_failed');
-  return body.id as string;
 }
 
 export function AttachmentInput({
@@ -42,6 +27,10 @@ export function AttachmentInput({
   const inputRef = useRef<HTMLInputElement>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState(false);
+  // Latest value, so slow uploads merge into fresh state instead of a stale
+  // closure (e.g. an attachment removed mid-upload must not reappear).
+  const valueRef = useRef(value);
+  valueRef.current = value;
 
   async function handleFiles(files: FileList | null) {
     if (!files || !files.length) return;
@@ -50,10 +39,12 @@ export function AttachmentInput({
     try {
       const uploaded: Attachment[] = [];
       for (const file of Array.from(files)) {
-        const id = await uploadMedia(file);
+        // Shared helper waits until the asset is 'ready' (images/videos are
+        // transcoded async) — attaching earlier would 409 on send.
+        const id = await uploadMedia(file, mediaKind(file));
         uploaded.push({ mediaAssetId: id, name: file.name });
       }
-      onChange([...value, ...uploaded]);
+      onChange([...valueRef.current, ...uploaded]);
     } catch {
       setError(true);
     } finally {

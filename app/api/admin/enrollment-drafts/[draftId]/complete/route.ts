@@ -15,6 +15,7 @@ import { completeEnrollment } from '@/lib/server/services/enrollments';
 export const runtime = 'nodejs';
 
 const completeSchema = z.object({
+  closeOpenItems: z.boolean().default(false),
   locale: z.enum(['tr', 'en']).default('tr'),
   password: z.string().min(12).max(128),
 });
@@ -43,6 +44,7 @@ export async function POST(
       principal,
       draftId,
       parsed.data.locale,
+      { closeOpenItems: parsed.data.closeOpenItems },
     );
     await auditService.record({
       action: 'candidate.enrollment_completed',

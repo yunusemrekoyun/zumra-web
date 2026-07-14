@@ -31,6 +31,7 @@ import {
   TimelineItem,
 } from '@/components/ui';
 import { useRouter } from '@/i18n/navigation';
+import { APP_TIME_ZONE } from '@/lib/datetime';
 import { AppointmentPanel } from './appointment-panel';
 import type { CandidateDirectoryRecord } from '@/lib/server/services/candidate-directory';
 import type { AdvisorOption } from '@/lib/server/services/candidate-pipeline';
@@ -57,11 +58,13 @@ export function CandidatesClient({
   basePath = '/admin/leads',
   candidates,
   currentUserId,
+  initialSelectedId,
 }: {
   advisors: AdvisorOption[];
   basePath?: string;
   candidates: CandidateDirectoryRecord[];
   currentUserId?: string;
+  initialSelectedId?: string;
 }) {
   const locale = useLocale();
   const t = useTranslations('admin.leads');
@@ -94,7 +97,9 @@ export function CandidatesClient({
       return matchesQuery && matchesStage && matchesFilter;
     });
   }, [candidates, currentUserId, filter, locale, query, stageFilter]);
-  const [selectedId, setSelectedId] = useState(candidates[0]?.id);
+  const [selectedId, setSelectedId] = useState(
+    initialSelectedId ?? candidates[0]?.id,
+  );
   const selected =
     visible.find((candidate) => candidate.id === selectedId) ??
     visible[0] ??
@@ -181,6 +186,7 @@ export function CandidatesClient({
 
   const profile = selected ? (
     <CandidateProfile
+      key={selected.id}
       advisors={advisors}
       basePath={basePath}
       candidate={selected}
@@ -240,6 +246,7 @@ function CandidateProfile({
 
   async function patchCandidate(payload: {
     advisorId?: string | null;
+    closeOpenItems?: boolean;
     stage?: string;
   }) {
     setActionError('');
@@ -323,11 +330,26 @@ function CandidateProfile({
           </div>
           <select
             value={candidate.stage}
-            onChange={(event) => patchCandidate({ stage: event.target.value })}
+            onChange={(event) => {
+              const stage = event.target.value;
+              // Losing a lead first asks whether its open meeting/tasks
+              // should be swept along; cancel keeps everything as-is.
+              if (stage === 'lost') {
+                const closeOpenItems = window.confirm(t('lostCloseConfirm'));
+                patchCandidate({ closeOpenItems, stage });
+                return;
+              }
+              patchCandidate({ stage });
+            }}
             className="rounded-xl border border-black/10 bg-white px-3 py-2 text-xs font-bold text-[#533089] outline-none focus:border-[#533089]/40"
           >
             {STAGES.map((stage) => (
-              <option key={stage} value={stage}>
+              // 'Kayıt oldu' is earned via the wizard, never hand-picked.
+              <option
+                key={stage}
+                value={stage}
+                disabled={stage === 'enrolled' && candidate.stage !== 'enrolled'}
+              >
                 {stageLabel(stage, t)}
               </option>
             ))}
@@ -400,7 +422,11 @@ function CandidateProfile({
             value={
               candidate.appointmentStatus === 'requested'
                 ? t('appointmentRequested')
-                : t('noAppointment')
+                : candidate.appointmentStatus === 'scheduled'
+                  ? t('appointment.statusScheduled')
+                  : candidate.appointmentStatus
+                    ? t(`appointment.outcome_${candidate.appointmentStatus}`)
+                    : t('noAppointment')
             }
           />
           <div className="rounded-2xl border border-black/[0.03] p-4">
@@ -577,6 +603,7 @@ function CandidateProfile({
                 time={new Intl.DateTimeFormat(locale, {
                   dateStyle: 'medium',
                   timeStyle: 'short',
+                  timeZone: APP_TIME_ZONE,
                 }).format(new Date(activity.occurredAt))}
                 tone={activityTone(activity.type)}
               />
@@ -758,7 +785,10 @@ function stageLabel(stage: string, t: ReturnType<typeof useTranslations>) {
 }
 
 function sourceLabel(source: string | undefined, t: ReturnType<typeof useTranslations>) {
-  return source === 'public_level_test' ? t('publicLevelTest') : source ?? '-';
+  if (source === 'public_level_test') return t('publicLevelTest');
+  if (source === 'program_inquiry') return t('programInquiry');
+  if (source === 'callback_request') return t('callbackRequest');
+  return source ?? '-';
 }
 
 function lessonModelLabel(

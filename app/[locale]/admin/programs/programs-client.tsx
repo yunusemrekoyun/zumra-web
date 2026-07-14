@@ -115,6 +115,7 @@ export function ProgramsClient({
   initial: ProgramManagementData;
 }) {
   const t = useTranslations('admin.programs');
+  const tLessonStatus = useTranslations('admin.calendar.statuses');
   const locale = useLocale();
   const [tab, setTab] = useState<'branches' | 'catalog' | 'rates'>('catalog');
   const [programs, setPrograms] = useState(initial.programs);
@@ -137,6 +138,7 @@ export function ProgramsClient({
       ),
     [programs],
   );
+  const [scheduleHistoryOpen, setScheduleHistoryOpen] = useState(false);
   const [branchDraft, setBranchDraft] = useState<BranchDraft>(
     emptyBranch(groupPrograms[0]?.id),
   );
@@ -177,6 +179,21 @@ export function ProgramsClient({
         .filter((date): date is Date => Boolean(date)),
     [scheduleDraft.manualLessons],
   );
+  // Past & terminal lessons survive a re-plan; the planner shows them as
+  // read-only history so the admin can see what stays untouched.
+  const scheduleHistory = useMemo(() => {
+    const sessions =
+      branches.find((branch) => branch.id === branchDraft.id)?.lessonSchedule
+        ?.sessions ?? [];
+    const now = Date.now();
+    return sessions.filter(
+      (session) =>
+        session.status === 'completed' ||
+        session.status === 'cancelled' ||
+        new Date(session.startsAt).getTime() < now,
+    );
+  }, [branches, branchDraft.id]);
+
   const scheduleCanSave = Boolean(
     branchDraft.id &&
       branchDraft.instructorProfileId &&
@@ -1954,6 +1971,58 @@ export function ProgramsClient({
                     </div>
                   </div>
                 </div>
+              </div>
+            )}
+
+            {scheduleHistory.length > 0 && (
+              <div className="mt-6 rounded-3xl border border-black/[0.06] bg-[#F8F9FC] p-4">
+                <div className="flex items-center justify-between gap-3">
+                  <div>
+                    <div className="text-xs font-bold uppercase tracking-wider text-[#2E286C]/45">
+                      {t('scheduleHistoryTitle')} · {scheduleHistory.length}
+                    </div>
+                    <p className="mt-1 text-xs font-medium leading-5 text-[#2E286C]/45">
+                      {t('scheduleHistoryHint')}
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setScheduleHistoryOpen((open) => !open)}
+                    className="shrink-0 rounded-xl px-3 py-2 text-xs font-bold text-[#533089] transition-colors hover:bg-[#533089]/8"
+                  >
+                    {scheduleHistoryOpen
+                      ? t('scheduleHistoryHide')
+                      : t('scheduleHistoryShow')}
+                  </button>
+                </div>
+                {scheduleHistoryOpen && (
+                  <div className="mt-3 max-h-56 space-y-1.5 overflow-y-auto pr-1">
+                    {scheduleHistory.map((session) => (
+                      <div
+                        key={session.id}
+                        className="flex items-center justify-between gap-3 rounded-2xl bg-white px-4 py-2.5 text-sm ring-1 ring-black/[0.03]"
+                      >
+                        <span className="font-semibold text-[#2E286C]/75">
+                          {formatDate(session.date, locale)} ·{' '}
+                          {session.startTime}
+                        </span>
+                        <span
+                          className={`rounded-lg px-2 py-1 text-[10px] font-bold uppercase tracking-wider ${
+                            session.status === 'completed'
+                              ? 'bg-emerald-50 text-emerald-700'
+                              : session.status === 'cancelled'
+                                ? 'bg-red-50 text-red-600'
+                                : session.status === 'postponed'
+                                  ? 'bg-amber-50 text-amber-700'
+                                  : 'bg-black/[0.04] text-[#2E286C]/55'
+                          }`}
+                        >
+                          {tLessonStatus(session.status)}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
             )}
 

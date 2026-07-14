@@ -236,9 +236,20 @@ export async function listCandidateDirectory(): Promise<
     const latestAttempt = attempts.find(
       (attempt) => attempt.inquiryId === latestInquiry?.id,
     );
-    const latestAppointment = appointments.find(
-      (appointment) => appointment.inquiryId === latestInquiry?.id,
+    // Appointment lifecycle is per candidate (matches candidate-pipeline):
+    // show the active one whichever inquiry it came from, else the newest.
+    const inquiryIds = new Set(
+      candidateInquiriesList.map((inquiry) => inquiry.id),
     );
+    const candidateAppointments = appointments.filter((appointment) =>
+      inquiryIds.has(appointment.inquiryId),
+    );
+    const latestAppointment =
+      candidateAppointments.find(
+        (appointment) =>
+          appointment.status === 'requested' ||
+          appointment.status === 'scheduled',
+      ) ?? candidateAppointments[0];
     const activeEnrollmentDraft = drafts.find(
       (draft) => draft.candidateId === candidate.id,
     );

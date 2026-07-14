@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useTranslations } from 'next-intl';
 import {
   CalendarClock,
@@ -26,6 +26,21 @@ type Row = AssignmentForGrading['roster'][number] & {
   sharedFailed: boolean;
 };
 
+function toRow(entry: AssignmentForGrading['roster'][number]): Row {
+  return {
+    ...entry,
+    scoreInput:
+      entry.submission?.score != null ? String(entry.submission.score) : '',
+    feedbackInput: entry.submission?.feedback ?? '',
+    busy: false,
+    saved: false,
+    failed: false,
+    sharing: false,
+    sharedOk: false,
+    sharedFailed: false,
+  };
+}
+
 export function GradingClient({
   data,
   locale,
@@ -36,19 +51,21 @@ export function GradingClient({
   const t = useTranslations('teacher.assignments');
   const router = useRouter();
   const { assignment } = data;
-  const [rows, setRows] = useState<Row[]>(() =>
-    data.roster.map((row) => ({
-      ...row,
-      scoreInput: row.submission?.score != null ? String(row.submission.score) : '',
-      feedbackInput: row.submission?.feedback ?? '',
-      busy: false,
-      saved: false,
-      failed: false,
-      sharing: false,
-      sharedOk: false,
-      sharedFailed: false,
-    })),
-  );
+  const [rows, setRows] = useState<Row[]>(() => data.roster.map(toRow));
+
+  // router.refresh() delivers a fresh roster via props; fold it into local
+  // state so new submissions appear without losing unsaved per-row edits.
+  useEffect(() => {
+    setRows((current) => {
+      const byStudent = new Map(
+        current.map((row) => [row.studentProfileId, row]),
+      );
+      return data.roster.map((entry) => {
+        const existing = byStudent.get(entry.studentProfileId);
+        return existing ? { ...existing, ...entry } : toRow(entry);
+      });
+    });
+  }, [data.roster]);
 
   function patch(index: number, next: Partial<Row>) {
     setRows((current) =>

@@ -1,6 +1,7 @@
 'use client';
 
 import React from 'react';
+import { useParams } from 'next/navigation';
 import { useLocale, useTranslations } from 'next-intl';
 import { Languages } from 'lucide-react';
 import { usePathname, useRouter } from '@/i18n/navigation';
@@ -21,6 +22,7 @@ export function LanguageSwitcher({ className, variant = 'public' }: LanguageSwit
   const locale = useLocale() as Locale;
   const t = useTranslations('common.languageSwitcher');
   const pathname = usePathname();
+  const params = useParams();
   const router = useRouter();
 
   const switchLocale = (nextLocale: Locale) => {
@@ -28,7 +30,14 @@ export function LanguageSwitcher({ className, variant = 'public' }: LanguageSwit
       return;
     }
 
-    router.replace(pathname, { locale: nextLocale });
+    // On dynamic detail pages listed in `workspacePathnames` (e.g.
+    // `/admin/students/[studentId]`) `usePathname` returns the route template,
+    // so the current route params must be provided for next-intl to compile
+    // the localized URL instead of throwing on the unfilled placeholder.
+    router.replace(
+      { params, pathname } as unknown as Parameters<typeof router.replace>[0],
+      { locale: nextLocale },
+    );
   };
 
   return (

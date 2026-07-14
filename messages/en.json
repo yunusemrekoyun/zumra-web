@@ -170,7 +170,8 @@
       "submit": "Send consultation request",
       "successTitle": "We received your request.",
       "successDescription": "Our advisor team will review your availability and contact you.",
-      "status": "Requested"
+      "status": "Requested",
+      "alreadyExists": "You already have a pending consultation request; our team will contact you."
     }
   },
   "workspace": {
@@ -227,7 +228,8 @@
       "unassign": "Remove assignment",
       "noOtherAdvisors": "No other advisor to transfer to.",
       "advisorRole": "Advisor",
-      "unassignHint": "Leave the lead unowned"
+      "unassignHint": "Leave the lead unowned",
+      "transferError": "Advisor transfer failed. Please try again."
     },
     "profilePhoto": {
       "change": "Change photo",
@@ -622,6 +624,7 @@
       "orphansHint": "These files aren't linked to any message, assignment or profile — safe to delete.",
       "noOrphans": "No orphan files — everything is in use 🎉",
       "delete": "Delete",
+      "deleteFailed": "The file could not be deleted. Please try again.",
       "close": "Close",
       "userFileCount": "{count} files",
       "download": "Download",
@@ -636,7 +639,8 @@
         "advisor": "Advisor",
         "admin": "Admin"
       },
-      "deleteConfirm": "Permanently delete this file?"
+      "deleteConfirm": "Permanently delete this file?",
+      "fileNotReady": "File isn't ready yet (still processing or unavailable), so it couldn't be downloaded."
     },
     "shell": {
       "searchPlaceholder": "Search students, instructors or messages..."
@@ -711,7 +715,9 @@
         "save": "Save",
         "saving": "Saving...",
         "success": "Settings saved.",
-        "error": "Could not save settings. Try again."
+        "error": "Could not save settings. Try again.",
+        "loadError": "Could not load settings. Try again.",
+        "retry": "Retry"
       },
       "mailMode": {
         "badge": "Mail",
@@ -959,7 +965,11 @@
       "rateErrors": {
         "languageMismatch": "The selected teacher has no active competency for this language. Add it on the Teachers page.",
         "invalidRate": "The rate is invalid. Check the hourly amount."
-      }
+      },
+      "scheduleHistoryTitle": "Lesson schedule history",
+      "scheduleHistoryHint": "Taught and past lessons survive schedule changes; a new plan only updates future lessons.",
+      "scheduleHistoryShow": "Show",
+      "scheduleHistoryHide": "Hide"
     },
     "instructors": {
       "title": "Instructors",
@@ -1164,6 +1174,8 @@
         "stale": "This appointment changed elsewhere. Please refresh the page.",
         "planHint": "Book a consultation for this lead directly; the confirmation email is sent automatically.",
         "planCta": "Book Consultation",
+        "planAgain": "Plan a new consultation",
+        "planAgainHint": "This consultation is closed; if the process continues you can book a new one.",
         "noneClosed": "No consultation can be booked for this lead.",
         "reschedule": "Reschedule",
         "rescheduleCta": "Save New Time",
@@ -1183,7 +1195,8 @@
         "result_negative": "Negative meeting",
         "followUpAt": "Follow-up call: {when}",
         "statusRequested": "Requested",
-        "statusScheduled": "Scheduled"
+        "statusScheduled": "Scheduled",
+        "invalidTime": "The chosen time is invalid — it cannot be in the past."
       },
       "noAppointment": "No request yet",
       "source": "Source",
@@ -1205,6 +1218,8 @@
       "noNotes": "No notes yet.",
       "contactCaptured": "Contact complete",
       "publicLevelTest": "Public level assessment",
+      "programInquiry": "Program information request",
+      "callbackRequest": "Callback request",
       "startEnrollment": "Start Enrollment",
       "continueEnrollment": "Continue Enrollment",
       "enrollmentOpening": "Opening...",
@@ -1288,7 +1303,8 @@
         "no_answer": "No answer",
         "emailed": "Email sent",
         "error": "Could not save, try again."
-      }
+      },
+      "lostCloseConfirm": "Close the candidate's scheduled meeting and open tasks too? \"OK\" closes them, \"Cancel\" leaves them as-is (the candidate is still marked lost)."
     },
     "enrollment": {
       "title": "Student Enrollment",
@@ -1567,7 +1583,9 @@
         "guardian": "guardian"
       },
       "reviewSummary": "{parties} contract parties and {documents} documents will be linked to the enrollment.",
-      "documentProcessing": "The document is still processing, try again in a few seconds."
+      "documentProcessing": "The document is still processing, try again in a few seconds.",
+      "closeOpenItemsLabel": "Close open tasks and appointments",
+      "closeOpenItemsHint": "On completion the candidate's pending consultation is cancelled and open system tasks are closed."
     },
     "empty": {
       "calendar": {
@@ -1713,6 +1731,22 @@
         "titleRequired": "Turkish title is required.",
         "slugReserved": "This address is reserved by the system; choose another slug.",
         "slugTaken": "This slug is already in use."
+      },
+      "editor": {
+        "bold": "Bold",
+        "italic": "Italic",
+        "underline": "Underline",
+        "heading": "Heading",
+        "subheading": "Subheading",
+        "bulletList": "Bullet list",
+        "orderedList": "Numbered list",
+        "blockquote": "Quote",
+        "link": "Insert link",
+        "image": "Insert image",
+        "undo": "Undo",
+        "redo": "Redo",
+        "linkPrompt": "Link address (URL)",
+        "imagePrompt": "Image address (https://...)"
       }
     }
   },
@@ -1747,7 +1781,9 @@
     "error": "Could not send the message. Try again.",
     "attachmentsAdd": "File",
     "attachmentsUploading": "Uploading...",
-    "attachmentsError": "Upload failed"
+    "attachmentsError": "Upload failed",
+    "searchClear": "Clear search",
+    "voiceError": "Voice recording could not be uploaded. Try again."
   },
   "student": {
     "nav": {

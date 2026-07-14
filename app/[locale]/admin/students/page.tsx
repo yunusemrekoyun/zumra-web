@@ -1,6 +1,7 @@
 import { getTranslations } from 'next-intl/server';
 import { Link } from '@/i18n/navigation';
 import { PageHeader } from '@/components/ui';
+import { APP_TIME_ZONE } from '@/lib/datetime';
 import { requireWorkspaceRole } from '@/lib/server/authorization';
 import { getAdminStudents } from '@/lib/server/services/students';
 import { AdminStudentsClient, type AdminStudentCard } from './students-client';
@@ -96,5 +97,6 @@ function formatNextLesson(value: string | undefined, locale: string) {
     hour: '2-digit',
     minute: '2-digit',
     month: 'short',
+    timeZone: APP_TIME_ZONE,
   }).format(new Date(value));
 }

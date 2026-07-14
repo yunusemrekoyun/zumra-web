@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { useTranslations } from 'next-intl';
 import { ClipboardList, Search, Send, X } from 'lucide-react';
 import { type Attachment, AttachmentInput } from '@/components/attachment-input';
 import { VoiceRecorderButton } from '@/components/voice-recorder-button';
@@ -52,6 +53,7 @@ export function ChatThreadClient({
     voiceUploading: string;
   };
 }) {
+  const t = useTranslations('chat');
   const [messages, setMessages] = useState<ChatMessage[]>(initialMessages);
   const [body, setBody] = useState('');
   const [attachments, setAttachments] = useState<Attachment[]>([]);
@@ -90,27 +92,33 @@ export function ChatThreadClient({
     return () => clearInterval(timer);
   }, [fetchNew]);
 
-  // Debounced conversation-scoped search.
+  // Debounced conversation-scoped search. Aborted on every query change so a
+  // stale response can never clobber the current results (or re-lock the
+  // composer after the search was cleared).
   useEffect(() => {
     const q = search.trim();
     if (!q) {
       setResults(null);
       return;
     }
+    const controller = new AbortController();
     const handle = setTimeout(async () => {
       try {
         const response = await fetch(
           `/api/conversations/${conversationId}/search?q=${encodeURIComponent(q)}`,
-          { credentials: 'same-origin' },
+          { credentials: 'same-origin', signal: controller.signal },
         );
         if (!response.ok) return;
         const data = (await response.json()) as { messages: ChatMessage[] };
-        setResults(data.messages ?? []);
+        if (!controller.signal.aborted) setResults(data.messages ?? []);
       } catch {
-        setResults([]);
+        if (!controller.signal.aborted) setResults([]);
       }
     }, 300);
-    return () => clearTimeout(handle);
+    return () => {
+      controller.abort();
+      clearTimeout(handle);
+    };
   }, [search, conversationId]);
 
   useEffect(() => {
@@ -213,7 +221,7 @@ export function ChatThreadClient({
             type="button"
             onClick={() => setSearch('')}
             className="rounded-lg p-1 text-[#2E286C]/40 hover:bg-black/[0.03]"
-            aria-label="clear"
+            aria-label={t('searchClear')}
           >
             <X className="h-4 w-4" />
           </button>
@@ -277,6 +285,7 @@ export function ChatThreadClient({
                 record: labels.voiceRecord,
                 stop: labels.voiceStop,
                 uploading: labels.voiceUploading,
+                error: t('voiceError'),
               }}
             />
             <textarea

@@ -43,6 +43,7 @@ export function PersonJourneyPanel({
   const [transferOpen, setTransferOpen] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
+  const [transferError, setTransferError] = useState(false);
 
   const transferTargets = advisors.filter(
     (advisor) => advisor.id !== journey.advisorId,
@@ -58,6 +59,7 @@ export function PersonJourneyPanel({
     if (busy) return;
     setBusy(true);
     setError('');
+    setTransferError(false);
     try {
       const response = await fetch(
         `/api/admin/candidates/${journey.candidateId}`,
@@ -72,6 +74,9 @@ export function PersonJourneyPanel({
       setTransferOpen(false);
       router.refresh();
     } catch {
+      // The picker modal stays open on failure and its overlay covers the
+      // panel, so surface the error inside the modal as well.
+      setTransferError(true);
       setError(t('error'));
     } finally {
       setBusy(false);
@@ -158,6 +163,7 @@ export function PersonJourneyPanel({
               onClick={() => {
                 setTransferOpen(!transferOpen);
                 setError('');
+                setTransferError(false);
               }}
               className="inline-flex min-h-8 flex-none items-center gap-1.5 rounded-xl bg-white px-2.5 text-[11px] font-bold text-[#533089] ring-1 ring-[#533089]/20 transition-colors hover:bg-[#533089]/10 disabled:opacity-50"
             >
@@ -170,7 +176,7 @@ export function PersonJourneyPanel({
 
       <EntityPicker
         busy={busy}
-        description={journey.fullName}
+        description={transferError ? t('transferError') : journey.fullName}
         icon={ArrowLeftRight}
         items={[
           ...transferTargets.map((advisor) => ({
@@ -195,7 +201,10 @@ export function PersonJourneyPanel({
               ]
             : []),
         ]}
-        onClose={() => setTransferOpen(false)}
+        onClose={() => {
+          setTransferOpen(false);
+          setTransferError(false);
+        }}
         onSelect={(item) =>
           transferAdvisor(item.id === '__unassign__' ? '' : item.id)
         }

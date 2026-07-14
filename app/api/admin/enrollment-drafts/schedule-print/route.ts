@@ -1,4 +1,5 @@
 import { eq } from 'drizzle-orm';
+import { getTranslations } from 'next-intl/server';
 import { z } from 'zod';
 import { requireStaffSession } from '@/lib/server/authorization';
 import { database } from '@/lib/server/db/client';
@@ -55,12 +56,24 @@ export async function GET(request: Request) {
       .where(eq(lessonSessions.branchId, branchId))
       .orderBy(lessonSessions.startsAt);
 
-    return new Response(renderScheduleHtml(branch, sessions), {
-      headers: {
-        'content-type': 'text/html; charset=utf-8',
-        'X-Request-ID': id,
-      },
+    // The printable document is Turkish by default; an explicit locale query
+    // param can switch the status labels for bilingual callers.
+    const localeParam = url.searchParams.get('locale');
+    const locale = localeParam === 'en' ? 'en' : 'tr';
+    const statusLabels = await getTranslations({
+      locale,
+      namespace: 'admin.calendar.statuses',
     });
+
+    return new Response(
+      renderScheduleHtml(branch, sessions, (status) => statusLabels(status)),
+      {
+        headers: {
+          'content-type': 'text/html; charset=utf-8',
+          'X-Request-ID': id,
+        },
+      },
+    );
   } catch (error) {
     return apiErrorResponse(error, id);
   }
@@ -79,12 +92,13 @@ function renderScheduleHtml(
     status: string;
     timezone: string;
   }>,
+  statusLabel: (status: string) => string,
 ) {
   const rows = sessions
     .map((session, index) => {
       const start = lessonSessionLocalParts(session.startsAt, session.timezone);
       const end = lessonSessionLocalParts(session.endsAt, session.timezone);
-      return `<tr><td>${index + 1}</td><td>${escapeHtml(start.date)}</td><td>${escapeHtml(start.time)} - ${escapeHtml(end.time)}</td><td>${escapeHtml(session.status)}</td></tr>`;
+      return `<tr><td>${index + 1}</td><td>${escapeHtml(start.date)}</td><td>${escapeHtml(start.time)} - ${escapeHtml(end.time)}</td><td>${escapeHtml(statusLabel(session.status))}</td></tr>`;
     })
     .join('');
 

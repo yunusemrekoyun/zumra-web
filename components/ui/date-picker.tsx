@@ -5,6 +5,7 @@ import { createPortal } from 'react-dom';
 import { CalendarClock, CalendarDays, Check, X } from 'lucide-react';
 import { DayPicker, type DateRange } from 'react-day-picker';
 import { enUS, tr } from 'react-day-picker/locale';
+import { isoToIstanbulWallClock, istanbulWallClockToISO } from '@/lib/datetime';
 import { cn } from '@/lib/utils';
 
 function parseDate(value?: string) {
@@ -305,8 +306,14 @@ export function DateTimePicker({
         Number(minute),
       )
     : undefined;
+  // Callers interpret the emitted value as Istanbul wall-clock, so compare the
+  // candidate's Istanbul instant against `min` instead of a browser-local one.
   const candidateIsValid =
-    candidate && (!min || candidate.getTime() >= min.getTime());
+    candidate &&
+    (!min ||
+      new Date(
+        istanbulWallClockToISO(serializeDateTime(candidate)),
+      ).getTime() >= min.getTime());
 
   return (
     <div className="relative">
@@ -351,7 +358,7 @@ export function DateTimePicker({
               weekStartsOn={1}
               showOutsideDays
               fixedWeeks
-              disabled={min ? [{ before: min }] : undefined}
+              disabled={min ? [{ before: toIstanbulWallClock(min) }] : undefined}
               className="zumra-calendar"
             />
             <div className="mt-3 grid grid-cols-[1fr_auto_1fr] items-center gap-2">
@@ -411,9 +418,19 @@ export function DateTimePicker({
   );
 }
 
+/** Project an instant onto Istanbul wall-clock, carried in a local Date. */
+function toIstanbulWallClock(instant: Date) {
+  const [datePart, timePart] =
+    isoToIstanbulWallClock(instant.toISOString()).split('T');
+  const [year, month, day] = datePart.split('-').map(Number);
+  const [hour, minute] = timePart.split(':').map(Number);
+  return new Date(year, month - 1, day, hour, minute);
+}
+
 function roundedFutureDate(min?: Date) {
-  const value = new Date(
-    Math.max(Date.now() + 60 * 60 * 1000, min?.getTime() ?? 0),
+  // Default draft in Istanbul wall-clock so it stays valid for the min check.
+  const value = toIstanbulWallClock(
+    new Date(Math.max(Date.now() + 60 * 60 * 1000, min?.getTime() ?? 0)),
   );
   value.setSeconds(0, 0);
   value.setMinutes(Math.ceil(value.getMinutes() / 15) * 15);

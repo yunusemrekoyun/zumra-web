@@ -227,11 +227,15 @@ export async function PATCH(
       return apiResponse(
         {
           error: 'invalid_request',
+          // Full dotted paths (minus the 'data' wrapper) so nested party
+          // issues don't collide with the student's own inputs; values are
+          // machine codes — the wizard localizes them per field.
           fieldErrors: Object.fromEntries(
-            parsed.error.issues.map((issue) => [
-              String(issue.path.at(-1) ?? 'form'),
-              issue.code,
-            ]),
+            parsed.error.issues.map((issue) => {
+              const path =
+                issue.path[0] === 'data' ? issue.path.slice(1) : issue.path;
+              return [path.join('.') || 'form', issue.code];
+            }),
           ),
         },
         400,

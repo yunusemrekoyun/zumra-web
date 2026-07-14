@@ -79,10 +79,16 @@ export function EntityPicker({
 
   useEffect(() => setMounted(true), []);
 
+  // Reset only when the modal (re)opens. A parent re-render hands us a new
+  // onClose identity, and tying the reset to it would wipe the query mid-type.
   useEffect(() => {
     if (!open) return;
     setQuery('');
     setGroup('all');
+  }, [open]);
+
+  useEffect(() => {
+    if (!open) return;
     const onKey = (event: KeyboardEvent) => {
       if (event.key === 'Escape') onClose();
     };

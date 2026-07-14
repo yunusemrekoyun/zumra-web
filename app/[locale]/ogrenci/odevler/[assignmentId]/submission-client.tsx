@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { CalendarClock, CheckCircle2, Clock, Paperclip, Send } from 'lucide-react';
 import { type Attachment, AttachmentInput } from '@/components/attachment-input';
+import { APP_TIME_ZONE } from '@/lib/datetime';
 import type { StudentAssignmentDetail } from '@/lib/server/services/assignments';
 import { Button, ModulePanel, StatusChip } from '@/components/ui';
 import { useRouter } from '@/i18n/navigation';
@@ -97,6 +98,7 @@ export function SubmissionClient({
                 month: 'long',
                 hour: '2-digit',
                 minute: '2-digit',
+                timeZone: APP_TIME_ZONE,
               }).format(new Date(data.lesson.startsAt))}
             </StatusChip>
           )}

@@ -14,10 +14,20 @@ type MediaRouteProps = {
   params: Promise<{ mediaId: string }>;
 };
 
+const UUID_PATTERN =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
 export const runtime = 'nodejs';
 
 export async function GET(request: Request, { params }: MediaRouteProps) {
   const { mediaId } = await params;
+
+  // Non-UUID ids can never match an asset and would make postgres throw on
+  // the uuid cast (unhandled 500), so reject them upfront.
+  if (!UUID_PATTERN.test(mediaId)) {
+    return NextResponse.json({ error: 'not_found' }, { status: 404 });
+  }
+
   const principal = await getSessionPrincipal();
   const asset = await getReadyAsset(mediaId, principal);
 

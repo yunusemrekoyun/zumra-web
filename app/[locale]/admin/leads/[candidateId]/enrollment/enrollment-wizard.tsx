@@ -5,9 +5,11 @@ import {
   type FormEvent,
   useEffect,
   useMemo,
+  useRef,
   useState,
 } from 'react';
 import { useLocale, useTranslations } from 'next-intl';
+import { APP_TIME_ZONE } from '@/lib/datetime';
 import {
   ArrowLeft,
   ArrowRight,
@@ -100,6 +102,7 @@ export function EnrollmentWizard({
     'contract' | 'identity' | 'other' | 'passport' | 'receipt'
   >(initial.draft.identityDocumentType === 'passport' ? 'passport' : 'identity');
   const [confirmationPassword, setConfirmationPassword] = useState('');
+  const [closeOpenItems, setCloseOpenItems] = useState(true);
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState('');
   const [fieldErrors, setFieldErrors] = useState<EnrollmentFieldErrors>({});
@@ -110,6 +113,9 @@ export function EnrollmentWizard({
     () => JSON.stringify(buildPatch(step, draft, parties)),
     [draft, parties, step],
   );
+  // The server echo merged into `draft` re-triggers this effect; without
+  // remembering what was last persisted the autosave would PATCH forever.
+  const lastSavedSignatureRef = useRef(autosaveSignature);
 
   const birthDateIsMinor = useMemo(() => {
     if (!draft.birthDate) return false;
@@ -120,6 +126,7 @@ export function EnrollmentWizard({
   useEffect(() => {
     if (
       isCompleted ||
+      autosaveSignature === lastSavedSignatureRef.current ||
       !canAutosaveStep(step, draft, parties, birthDateIsMinor, catalog)
     ) {
       return;
@@ -140,6 +147,7 @@ export function EnrollmentWizard({
         );
         const body = await response.json().catch(() => ({}));
         if (response.ok && body.savedAt) {
+          lastSavedSignatureRef.current = autosaveSignature;
           setLastSavedAt(body.savedAt);
           if (body.draft) {
             setDraft((current) => ({ ...current, ...body.draft }));
@@ -186,11 +194,11 @@ export function EnrollmentWizard({
     setFieldErrors({});
 
     try {
-      const payload = buildPatch(step, draft, parties);
+      const payload = JSON.stringify(buildPatch(step, draft, parties));
       const response = await fetch(
         `/api/admin/enrollment-drafts/${draft.id}`,
         {
-          body: JSON.stringify(payload),
+          body: payload,
           credentials: 'same-origin',
           headers: { 'content-type': 'application/json' },
           method: 'PATCH',
@@ -198,8 +206,9 @@ export function EnrollmentWizard({
       );
       const body = await response.json().catch(() => ({}));
       if (!response.ok) {
-        const mappedErrors =
-          body.fieldErrors ?? enrollmentApiFieldErrors(String(body.error ?? ''), t);
+        const mappedErrors = body.fieldErrors
+          ? localizeServerFieldErrors(body.fieldErrors, t)
+          : enrollmentApiFieldErrors(String(body.error ?? ''), t);
         if (Object.keys(mappedErrors).length) {
           setFieldErrors(mappedErrors);
           setMessage(t('validation.stepHasErrors'));
@@ -208,6 +217,7 @@ export function EnrollmentWizard({
         }
         throw new Error(body.error ?? 'save_failed');
       }
+      lastSavedSignatureRef.current = payload;
       setLastSavedAt(body.savedAt);
       if (body.draft) {
         setDraft((current) => ({ ...current, ...body.draft }));
@@ -237,7 +247,11 @@ export function EnrollmentWizard({
       const response = await fetch(
         `/api/admin/enrollment-drafts/${draft.id}/complete`,
         {
-          body: JSON.stringify({ locale, password: confirmationPassword }),
+          body: JSON.stringify({
+            closeOpenItems,
+            locale,
+            password: confirmationPassword,
+          }),
           credentials: 'same-origin',
           headers: { 'content-type': 'application/json' },
           method: 'POST',
@@ -395,6 +409,8 @@ export function EnrollmentWizard({
       setDocuments((current) =>
         current.filter((document) => document.id !== documentId),
       );
+    } catch {
+      setMessage(t('documentError'));
     } finally {
       setBusy(false);
     }
@@ -463,6 +479,7 @@ export function EnrollmentWizard({
                 date: new Intl.DateTimeFormat(locale, {
                   dateStyle: 'short',
                   timeStyle: 'short',
+                  timeZone: APP_TIME_ZONE,
                 }).format(new Date(lastSavedAt)),
               })}
             </div>
@@ -562,6 +579,8 @@ export function EnrollmentWizard({
                 isMinor={birthDateIsMinor}
                 parties={parties}
                 confirmationPassword={confirmationPassword}
+                closeOpenItems={closeOpenItems}
+                setCloseOpenItems={setCloseOpenItems}
                 setConfirmationPassword={setConfirmationPassword}
                 setDraft={setDraft}
                 onIssueClick={(issue, issueStep) => {
@@ -2083,22 +2102,26 @@ function buildSchedulePrintUrl(draftId: string, branchId?: string) {
 }
 
 function ReviewStep({
+  closeOpenItems,
   confirmationPassword,
   documents,
   draft,
   isMinor,
   onIssueClick,
   parties,
+  setCloseOpenItems,
   setConfirmationPassword,
   setDraft,
   t,
 }: {
+  closeOpenItems: boolean;
   confirmationPassword: string;
   documents: EnrollmentDraftView['documents'];
   draft: DraftState;
   isMinor: boolean;
   onIssueClick: (issue: string, step?: number) => void;
   parties: EnrollmentDraftView['parties'];
+  setCloseOpenItems: (value: boolean) => void;
   setConfirmationPassword: (value: string) => void;
   setDraft: SetDraft;
   t: WizardT;
@@ -2208,6 +2231,20 @@ function ReviewStep({
           setDraft((current) => ({ ...current, internalNotes: value }))
         }
       />
+      <label className="flex cursor-pointer items-start gap-3 rounded-2xl bg-[#F8F0DC] p-4">
+        <input
+          type="checkbox"
+          checked={closeOpenItems}
+          onChange={(event) => setCloseOpenItems(event.target.checked)}
+          className="mt-0.5 h-4 w-4 accent-[#533089]"
+        />
+        <span className="text-sm leading-5 text-[#9A6A0B]">
+          <span className="font-bold">{t('closeOpenItemsLabel')}</span>
+          <span className="mt-0.5 block text-xs font-medium">
+            {t('closeOpenItemsHint')}
+          </span>
+        </span>
+      </label>
       <Field
         label={t('fields.confirmationPassword')}
         type="password"
@@ -2623,6 +2660,22 @@ function validationMessages(t: WizardT) {
   };
 }
 
+// Server-side zod issues arrive as {dottedPath: machineCode}; users must see
+// the wizard's own translated field messages, never a raw code like
+// 'too_small'. Party paths collapse onto the shared 'guardian' message.
+function localizeServerFieldErrors(
+  raw: Record<string, string>,
+  t: WizardT,
+): EnrollmentFieldErrors {
+  const messages = validationMessages(t) as Record<string, string>;
+  const errors: EnrollmentFieldErrors = {};
+  for (const key of Object.keys(raw)) {
+    const field = key.startsWith('parties') ? 'guardian' : key;
+    errors[field] = messages[field] ?? t('validation.stepHasErrors');
+  }
+  return errors;
+}
+
 function enrollmentApiFieldErrors(code: string, t: WizardT) {
   const errors: EnrollmentFieldErrors = {};
 
@@ -2639,12 +2692,13 @@ function enrollmentApiFieldErrors(code: string, t: WizardT) {
 
   if (
     code === 'invitation_email_already_registered' ||
-    code === 'invitation_already_pending'
+    code === 'invitation_already_pending' ||
+    code === 'enrollment_email_taken'
   ) {
     errors.email =
-      code === 'invitation_email_already_registered'
-        ? t('fieldErrors.emailTaken')
-        : t('fieldErrors.emailPending');
+      code === 'invitation_already_pending'
+        ? t('fieldErrors.emailPending')
+        : t('fieldErrors.emailTaken');
     return errors;
   }
 

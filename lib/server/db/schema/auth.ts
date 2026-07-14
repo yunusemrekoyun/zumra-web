@@ -1,3 +1,5 @@
+import type { AnyPgColumn } from 'drizzle-orm/pg-core';
+import { mediaAssets } from './foundation';
 import {
   boolean,
   index,
@@ -50,7 +52,12 @@ export const users = pgTable(
     twoFactorEnabled: boolean('two_factor_enabled').notNull().default(false),
     // Self-service profile photo (scanned + re-encoded media asset). Kept
     // separate from Better Auth's 'image' (external OAuth avatar URL).
-    photoMediaAssetId: uuid('photo_media_asset_id'),
+    // Lazy reference (foundation.ts imports users back) — deleting the asset
+    // clears the pointer instead of leaving it dangling.
+    photoMediaAssetId: uuid('photo_media_asset_id').references(
+      (): AnyPgColumn => mediaAssets.id,
+      { onDelete: 'set null' },
+    ),
   },
   (table) => [
     uniqueIndex('users_email_unique').on(table.email),

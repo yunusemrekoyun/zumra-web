@@ -1,4 +1,4 @@
-import { requireRole } from '@/lib/server/authorization';
+import { requireAdminSession } from '@/lib/server/authorization';
 import {
   apiErrorResponse,
   apiResponse,
@@ -13,7 +13,7 @@ export async function GET(request: Request) {
   const id = requestId(request);
 
   try {
-    await requireRole('admin');
+    await requireAdminSession();
     const runs = await backupStatusService.listRecent();
     return apiResponse({ runs }, 200, id);
   } catch (error) {

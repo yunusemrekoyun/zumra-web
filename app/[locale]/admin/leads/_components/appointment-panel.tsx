@@ -79,14 +79,23 @@ export function AppointmentPanel({
         setError(
           response.status === 404 || response.status === 409
             ? t('stale')
-            : t('error'),
+            : response.status === 400
+              ? t('invalidTime')
+              : t('error'),
         );
-        setBusy(false);
         return;
       }
+      // Success wipes the panel's scratch state so the next mode (or the
+      // refreshed status) starts clean instead of inheriting stale input.
+      setMode('idle');
+      setNote('');
+      setPickerValue('');
+      setFollowUpValue('');
+      setVerdict(null);
       router.refresh();
     } catch {
       setError(t('error'));
+    } finally {
       setBusy(false);
     }
   }
@@ -258,6 +267,8 @@ export function AppointmentPanel({
               onClick={() => {
                 setMode(mode === 'reschedule' ? 'idle' : 'reschedule');
                 setError('');
+                setPickerValue('');
+                setError('');
                 if (scheduledStartsAt) {
                   setPickerValue(isoToIstanbulWallClock(scheduledStartsAt));
                 }
@@ -398,6 +409,10 @@ export function AppointmentPanel({
                       onClick={() => {
                         setMode('verdict');
                         setError('');
+                        setNote('');
+                        setVerdict(null);
+                        setFollowUpValue('');
+                        setError('');
                       }}
                       className="inline-flex min-h-10 items-center justify-center rounded-2xl bg-[#533089] px-3 text-xs font-bold text-white transition-colors hover:bg-[#462878] disabled:opacity-50"
                     >
@@ -463,6 +478,38 @@ export function AppointmentPanel({
             <p className="rounded-2xl bg-white p-3 text-sm text-[#2E286C]/75 ring-1 ring-black/[0.04]">
               {outcomeNote}
             </p>
+          )}
+
+          {/* The lifecycle continues: a thinking / unreachable / lost-then-
+              returned lead can get a fresh consultation booked right here. */}
+          {canCreate && (
+            <div className="space-y-3 border-t border-black/[0.06] pt-3">
+              <p className="text-sm text-[#2E286C]/60">{t('planAgainHint')}</p>
+              <DateTimePicker
+                locale={locale}
+                min={new Date()}
+                value={pickerValue}
+                onChange={setPickerValue}
+                placeholder={t('pickTime')}
+              />
+              {error && (
+                <p className="text-sm font-semibold text-red-600">{error}</p>
+              )}
+              <button
+                type="button"
+                disabled={busy || !pickerValue}
+                onClick={() =>
+                  send({
+                    action: 'create',
+                    startsAt: istanbulWallClockToISO(pickerValue),
+                  })
+                }
+                className="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-2xl bg-[#533089] px-5 text-xs font-bold uppercase tracking-wider text-white shadow-md shadow-[#533089]/20 transition-colors hover:bg-[#462878] disabled:opacity-50"
+              >
+                <CalendarPlus className="h-4 w-4" />
+                {t('planAgain')}
+              </button>
+            </div>
           )}
         </div>
       )}

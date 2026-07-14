@@ -95,7 +95,8 @@ export async function searchAdminDirectory(
       id: row.id,
       name: `${row.firstName} ${row.lastName}`.trim(),
       subtitle: row.email,
-      href: '/admin/leads',
+      // Candidates have no detail page; deep-link the directory's selection.
+      href: `/admin/leads?candidate=${row.id}`,
     })),
   ];
 }

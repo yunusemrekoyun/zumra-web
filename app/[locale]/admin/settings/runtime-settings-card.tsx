@@ -10,6 +10,8 @@ export function RuntimeSettingsCard() {
   const [joinLeadMinutes, setJoinLeadMinutes] = useState('15');
   const [autoCloseHours, setAutoCloseHours] = useState('3');
   const [loading, setLoading] = useState(true);
+  const [loadFailed, setLoadFailed] = useState(false);
+  const [reloadToken, setReloadToken] = useState(0);
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState<{
     text: string;
@@ -24,10 +26,18 @@ export function RuntimeSettingsCard() {
           credentials: 'same-origin',
         });
         const body = await response.json().catch(() => ({}));
-        if (active && response.ok && body.settings) {
+        if (!active) return;
+        if (response.ok && body.settings) {
           setJoinLeadMinutes(String(body.settings.joinLeadMinutes));
           setAutoCloseHours(String(body.settings.lessonAutoCloseHours));
+          setLoadFailed(false);
+        } else {
+          // Saving with the hardcoded defaults would silently overwrite the
+          // real stored values, so surface the failure and block the form.
+          setLoadFailed(true);
         }
+      } catch {
+        if (active) setLoadFailed(true);
       } finally {
         if (active) setLoading(false);
       }
@@ -35,9 +45,16 @@ export function RuntimeSettingsCard() {
     return () => {
       active = false;
     };
-  }, []);
+  }, [reloadToken]);
+
+  function retryLoad() {
+    setLoading(true);
+    setMessage(undefined);
+    setReloadToken((token) => token + 1);
+  }
 
   async function save() {
+    if (loading || loadFailed) return;
     setBusy(true);
     setMessage(undefined);
     try {
@@ -85,7 +102,7 @@ export function RuntimeSettingsCard() {
             min={0}
             max={120}
             value={joinLeadMinutes}
-            disabled={loading || busy}
+            disabled={loading || busy || loadFailed}
             onChange={(event) => setJoinLeadMinutes(event.target.value)}
           />
           <span className="text-[11px] font-semibold normal-case tracking-normal text-[#2E286C]/45">
@@ -99,7 +116,7 @@ export function RuntimeSettingsCard() {
             min={1}
             max={48}
             value={autoCloseHours}
-            disabled={loading || busy}
+            disabled={loading || busy || loadFailed}
             onChange={(event) => setAutoCloseHours(event.target.value)}
           />
           <span className="text-[11px] font-semibold normal-case tracking-normal text-[#2E286C]/45">
@@ -107,6 +124,19 @@ export function RuntimeSettingsCard() {
           </span>
         </label>
       </div>
+
+      {!loading && loadFailed && (
+        <div className="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-2xl bg-[#B42318]/10 px-4 py-3 text-sm font-semibold text-[#B42318]">
+          {t('loadError')}
+          <button
+            type="button"
+            onClick={retryLoad}
+            className="rounded-full bg-[#B42318]/10 px-3 py-1 text-xs font-bold uppercase tracking-wider text-[#B42318] transition-colors hover:bg-[#B42318]/20"
+          >
+            {t('retry')}
+          </button>
+        </div>
+      )}
 
       {message && (
         <div
@@ -120,7 +150,11 @@ export function RuntimeSettingsCard() {
         </div>
       )}
 
-      <Button className="mt-5" disabled={loading || busy} onClick={save}>
+      <Button
+        className="mt-5"
+        disabled={loading || busy || loadFailed}
+        onClick={save}
+      >
         <Save className="h-4 w-4" />
         {busy ? t('saving') : t('save')}
       </Button>

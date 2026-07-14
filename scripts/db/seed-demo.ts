@@ -14,6 +14,7 @@ import 'dotenv/config';
 import { randomUUID } from 'node:crypto';
 import { hashPassword } from 'better-auth/crypto';
 import { eq } from 'drizzle-orm';
+import { isoToIstanbulWallClock, istanbulWallClockToISO } from '@/lib/datetime';
 import { database } from '@/lib/server/db/client';
 import {
   accounts,
@@ -43,10 +44,13 @@ const TZ = 'Europe/Istanbul';
 const day = 24 * 60 * 60 * 1000;
 const HOUR = 18;
 
+// Lesson times must be Istanbul wall clock regardless of the host timezone —
+// a plain setHours(18) on a UTC VPS would land lessons at 21:00 Istanbul.
 function weeksAgo(n: number): Date {
-  const d = new Date(Date.now() - n * 7 * day);
-  d.setHours(HOUR, 0, 0, 0);
-  return d;
+  const base = new Date(Date.now() - n * 7 * day);
+  const istanbulDay = isoToIstanbulWallClock(base.toISOString()).slice(0, 10);
+  const hh = String(HOUR).padStart(2, '0');
+  return new Date(istanbulWallClockToISO(`${istanbulDay}T${hh}:00`));
 }
 function ymd(d: Date): string {
   return d.toISOString().slice(0, 10);

@@ -125,9 +125,12 @@ export async function getStudentWorkspaceData(
     lastName: profile.lastName,
   });
   const now = Date.now();
+  // A lesson stays "upcoming" until it ends so an in-progress lesson keeps its
+  // "next lesson" slot (and join button) instead of dropping into the past
+  // list the moment it starts.
   const isUpcoming = (event: CalendarEventView) =>
     (event.status === 'scheduled' || event.status === 'postponed') &&
-    new Date(event.startsAt).getTime() >= now;
+    new Date(event.endsAt).getTime() > now;
 
   const upcoming = events
     .filter(isUpcoming)

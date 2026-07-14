@@ -1,6 +1,6 @@
 import 'server-only';
 
-import { and, asc, eq, inArray, or } from 'drizzle-orm';
+import { and, asc, eq, inArray, isNotNull, or } from 'drizzle-orm';
 import type { WorkspacePrincipal } from '@/lib/domain';
 import { database } from '@/lib/server/db/client';
 import {
@@ -351,6 +351,8 @@ export async function getStudentProgress(
   const graded = subs.filter((s) => s.status === 'graded' && s.score != null);
 
   // Attendance with lesson dates (chronological).
+  // Only teacher-confirmed records count: auto-sync drafts (confirmedAt null)
+  // may say 'absent' for a lesson whose sheet was never reviewed.
   const att = await database
     .select({
       status: lessonAttendanceRecords.status,
@@ -361,7 +363,12 @@ export async function getStudentProgress(
       lessonSessions,
       eq(lessonSessions.id, lessonAttendanceRecords.lessonSessionId),
     )
-    .where(eq(lessonAttendanceRecords.studentProfileId, profile.id))
+    .where(
+      and(
+        eq(lessonAttendanceRecords.studentProfileId, profile.id),
+        isNotNull(lessonAttendanceRecords.confirmedAt),
+      ),
+    )
     .orderBy(asc(lessonSessions.startsAt));
   const present = att.filter((a) => a.status === 'present').length;
   const late = att.filter((a) => a.status === 'late').length;

@@ -13,7 +13,12 @@ import {
   PublicFlowError,
 } from '@/lib/server/http/errors';
 
-async function assertReadyPrivateImage(mediaAssetId: string) {
+// Attaching an asset as a profile photo makes it world-readable, so only
+// assets uploaded by one of the allowed owners may ever be attached.
+async function assertReadyPrivateImage(
+  mediaAssetId: string,
+  allowedOwnerIds: string[],
+) {
   const [asset] = await database
     .select({ id: mediaAssets.id })
     .from(mediaAssets)
@@ -23,6 +28,7 @@ async function assertReadyPrivateImage(mediaAssetId: string) {
         eq(mediaAssets.status, 'ready'),
         eq(mediaAssets.visibility, 'private'),
         eq(mediaAssets.kind, 'image'),
+        inArray(mediaAssets.ownerUserId, allowedOwnerIds),
       ),
     )
     .limit(1);
@@ -35,7 +41,7 @@ export async function setOwnProfilePhoto(
   mediaAssetId: string | null,
 ): Promise<void> {
   if (mediaAssetId) {
-    await assertReadyPrivateImage(mediaAssetId);
+    await assertReadyPrivateImage(mediaAssetId, [principal.id]);
   }
   await database
     .update(users)
@@ -53,7 +59,8 @@ export async function setUserProfilePhoto(
     throw new AuthorizationDeniedError('Admin access is required.');
   }
   if (mediaAssetId) {
-    await assertReadyPrivateImage(mediaAssetId);
+    // The admin's own upload or one the user uploaded themselves.
+    await assertReadyPrivateImage(mediaAssetId, [principal.id, userId]);
   }
   const updated = await database
     .update(users)

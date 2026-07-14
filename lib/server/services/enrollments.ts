@@ -1,6 +1,6 @@
 import 'server-only';
 
-import { and, desc, eq, gt, inArray } from 'drizzle-orm';
+import { and, desc, eq, gt, inArray, ne } from 'drizzle-orm';
 import type { WorkspacePrincipal } from '@/lib/domain';
 import {
   ageOnDate,
@@ -12,6 +12,8 @@ import {
 } from '@/lib/domain/phone';
 import { database } from '@/lib/server/db/client';
 import {
+  advisorTasks,
+  appointmentRequests,
   assessmentAttempts,
   candidateActivities,
   candidateInquiries,
@@ -319,9 +321,29 @@ export async function beginEnrollmentDraft(
           ? normalizePhoneNumber(candidate.phone)
           : candidate.phone,
       })
+      // Two staff opening the wizard at once: the one-active-draft unique
+      // index wins the race, and the loser reuses the winner's draft.
+      .onConflictDoNothing()
       .returning({ id: enrollmentDrafts.id });
 
     if (!draft) {
+      const [concurrent] = await transaction
+        .select({ id: enrollmentDrafts.id })
+        .from(enrollmentDrafts)
+        .where(
+          and(
+            eq(enrollmentDrafts.candidateId, candidateId),
+            inArray(enrollmentDrafts.status, [
+              'draft',
+              'review_required',
+              'ready',
+            ]),
+          ),
+        )
+        .limit(1);
+      if (concurrent) {
+        return { created: false, id: concurrent.id };
+      }
       throw new Error('Enrollment draft could not be created.');
     }
 
@@ -719,6 +741,18 @@ export async function updateEnrollmentDraft(
         })
         .where(eq(enrollmentDrafts.id, draftId));
 
+      // The e-mail is being rewritten onto the candidate's contact row; if
+      // another contact already owns it, surface a field error instead of
+      // letting the unique index blow up as a generic conflict.
+      const [emailOwner] = await transaction
+        .select({ id: contacts.id })
+        .from(contacts)
+        .where(eq(contacts.normalizedEmail, normalizedEmail))
+        .limit(1);
+      if (emailOwner && emailOwner.id !== draft.contactId) {
+        throw new PublicFlowError('enrollment_email_taken', 409);
+      }
+
       await transaction
         .update(contacts)
         .set({
@@ -1086,12 +1120,29 @@ export async function updateEnrollmentDraft(
   return { ...result, savedAt: now.toISOString() };
 }
 
+async function requireOpenDraft(draftId: string) {
+  const [draft] = await database
+    .select({ id: enrollmentDrafts.id, status: enrollmentDrafts.status })
+    .from(enrollmentDrafts)
+    .where(eq(enrollmentDrafts.id, draftId))
+    .limit(1);
+  if (!draft) {
+    throw new PublicFlowError('enrollment_draft_not_found', 404);
+  }
+  // A completed draft is the legal record of the enrollment — its document
+  // set is frozen.
+  if (draft.status === 'completed') {
+    throw new PublicFlowError('enrollment_draft_completed', 409);
+  }
+}
+
 export async function attachEnrollmentDocument(
   principal: WorkspacePrincipal,
   draftId: string,
   input: { label: string; mediaAssetId: string; type: string },
 ) {
   assertAdmin(principal);
+  await requireOpenDraft(draftId);
 
   const [asset] = await database
     .select({
@@ -1134,6 +1185,7 @@ export async function removeEnrollmentDocument(
   documentId: string,
 ) {
   assertAdmin(principal);
+  await requireOpenDraft(draftId);
   await database
     .delete(enrollmentDocuments)
     .where(
@@ -1148,6 +1200,7 @@ export async function completeEnrollment(
   principal: WorkspacePrincipal,
   draftId: string,
   locale: 'tr' | 'en' = 'tr',
+  options: { closeOpenItems?: boolean } = {},
 ) {
   assertAdmin(principal);
 
@@ -1250,18 +1303,18 @@ export async function completeEnrollment(
       throw new Error('Student profile could not be created.');
     }
 
-    if (student.userId) {
-      throw new PublicFlowError('student_account_already_linked', 409);
-    }
-
-    const invitation = await createStudentAccountInvitation(transaction, {
-      actorId: principal.id,
-      email: draft.email!,
-      locale,
-      name: fullName(draft.firstName ?? '', draft.lastName ?? ''),
-      studentId: student.id,
-      username: draft.studentUsername!,
-    });
+    // A returning student (account already activated) simply gets a second
+    // enrollment — the invitation step only exists for brand-new accounts.
+    const invitation = student.userId
+      ? null
+      : await createStudentAccountInvitation(transaction, {
+          actorId: principal.id,
+          email: draft.email!,
+          locale,
+          name: fullName(draft.firstName ?? '', draft.lastName ?? ''),
+          studentId: student.id,
+          username: draft.studentUsername!,
+        });
 
     const [enrollment] = await transaction
       .insert(enrollments)
@@ -1322,6 +1375,38 @@ export async function completeEnrollment(
       .update(candidateProfiles)
       .set({ lastActivityAt: now, stage: 'enrolled', updatedAt: now })
       .where(eq(candidateProfiles.id, candidate.id));
+    // Opt-in cleanup (the wizard asks first): the enrolled candidate's open
+    // consultation and system work items are now moot.
+    if (options.closeOpenItems) {
+      await transaction
+        .update(appointmentRequests)
+        .set({
+          outcomeNote: 'auto_closed_enrollment',
+          status: 'cancelled',
+          updatedAt: now,
+        })
+        .where(
+          and(
+            eq(appointmentRequests.candidateId, candidate.id),
+            inArray(appointmentRequests.status, ['requested', 'scheduled']),
+          ),
+        );
+      await transaction
+        .update(advisorTasks)
+        .set({
+          completedAt: now,
+          completedByUserId: principal.id,
+          status: 'done',
+          updatedAt: now,
+        })
+        .where(
+          and(
+            eq(advisorTasks.candidateId, candidate.id),
+            eq(advisorTasks.status, 'open'),
+            ne(advisorTasks.kind, 'manual'),
+          ),
+        );
+    }
     if (latestAttempt?.inquiryId) {
       await transaction
         .update(candidateInquiries)

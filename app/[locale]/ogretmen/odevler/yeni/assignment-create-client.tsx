@@ -11,7 +11,7 @@ import {
   Input,
   ModulePanel,
 } from '@/components/ui';
-import { istanbulWallClockToISO } from '@/lib/datetime';
+import { APP_TIME_ZONE, istanbulWallClockToISO } from '@/lib/datetime';
 import type { AssignableLesson } from '@/lib/server/services/assignments';
 import { cn } from '@/lib/utils';
 
@@ -59,6 +59,7 @@ export function AssignmentCreateClient({
     month: 'long',
     hour: '2-digit',
     minute: '2-digit',
+    timeZone: APP_TIME_ZONE,
   });
 
   async function submit() {

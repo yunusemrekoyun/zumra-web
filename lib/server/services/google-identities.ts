@@ -103,7 +103,9 @@ export const googleIdentityService: GoogleIdentityService = {
       body: {
         callbackURL: `${env.APP_URL}/${locale}/google-tamamla?mode=link`,
         disableRedirect: true,
-        errorCallbackURL: `${env.APP_URL}/${locale}/ogrenci/profil?google=error`,
+        errorCallbackURL: `${env.APP_URL}/${locale}/${
+          student.role === 'teacher' ? 'ogretmen' : 'ogrenci'
+        }/profil?google=error`,
         provider: 'google',
       },
       headers,
@@ -286,7 +288,7 @@ async function getEligibleStudent(studentId: string) {
 
   if (
     !student ||
-    student.role !== 'student' ||
+    (student.role !== 'student' && student.role !== 'teacher') ||
     student.accountStatus !== 'active' ||
     !student.emailVerified
   ) {

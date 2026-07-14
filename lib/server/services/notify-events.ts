@@ -119,6 +119,7 @@ export async function notifyAssignmentSubmitted(
         instructorEmail: instructorProfiles.email,
         studentFirst: contacts.firstName,
         studentLast: contacts.lastName,
+        submittedAt: assignmentSubmissions.submittedAt,
       })
       .from(assignmentSubmissions)
       .innerJoin(
@@ -153,7 +154,10 @@ export async function notifyAssignmentSubmitted(
     if (row.instructorEmail) {
       await notificationService.enqueue({
         channel: 'email',
-        idempotencyKey: `assignment-submitted:${submissionId}`,
+        // Resubmissions reuse the same submission row, so key on submittedAt:
+        // every (re)submission gets its own email — consistent with the in-app
+        // notification above — while retries of the same event still dedupe.
+        idempotencyKey: `assignment-submitted:${submissionId}:${row.submittedAt.getTime()}`,
         locale: 'tr',
         payload: {
           name: '',
@@ -180,6 +184,7 @@ export async function notifyAssignmentGraded(
         assignmentTitle: assignments.title,
         maxScore: assignments.maxScore,
         score: assignmentSubmissions.score,
+        gradedAt: assignmentSubmissions.gradedAt,
         studentUserId: studentProfiles.userId,
         studentEmail: contacts.email,
         studentFirst: contacts.firstName,
@@ -218,7 +223,10 @@ export async function notifyAssignmentGraded(
     if (row.studentEmail) {
       await notificationService.enqueue({
         channel: 'email',
-        idempotencyKey: `assignment-graded:${submissionId}`,
+        // Re-grades update the same submission row, so key on gradedAt: the
+        // corrected-score email goes out — consistent with the in-app
+        // notification above — while retries of the same event still dedupe.
+        idempotencyKey: `assignment-graded:${submissionId}:${row.gradedAt?.getTime() ?? 0}`,
         locale: 'tr',
         payload: { name: fullName(row.studentFirst, row.studentLast), ...payload },
         recipient: row.studentEmail,
@@ -318,7 +326,7 @@ export async function notifyLeadReceived(input: {
     const name = fullName(input.firstName, input.lastName);
 
     const staff = await database
-      .select({ id: users.id })
+      .select({ id: users.id, role: users.role })
       .from(users)
       .where(inArray(users.role, ['advisor', 'admin']));
 
@@ -331,7 +339,8 @@ export async function notifyLeadReceived(input: {
           name,
           program: input.programName ?? '',
         },
-        href: '/admin/leads',
+        href:
+          member.role === 'advisor' ? '/danisman/leadler' : '/admin/leads',
       })),
     );
 

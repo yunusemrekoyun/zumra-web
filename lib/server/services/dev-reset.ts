@@ -51,6 +51,13 @@ const DELETE_ALL_STATEMENTS: DeleteStatement[] = [
   { key: 'studentProfiles', sql: 'delete from student_profiles' },
   { key: 'enrollmentParties', sql: 'delete from enrollment_parties' },
   { key: 'enrollmentDrafts', sql: 'delete from enrollment_drafts' },
+  {
+    // Manual tasks have no candidate FK to cascade from and their user FKs are
+    // 'set null', so without an explicit delete they survive the reset as
+    // invisible orphan rows (potentially carrying lead PII in title/note).
+    key: 'advisorTasks',
+    sql: 'delete from advisor_tasks',
+  },
   { key: 'appointmentPreferences', sql: 'delete from appointment_preferences' },
   { key: 'appointmentRequests', sql: 'delete from appointment_requests' },
   { key: 'assessmentResults', sql: 'delete from assessment_results' },
@@ -81,6 +88,13 @@ const DELETE_ALL_STATEMENTS: DeleteStatement[] = [
     sql: 'delete from programs where coalesce(system_managed, false) = false',
   },
   { key: 'mediaAssets', sql: 'delete from media_assets' },
+  {
+    // Bell rows for the preserved admin survive the users cascade, yet every
+    // notification points at demo entities wiped above — clearing ALL rows
+    // (the preserved admin's included) keeps the bell free of ghost records.
+    key: 'notifications',
+    sql: 'delete from notifications',
+  },
   { key: 'notificationOutbox', sql: 'delete from notification_outbox' },
   { key: 'backupRuns', sql: 'delete from backup_runs' },
   { key: 'workerHeartbeats', sql: 'delete from worker_heartbeats' },

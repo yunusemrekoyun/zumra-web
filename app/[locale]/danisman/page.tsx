@@ -2,7 +2,11 @@ import { CalendarCheck, CalendarClock, Sparkles, UserRound } from 'lucide-react'
 import { getTranslations } from 'next-intl/server';
 import { Link } from '@/i18n/navigation';
 import { EmptyState, ModulePanel, PageHeader } from '@/components/ui';
-import { APP_TIME_ZONE } from '@/lib/datetime';
+import {
+  APP_TIME_ZONE,
+  isoToIstanbulWallClock,
+  istanbulWallClockToISO,
+} from '@/lib/datetime';
 import { requireWorkspaceRole } from '@/lib/server/authorization';
 import {
   type AppointmentOverviewRow,
@@ -38,7 +42,12 @@ export default async function AdvisorDashboardPage({
   ]);
 
   // "Bugünüm": vadesi geçmiş ya da bugün dolan işler önce, sonra vadesizler.
-  const todayEnd = new Date(new Date().setHours(24, 0, 0, 0));
+  // Gün sınırı sunucunun değil İstanbul'un yerel gününe göre hesaplanır.
+  const localDate = isoToIstanbulWallClock(new Date().toISOString()).slice(0, 10);
+  const todayEnd = new Date(
+    new Date(istanbulWallClockToISO(`${localDate}T00:00`)).getTime() +
+      24 * 60 * 60 * 1000,
+  );
   const myToday = [
     ...board.mine.filter(
       (task) => task.dueAt && new Date(task.dueAt) <= todayEnd,

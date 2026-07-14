@@ -17,12 +17,11 @@ import {
   Mail,
   Phone,
   Presentation,
-  Settings,
   Users,
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
-import { Link } from '@/i18n/navigation';
 import { LogoutButton } from '@/components/auth/logout-button';
+import { APP_TIME_ZONE } from '@/lib/datetime';
 import { ProfilePhotoUploader } from '@/components/profile-photo-uploader';
 import { GoogleAccountCard } from '@/components/auth/google-account-card';
 import {
@@ -55,10 +54,9 @@ export default async function StudentProfilePage({
     getStudentWorkspaceData(principal),
     getProfilePhotoUrl(principal.id),
   ]);
-  const [t, workspace, nav, commonStatus, calendar] = await Promise.all([
+  const [t, workspace, commonStatus, calendar] = await Promise.all([
     getTranslations('student.profilePage'),
     getTranslations('workspace.more'),
-    getTranslations('workspace.nav'),
     getTranslations('common.status'),
     getTranslations('student.calendar'),
   ]);
@@ -155,15 +153,6 @@ export default async function StudentProfilePage({
             className="px-5 pt-5 lg:px-6 lg:pt-6"
           />
           <div className="px-3 pb-4 lg:px-4 lg:pb-5 space-y-0.5">
-            <Link
-              href="/ogrenci/profil"
-              className="flex items-center gap-4 px-4 py-3.5 rounded-2xl text-[#2E286C] hover:bg-black/[0.02] transition-colors"
-            >
-              <Settings className="w-5 h-5 text-[#2E286C]/40" />
-              <span className="text-[15px] font-medium flex-1">
-                {nav('settings')}
-              </span>
-            </Link>
             <button className="flex w-full items-center gap-4 px-4 py-3.5 rounded-2xl text-[#2E286C] hover:bg-black/[0.02] transition-colors">
               <HelpCircle className="w-5 h-5 text-[#2E286C]/40" />
               <span className="text-[15px] font-medium flex-1 text-left">
@@ -244,5 +233,6 @@ function formatEnrollmentDate(value: string, locale: string) {
     day: 'numeric',
     month: 'long',
     year: 'numeric',
+    timeZone: APP_TIME_ZONE,
   }).format(new Date(value));
 }

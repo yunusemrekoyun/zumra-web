@@ -28,6 +28,7 @@ import {
   programs,
   type LocalizedText,
   advisorTasks,
+  users,
 } from '@/lib/server/db/schema';
 import { normalizePhoneNumber, phoneNumberIsValid } from '@/lib/domain/phone';
 import { PublicFlowError } from '@/lib/server/http/errors';
@@ -516,6 +517,14 @@ export async function createPublicLead(
         })
         .onConflictDoNothing();
     }
+    if (profile) {
+      await reviveReturningCandidate(
+        transaction,
+        candidate.id,
+        profile.stage,
+        profile.advisorId,
+      );
+    }
   });
 
   if (created) {
@@ -725,6 +734,23 @@ export async function startPublicAssessment(
           visibility: 'staff',
         })
         .onConflictDoNothing();
+    } else {
+      const [profile] = await transaction
+        .select({
+          advisorId: candidateProfiles.advisorId,
+          stage: candidateProfiles.stage,
+        })
+        .from(candidateProfiles)
+        .where(eq(candidateProfiles.id, candidate.id))
+        .limit(1);
+      if (profile) {
+        await reviveReturningCandidate(
+          transaction,
+          candidate.id,
+          profile.stage,
+          profile.advisorId,
+        );
+      }
     }
 
     return attempt.id;
@@ -984,6 +1010,54 @@ export async function completePublicCandidateProfile(
   return buildState(await requireAttemptContext(token), locale);
 }
 
+type PublicTransaction = Parameters<
+  Parameters<typeof database.transaction>[0]
+>[0];
+
+// A returning applicant must never land in a dead funnel: a lost lead starts
+// over as 'new' with a fresh first-contact task, an enrolled student raises a
+// follow-up for their advisor ("existing student wants another course").
+async function reviveReturningCandidate(
+  transaction: PublicTransaction,
+  candidateId: string,
+  stage: string,
+  advisorId: string | null,
+) {
+  if (stage === 'lost') {
+    await transaction
+      .update(candidateProfiles)
+      .set({ stage: 'new', updatedAt: new Date() })
+      .where(eq(candidateProfiles.id, candidateId));
+    await transaction.insert(candidateActivities).values({
+      candidateId,
+      metadata: { from: 'lost', to: 'new' },
+      type: 'candidate.stage_changed',
+    });
+    await transaction
+      .insert(advisorTasks)
+      .values({
+        assigneeUserId: advisorId,
+        candidateId,
+        kind: 'first_contact',
+        visibility: 'staff',
+      })
+      .onConflictDoNothing();
+    return;
+  }
+
+  if (stage === 'enrolled') {
+    await transaction
+      .insert(advisorTasks)
+      .values({
+        assigneeUserId: advisorId,
+        candidateId,
+        kind: 'follow_up',
+        visibility: 'staff',
+      })
+      .onConflictDoNothing();
+  }
+}
+
 export async function requestPublicAppointment(
   token: string,
   timezone: string,
@@ -1040,10 +1114,15 @@ export async function requestPublicAppointment(
           inquiryId: context.inquiryId,
           timezone,
         })
+        // Double submit / concurrent tab: the active-per-candidate unique
+        // index absorbs it — the earlier request simply stays authoritative.
+        .onConflictDoNothing()
         .returning({ id: appointmentRequests.id });
 
       if (!request) {
-        throw new PublicFlowError('appointment_could_not_be_requested', 409);
+        // The candidate already has an active appointment (double submit or a
+        // re-application) — say so instead of silently dropping the request.
+        throw new PublicFlowError('appointment_exists', 409);
       }
 
       await transaction.insert(appointmentPreferences).values(
@@ -1055,9 +1134,18 @@ export async function requestPublicAppointment(
       );
 
       const activityAt = new Date();
+      // Owner only counts if they are (still) an advisor — anything else
+      // sends the work item to the shared pool.
       const [ownerProfile] = await transaction
         .select({ advisorId: candidateProfiles.advisorId })
         .from(candidateProfiles)
+        .innerJoin(
+          users,
+          and(
+            eq(users.id, candidateProfiles.advisorId),
+            eq(users.role, 'advisor'),
+          ),
+        )
         .where(eq(candidateProfiles.id, context.candidateId))
         .limit(1);
       await Promise.all([

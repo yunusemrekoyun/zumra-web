@@ -276,7 +276,9 @@ export async function requireFreshStudentPassword(
 ) {
   const principal = await requireFreshSession();
 
-  if (principal.role !== 'student') {
+  // Google identity linking is available to both students and teachers (the
+  // teacher's Google account drives Meet attendance matching).
+  if (principal.role !== 'student' && principal.role !== 'teacher') {
     throw new AuthorizationDeniedError('Student access is required.');
   }
 

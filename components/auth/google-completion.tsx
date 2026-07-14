@@ -48,7 +48,15 @@ export function GoogleCompletion({
         }
 
         if (mode === 'link') {
-          router.replace('/ogrenci/profil?google=linked');
+          // Teachers link from their own profile; send them back there.
+          const body = (await completion.json().catch(() => ({}))) as {
+            role?: string;
+          };
+          router.replace(
+            body.role === 'teacher'
+              ? '/ogretmen/profil?google=linked'
+              : '/ogrenci/profil?google=linked',
+          );
           return;
         }
 

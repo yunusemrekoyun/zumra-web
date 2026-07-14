@@ -9,6 +9,7 @@ import {
   candidateActivities,
   candidateProfiles,
   contacts,
+  users,
 } from '@/lib/server/db/schema';
 import {
   AuthorizationDeniedError,
@@ -63,26 +64,54 @@ export async function spawnSystemTask(input: {
   dueAt?: Date | null;
   kind: SystemTaskKind;
 }): Promise<void> {
+  // Only advisors own work items; anything else (legacy admin advisorId,
+  // deleted user) drops the task into the shared pool instead.
+  let assigneeUserId = input.assigneeUserId;
+  if (assigneeUserId) {
+    const [assignee] = await database
+      .select({ id: users.id })
+      .from(users)
+      .where(and(eq(users.id, assigneeUserId), eq(users.role, 'advisor')))
+      .limit(1);
+    if (!assignee) assigneeUserId = null;
+  }
+
   await database
     .insert(advisorTasks)
     .values({
       appointmentId: input.appointmentId ?? null,
-      assigneeUserId: input.assigneeUserId,
+      assigneeUserId,
       candidateId: input.candidateId,
       dueAt: input.dueAt ?? null,
       kind: input.kind,
       visibility: 'staff',
     })
-    .onConflictDoNothing();
+    // Same event firing again refreshes the open task (new due date, newer
+    // appointment) rather than silently keeping stale scheduling info.
+    .onConflictDoUpdate({
+      set: {
+        appointmentId: input.appointmentId ?? null,
+        assigneeUserId: sql`coalesce(${advisorTasks.assigneeUserId}, ${assigneeUserId})`,
+        dueAt: input.dueAt ?? null,
+        updatedAt: new Date(),
+      },
+      target: [advisorTasks.candidateId, advisorTasks.kind],
+      targetWhere: sql`${advisorTasks.status} = 'open' and ${advisorTasks.candidateId} is not null and ${advisorTasks.kind} <> 'manual'`,
+    });
 }
+
+type TaskExecutor =
+  | typeof database
+  | Parameters<Parameters<typeof database.transaction>[0]>[0];
 
 export async function closeSystemTasks(
   candidateId: string,
   kinds: ReadonlyArray<SystemTaskKind>,
   completedByUserId: string,
+  executor: TaskExecutor = database,
 ): Promise<void> {
   const now = new Date();
-  await database
+  await executor
     .update(advisorTasks)
     .set({
       completedAt: now,
@@ -271,34 +300,79 @@ export async function claimTask(
   }
 
   const now = new Date();
-  const [claimed] = await database
-    .update(advisorTasks)
-    .set({ assigneeUserId: principal.id, updatedAt: now })
-    .where(
-      and(
-        eq(advisorTasks.id, taskId),
-        eq(advisorTasks.status, 'open'),
-        isNull(advisorTasks.assigneeUserId),
-      ),
-    )
-    .returning({ candidateId: advisorTasks.candidateId });
-  if (!claimed) {
-    throw new PublicFlowError('task_taken', 409);
-  }
+  await database.transaction(async (tx) => {
+    const [claimed] = await tx
+      .update(advisorTasks)
+      .set({ assigneeUserId: principal.id, updatedAt: now })
+      .where(
+        and(
+          eq(advisorTasks.id, taskId),
+          eq(advisorTasks.status, 'open'),
+          isNull(advisorTasks.assigneeUserId),
+        ),
+      )
+      .returning({ candidateId: advisorTasks.candidateId });
+    if (!claimed) {
+      throw new PublicFlowError('task_taken', 409);
+    }
 
-  if (claimed.candidateId) {
-    await database
+    if (!claimed.candidateId) return;
+
+    const newlyOwned = await tx
       .update(candidateProfiles)
       .set({ advisorId: principal.id, updatedAt: now })
-      .where(eq(candidateProfiles.id, claimed.candidateId));
-    await database.insert(candidateActivities).values({
-      candidateId: claimed.candidateId,
-      metadata: { advisorId: principal.id },
-      type: 'candidate.advisor_assigned',
-    });
+      .where(
+        and(
+          eq(candidateProfiles.id, claimed.candidateId),
+          isNull(candidateProfiles.advisorId),
+        ),
+      )
+      .returning({ id: candidateProfiles.id });
+
+    if (newlyOwned.length) {
+      await tx.insert(candidateActivities).values({
+        candidateId: claimed.candidateId,
+        metadata: { advisorId: principal.id },
+        type: 'candidate.advisor_assigned',
+      });
+    } else {
+      const [current] = await tx
+        .select({ advisorId: candidateProfiles.advisorId, role: users.role })
+        .from(candidateProfiles)
+        .leftJoin(users, eq(users.id, candidateProfiles.advisorId))
+        .where(eq(candidateProfiles.id, claimed.candidateId))
+        .limit(1);
+      if (current?.advisorId !== principal.id) {
+        // A non-advisor "owner" (legacy admin assignment, deleted account) is
+        // no owner at all — claiming takes over. A real fellow advisor's
+        // candidate stays theirs: roll back so the task returns to the pool.
+        if (current?.role === 'advisor') {
+          throw new PublicFlowError('task_taken', 409);
+        }
+        await tx
+          .update(candidateProfiles)
+          .set({ advisorId: principal.id, updatedAt: now })
+          .where(eq(candidateProfiles.id, claimed.candidateId));
+        await tx.insert(candidateActivities).values({
+          candidateId: claimed.candidateId,
+          metadata: { advisorId: principal.id },
+          type: 'candidate.advisor_assigned',
+        });
+      }
+    }
+
     // Sibling pool tasks of the same candidate follow the new owner too.
-    await reassignPoolTasks(claimed.candidateId, principal.id);
-  }
+    await tx
+      .update(advisorTasks)
+      .set({ assigneeUserId: principal.id, updatedAt: now })
+      .where(
+        and(
+          eq(advisorTasks.candidateId, claimed.candidateId),
+          eq(advisorTasks.status, 'open'),
+          isNull(advisorTasks.assigneeUserId),
+        ),
+      );
+  });
 }
 
 export async function completeTask(
