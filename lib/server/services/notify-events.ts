@@ -356,3 +356,268 @@ export async function notifyLeadReceived(input: {
     logFailure('lead_received', error);
   }
 }
+
+function formatLira(cents: number) {
+  return `${(cents / 100).toLocaleString('tr-TR', {
+    maximumFractionDigits: 2,
+    minimumFractionDigits: 2,
+  })} ₺`;
+}
+
+// Student reported a bank transfer → tell the receiving teacher (in-app if
+// they have an account, always by email to the profile address).
+export async function notifyPaymentReported(input: {
+  declaredAmountCents: number;
+  installmentLabel: string | null;
+  instructorId: string;
+  paymentId: string;
+  studentName: string;
+}): Promise<void> {
+  try {
+    const [instructor] = await database
+      .select({
+        email: instructorProfiles.email,
+        firstName: instructorProfiles.firstName,
+        userId: instructorProfiles.userId,
+      })
+      .from(instructorProfiles)
+      .where(eq(instructorProfiles.id, input.instructorId))
+      .limit(1);
+    if (!instructor) return;
+
+    const amount = formatLira(input.declaredAmountCents);
+
+    if (instructor.userId) {
+      await createNotifications([
+        {
+          userId: instructor.userId,
+          type: 'payment_reported',
+          payload: { amount, studentName: input.studentName },
+          href: '/ogretmen/odemeler',
+        },
+      ]);
+    }
+
+    await notificationService.enqueue({
+      channel: 'email',
+      idempotencyKey: `payment-reported:${input.paymentId}`,
+      locale: 'tr',
+      payload: {
+        amount,
+        installment: input.installmentLabel ?? '',
+        name: instructor.firstName,
+        studentName: input.studentName,
+      },
+      recipient: instructor.email,
+      templateKey: 'payment-reported',
+    });
+  } catch (error) {
+    logFailure('payment_reported', error);
+  }
+}
+
+// Teacher (or staff) confirmed the transfer → tell the student.
+export async function notifyPaymentConfirmed(input: {
+  amountCents: number;
+  paymentId: string;
+  studentUserId: string | null;
+}): Promise<void> {
+  try {
+    if (!input.studentUserId) return;
+
+    const amount = formatLira(input.amountCents);
+
+    await createNotifications([
+      {
+        userId: input.studentUserId,
+        type: 'payment_confirmed',
+        payload: { amount },
+        href: '/ogrenci/odemeler',
+      },
+    ]);
+
+    const [account] = await database
+      .select({ email: users.email, name: users.name })
+      .from(users)
+      .where(eq(users.id, input.studentUserId))
+      .limit(1);
+    if (!account) return;
+
+    await notificationService.enqueue({
+      channel: 'email',
+      idempotencyKey: `payment-confirmed:${input.paymentId}`,
+      locale: 'tr',
+      payload: { amount, name: account.name },
+      recipient: account.email,
+      templateKey: 'payment-confirmed',
+    });
+  } catch (error) {
+    logFailure('payment_confirmed', error);
+  }
+}
+
+// Teacher rejected the declaration → tell the student in-app and warn staff so
+// the mismatch gets chased.
+export async function notifyPaymentRejected(input: {
+  paymentId: string;
+  reason: string;
+  studentUserId: string | null;
+}): Promise<void> {
+  try {
+    const entries: NotificationEntry[] = [];
+
+    if (input.studentUserId) {
+      entries.push({
+        userId: input.studentUserId,
+        type: 'payment_rejected',
+        payload: { reason: input.reason },
+        href: '/ogrenci/odemeler',
+      });
+    }
+
+    const staff = await database
+      .select({ id: users.id, role: users.role })
+      .from(users)
+      .where(inArray(users.role, ['advisor', 'admin']));
+
+    entries.push(
+      ...staff.map((member) => ({
+        userId: member.id,
+        type: 'payment_rejected' as const,
+        payload: { reason: input.reason },
+        href:
+          member.role === 'advisor' ? '/danisman/odemeler' : '/admin/payments',
+      })),
+    );
+
+    await createNotifications(entries);
+  } catch (error) {
+    logFailure('payment_rejected', error);
+  }
+}
+
+// Admin took the teacher's cash for Zümra's share → receipt-style ping to the
+// teacher.
+export async function notifySettlementRecorded(input: {
+  instructorId: string;
+  settlementId: string;
+  totalCents: number;
+}): Promise<void> {
+  try {
+    const [instructor] = await database
+      .select({ userId: instructorProfiles.userId })
+      .from(instructorProfiles)
+      .where(eq(instructorProfiles.id, input.instructorId))
+      .limit(1);
+    if (!instructor?.userId) return;
+
+    await createNotifications([
+      {
+        userId: instructor.userId,
+        type: 'settlement_recorded',
+        payload: { amount: formatLira(input.totalCents) },
+        href: '/ogretmen/odemeler',
+      },
+    ]);
+  } catch (error) {
+    logFailure('settlement_recorded', error);
+  }
+}
+
+// Sweep: an installment is due soon (or overdue) → remind the student.
+export async function notifyInstallmentDue(input: {
+  amountCents: number;
+  courseLabel: string;
+  dueDate: string;
+  installmentId: string;
+  studentUserId: string;
+}): Promise<void> {
+  try {
+    const amount = formatLira(input.amountCents);
+
+    await createNotifications([
+      {
+        userId: input.studentUserId,
+        type: 'installment_due',
+        // installmentId is the sweep's daily dedupe key.
+        payload: {
+          amount,
+          dueDate: input.dueDate,
+          installmentId: input.installmentId,
+        },
+        href: '/ogrenci/odemeler',
+      },
+    ]);
+
+    const [account] = await database
+      .select({ email: users.email, name: users.name })
+      .from(users)
+      .where(eq(users.id, input.studentUserId))
+      .limit(1);
+    if (!account) return;
+
+    await notificationService.enqueue({
+      channel: 'email',
+      idempotencyKey: `installment-due:${input.installmentId}:${input.dueDate}:${new Date().toISOString().slice(0, 10)}`,
+      locale: 'tr',
+      payload: {
+        amount,
+        course: input.courseLabel,
+        dueDate: input.dueDate,
+        name: account.name,
+      },
+      recipient: account.email,
+      templateKey: 'installment-due',
+    });
+  } catch (error) {
+    logFailure('installment_due', error);
+  }
+}
+
+// Sweep: payment reports waited too long for a teacher review → warn staff.
+// Admins get the global count; each advisor gets only their own students'.
+export async function notifyPaymentReviewStale(input: {
+  advisorCounts: Array<{ count: number; userId: string }>;
+  totalCount: number;
+}): Promise<void> {
+  try {
+    if (input.totalCount <= 0) return;
+
+    const admins = await database
+      .select({ id: users.id })
+      .from(users)
+      .where(eq(users.role, 'admin'));
+
+    const advisorById = new Map(
+      input.advisorCounts.map((entry) => [entry.userId, entry.count]),
+    );
+    const advisors = advisorById.size
+      ? await database
+          .select({ id: users.id })
+          .from(users)
+          .where(
+            and(
+              eq(users.role, 'advisor'),
+              inArray(users.id, [...advisorById.keys()]),
+            ),
+          )
+      : [];
+
+    await createNotifications([
+      ...admins.map((member) => ({
+        userId: member.id,
+        type: 'payment_review_stale' as const,
+        payload: { count: input.totalCount },
+        href: '/admin/payments',
+      })),
+      ...advisors.map((member) => ({
+        userId: member.id,
+        type: 'payment_review_stale' as const,
+        payload: { count: advisorById.get(member.id) ?? 0 },
+        href: '/danisman/odemeler',
+      })),
+    ]);
+  } catch (error) {
+    logFailure('payment_review_stale', error);
+  }
+}

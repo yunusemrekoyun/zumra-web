@@ -241,6 +241,83 @@ export function renderMailTemplate(input: TemplateInput) {
     };
   }
 
+  if (input.templateKey === 'task-reminder') {
+    const task = escapeHtml(String(input.payload.task ?? ''));
+    return {
+      html: `<p>${english ? 'Hello' : 'Merhaba'} ${name},</p><p>${
+        english
+          ? `A task on your list is due: <strong>${task}</strong>. You can handle it from your panel.`
+          : `Listendeki bir görevin vadesi geldi: <strong>${task}</strong>. Panelinden ilgilenebilirsin.`
+      }</p>`,
+      subject: english ? 'Task reminder' : 'Görev hatırlatması',
+      text: english
+        ? `A task on your list is due: ${task}.`
+        : `Listendeki bir görevin vadesi geldi: ${task}.`,
+    };
+  }
+
+  if (input.templateKey === 'payment-reported') {
+    const amount = escapeHtml(String(input.payload.amount ?? ''));
+    const studentName = escapeHtml(String(input.payload.studentName ?? ''));
+    const installment = escapeHtml(String(input.payload.installment ?? ''));
+    const detail = installment ? ` (${installment})` : '';
+    return {
+      html: `<p>${english ? 'Hello' : 'Merhaba'} ${name},</p><p>${
+        english
+          ? `${studentName} reported a payment of <strong>${amount}</strong>${detail}. Please confirm it with the bank receipt from your panel.`
+          : `${studentName} <strong>${amount}</strong> tutarında bir ödeme bildirdi${detail}. Lütfen panelinizden dekont yükleyerek onaylayın.`
+      }</p>`,
+      subject: english
+        ? 'A student reported a payment'
+        : 'Bir öğrenci ödeme bildirdi',
+      text: english
+        ? `${studentName} reported a payment of ${amount}${detail}. Confirm it from your panel.`
+        : `${studentName} ${amount} tutarında ödeme bildirdi${detail}. Panelinizden onaylayın.`,
+    };
+  }
+
+  if (input.templateKey === 'payment-confirmed') {
+    const amount = escapeHtml(String(input.payload.amount ?? ''));
+    return {
+      html: `<p>${english ? 'Hello' : 'Merhaba'} ${name},</p><p>${
+        english
+          ? `Your payment of <strong>${amount}</strong> was confirmed. You can see the receipt in your payment history.`
+          : `<strong>${amount}</strong> tutarındaki ödemeniz onaylandı. Dekontu geçmiş ödemelerinizden görüntüleyebilirsiniz.`
+      }</p>`,
+      subject: english ? 'Your payment was confirmed' : 'Ödemeniz onaylandı',
+      text: english
+        ? `Your payment of ${amount} was confirmed.`
+        : `${amount} tutarındaki ödemeniz onaylandı.`,
+    };
+  }
+
+  if (input.templateKey === 'installment-due') {
+    const amount = escapeHtml(String(input.payload.amount ?? ''));
+    const course = escapeHtml(String(input.payload.course ?? ''));
+    const rawDueDate = String(input.payload.dueDate ?? '');
+    const dueDate = escapeHtml(
+      /^\d{4}-\d{2}-\d{2}$/.test(rawDueDate)
+        ? new Intl.DateTimeFormat(english ? 'en-US' : 'tr-TR', {
+            dateStyle: 'long',
+            timeZone: 'Europe/Istanbul',
+          }).format(new Date(`${rawDueDate}T12:00:00+03:00`))
+        : rawDueDate,
+    );
+    return {
+      html: `<p>${english ? 'Hello' : 'Merhaba'} ${name},</p><p>${
+        english
+          ? `A reminder: the <strong>${amount}</strong> installment for ${course} is due on <strong>${dueDate}</strong>. You can see the account details and report your payment from your panel.`
+          : `Hatırlatma: ${course} kaydınızın <strong>${amount}</strong> tutarındaki taksitinin vadesi <strong>${dueDate}</strong>. Ödeme yapılacak hesabı panelinizden görebilir, ödemenizi yine panelden bildirebilirsiniz.`
+      }</p>`,
+      subject: english
+        ? 'Upcoming installment reminder'
+        : 'Yaklaşan taksit hatırlatması',
+      text: english
+        ? `The ${amount} installment for ${course} is due on ${dueDate}.`
+        : `${course} kaydınızın ${amount} tutarındaki taksitinin vadesi ${dueDate}.`,
+    };
+  }
+
   throw new Error(`Unknown mail template: ${input.templateKey}`);
 }
 

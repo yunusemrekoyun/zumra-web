@@ -32,6 +32,7 @@ import {
   requeuePendingNotifications,
   startNotificationReconciliation,
 } from './notification-worker';
+import { startPaymentSweeps } from './payment-sweep';
 
 async function main() {
   const workerId = `${os.hostname()}:${process.pid}`;
@@ -56,6 +57,7 @@ async function main() {
   const stopMeetReconciliation = startMeetReconciliation();
   const stopLessonAutoCloseSweep = startLessonAutoCloseSweep();
   const stopNotificationReconciliation = startNotificationReconciliation();
+  const stopPaymentSweeps = startPaymentSweeps();
 
   const mailMode = await getMailMode().catch(() => 'live' as const);
   await verifyMailTransport(mailMode)
@@ -131,6 +133,7 @@ async function main() {
     stopMeetReconciliation();
     stopLessonAutoCloseSweep();
     stopNotificationReconciliation();
+    stopPaymentSweeps();
     await Promise.all([
       mediaWorker.close(),
       meetWorker.close(),

@@ -14,12 +14,15 @@ import {
 import {
   Avatar,
   Button,
+  FormField,
+  Input,
   ModulePanel,
   PageHeader,
   SearchInput,
   StatusChip,
 } from '@/components/ui';
 import { Link, useRouter } from '@/i18n/navigation';
+import { isValidTurkishIban, normalizeIban } from '@/lib/domain/iban';
 import type { InstructorSummary } from '@/lib/server/services/instructors';
 import {
   editorPayload,
@@ -49,6 +52,9 @@ export function InstructorsClient({
   const [draft, setDraft] = useState<InstructorEditorValue>(
     emptyInstructorEditor(),
   );
+  const [bankIban, setBankIban] = useState('');
+  const [bankHolder, setBankHolder] = useState('');
+  const [bankError, setBankError] = useState('');
   const activeCount = initial.filter(
     (instructor) => instructor.status !== 'archived',
   ).length;
@@ -74,6 +80,12 @@ export function InstructorsClient({
   }
 
   async function submitCreate(allowArchivedDuplicate: boolean) {
+    const trimmedIban = bankIban.trim();
+    if (trimmedIban && !isValidTurkishIban(trimmedIban)) {
+      setBankError(t('bank.invalid'));
+      return;
+    }
+    setBankError('');
     setBusy(true);
     setMessage('');
     try {
@@ -94,6 +106,19 @@ export function InstructorsClient({
           return;
         }
         throw new Error(String(body.error ?? 'save_failed'));
+      }
+      if (trimmedIban) {
+        // Best effort: the detail page bank panel allows a retry on failure.
+        await fetch('/api/admin/instructor-bank-accounts', {
+          body: JSON.stringify({
+            holderName: bankHolder.trim() || undefined,
+            iban: normalizeIban(trimmedIban),
+            instructorId: body.id,
+          }),
+          credentials: 'same-origin',
+          headers: { 'content-type': 'application/json' },
+          method: 'POST',
+        }).catch(() => undefined);
       }
       router.push(`/admin/instructors/${body.id}`);
     } catch (error) {
@@ -259,6 +284,30 @@ export function InstructorsClient({
                 value={draft}
                 onChange={setDraft}
               />
+              <div className="mt-4 space-y-4">
+                <FormField
+                  label={t('bank.iban')}
+                  error={bankError || undefined}
+                >
+                  <Input
+                    value={bankIban}
+                    onChange={(event) => {
+                      setBankIban(event.target.value.toUpperCase());
+                      if (bankError) setBankError('');
+                    }}
+                    placeholder="TR00 0000 0000 0000 0000 0000 00"
+                    autoComplete="off"
+                    spellCheck={false}
+                  />
+                </FormField>
+                <FormField label={t('bank.holder')}>
+                  <Input
+                    value={bankHolder}
+                    onChange={(event) => setBankHolder(event.target.value)}
+                    maxLength={120}
+                  />
+                </FormField>
+              </div>
               {message && (
                 <p className="mt-4 text-sm font-semibold text-red-600">
                   {message}

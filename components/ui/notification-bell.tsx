@@ -10,7 +10,14 @@ type NotificationType =
   | 'assignment_submitted'
   | 'assignment_graded'
   | 'chat_message'
-  | 'lead_received';
+  | 'lead_received'
+  | 'payment_reported'
+  | 'payment_confirmed'
+  | 'payment_rejected'
+  | 'payment_review_stale'
+  | 'installment_due'
+  | 'settlement_recorded'
+  | 'task_due';
 
 type NotificationItem = {
   id: string;
@@ -102,6 +109,35 @@ export function NotificationBell() {
         return t('chatMessage', { from: String(p.fromName ?? '') });
       case 'lead_received':
         return t('leadReceived', { name: String(p.name ?? '') });
+      case 'payment_reported':
+        return t('paymentReported', {
+          amount: String(p.amount ?? ''),
+          student: String(p.studentName ?? ''),
+        });
+      case 'payment_confirmed':
+        return t('paymentConfirmed', { amount: String(p.amount ?? '') });
+      case 'payment_rejected':
+        return t('paymentRejected', { reason: String(p.reason ?? '') });
+      case 'payment_review_stale':
+        return t('paymentReviewStale', { count: String(p.count ?? '') });
+      case 'installment_due': {
+        const rawDue = String(p.dueDate ?? '');
+        const parsedDue = /^\d{4}-\d{2}-\d{2}$/.test(rawDue)
+          ? new Intl.DateTimeFormat(locale === 'en' ? 'en-US' : 'tr-TR', {
+              day: 'numeric',
+              month: 'short',
+              year: 'numeric',
+            }).format(new Date(`${rawDue}T00:00:00`))
+          : rawDue;
+        return t('installmentDue', {
+          amount: String(p.amount ?? ''),
+          due: parsedDue,
+        });
+      }
+      case 'settlement_recorded':
+        return t('settlementRecorded', { amount: String(p.amount ?? '') });
+      case 'task_due':
+        return t('taskDue', { title: String(p.title ?? '') });
       default:
         return '';
     }

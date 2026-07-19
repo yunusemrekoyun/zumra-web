@@ -1,0 +1,1 @@
+CREATE UNIQUE INDEX "payment_records_open_report_unique" ON "payment_records" USING btree ("installment_id") WHERE "payment_records"."status" = 'reported';

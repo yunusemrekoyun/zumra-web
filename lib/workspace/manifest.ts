@@ -117,6 +117,7 @@ export const workspaceModules = [
   { scope: 'student', kind: 'nav', labelKey: 'student.nav.calendar', path: '/ogrenci/takvim', iconKey: 'calendar', mobile: 'more' },
   { scope: 'student', kind: 'nav', labelKey: 'student.nav.progress', path: '/ogrenci/ilerleme', iconKey: 'trending', mobile: 'tab' },
   { scope: 'student', kind: 'nav', labelKey: 'student.nav.messages', path: '/ogrenci/mesajlar', iconKey: 'messages', mobile: 'tab' },
+  { scope: 'student', kind: 'nav', labelKey: 'student.nav.payments', path: '/ogrenci/odemeler', iconKey: 'creditCard', mobile: 'more' },
   { scope: 'student', kind: 'nav', labelKey: 'student.nav.profile', path: '/ogrenci/profil', iconKey: 'profile', mobile: 'tab' },
 
   { scope: 'advisor', kind: 'nav', labelKey: 'advisor.nav.overview', path: '/danisman', iconKey: 'dashboard', mobile: 'tab' },
@@ -125,6 +126,7 @@ export const workspaceModules = [
   { scope: 'advisor', kind: 'nav', labelKey: 'advisor.nav.students', path: '/danisman/ogrenciler', iconKey: 'students', mobile: 'tab' },
   { scope: 'advisor', kind: 'nav', labelKey: 'advisor.nav.meetings', path: '/danisman/gorusmeler', iconKey: 'calendar', mobile: 'tab' },
   { scope: 'advisor', kind: 'nav', labelKey: 'advisor.nav.offers', path: '/danisman/teklifler', iconKey: 'target', mobile: 'more' },
+  { scope: 'advisor', kind: 'nav', labelKey: 'advisor.nav.payments', path: '/danisman/odemeler', iconKey: 'creditCard', mobile: 'more' },
   { scope: 'advisor', kind: 'nav', labelKey: 'advisor.nav.messages', path: '/danisman/mesajlar', iconKey: 'messages', mobile: 'more' },
   { scope: 'advisor', kind: 'account', labelKey: 'workspace.nav.settings', path: '/danisman/ayarlar', iconKey: 'settings', mobile: 'more' },
 
@@ -133,6 +135,7 @@ export const workspaceModules = [
   { scope: 'teacher', kind: 'nav', labelKey: 'teacher.nav.students', path: '/ogretmen/ogrenciler', iconKey: 'students', mobile: 'tab' },
   { scope: 'teacher', kind: 'nav', labelKey: 'teacher.nav.calendar', path: '/ogretmen/takvim', iconKey: 'calendar', mobile: 'more' },
   { scope: 'teacher', kind: 'nav', labelKey: 'teacher.nav.messages', path: '/ogretmen/mesajlar', iconKey: 'messages', mobile: 'more' },
+  { scope: 'teacher', kind: 'nav', labelKey: 'teacher.nav.payments', path: '/ogretmen/odemeler', iconKey: 'creditCard', mobile: 'more' },
   { scope: 'teacher', kind: 'nav', labelKey: 'teacher.nav.profile', path: '/ogretmen/profil', iconKey: 'userCheck', mobile: 'more' },
   { scope: 'teacher', kind: 'account', labelKey: 'workspace.nav.settings', path: '/ogretmen/ayarlar', iconKey: 'settings', mobile: 'more' },
 ] satisfies WorkspaceModuleDefinition[];
@@ -149,6 +152,8 @@ export const workspaceExtraRoutes = [
   '/admin/students/[studentId]',
   '/admin/instructors/[instructorId]',
   '/admin/leads/[candidateId]/enrollment',
+  '/admin/payments/komisyonlar',
+  '/admin/payments/mutabakat',
   '/ogrenci/dersler',
   '/ogretmen/odevler/yeni',
   '/ogretmen/odevler/[assignmentId]',

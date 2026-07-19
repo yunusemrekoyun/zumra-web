@@ -10,7 +10,14 @@ export type NotificationType =
   | 'assignment_submitted'
   | 'assignment_graded'
   | 'chat_message'
-  | 'lead_received';
+  | 'lead_received'
+  | 'payment_reported'
+  | 'payment_confirmed'
+  | 'payment_rejected'
+  | 'payment_review_stale'
+  | 'installment_due'
+  | 'settlement_recorded'
+  | 'task_due';
 
 export type NotificationView = {
   id: string;

@@ -9,6 +9,8 @@ export function RuntimeSettingsCard() {
   const t = useTranslations('admin.settings.runtimeSettings');
   const [joinLeadMinutes, setJoinLeadMinutes] = useState('15');
   const [autoCloseHours, setAutoCloseHours] = useState('3');
+  const [installmentReminderDays, setInstallmentReminderDays] = useState('3');
+  const [paymentReviewStaleDays, setPaymentReviewStaleDays] = useState('3');
   const [loading, setLoading] = useState(true);
   const [loadFailed, setLoadFailed] = useState(false);
   const [reloadToken, setReloadToken] = useState(0);
@@ -30,6 +32,12 @@ export function RuntimeSettingsCard() {
         if (response.ok && body.settings) {
           setJoinLeadMinutes(String(body.settings.joinLeadMinutes));
           setAutoCloseHours(String(body.settings.lessonAutoCloseHours));
+          setInstallmentReminderDays(
+            String(body.settings.installmentReminderDays),
+          );
+          setPaymentReviewStaleDays(
+            String(body.settings.paymentReviewStaleDays),
+          );
           setLoadFailed(false);
         } else {
           // Saving with the hardcoded defaults would silently overwrite the
@@ -60,8 +68,10 @@ export function RuntimeSettingsCard() {
     try {
       const response = await fetch('/api/admin/settings', {
         body: JSON.stringify({
+          installmentReminderDays: Number(installmentReminderDays),
           joinLeadMinutes: Number(joinLeadMinutes),
           lessonAutoCloseHours: Number(autoCloseHours),
+          paymentReviewStaleDays: Number(paymentReviewStaleDays),
         }),
         credentials: 'same-origin',
         headers: { 'content-type': 'application/json' },
@@ -72,6 +82,10 @@ export function RuntimeSettingsCard() {
       if (body.settings) {
         setJoinLeadMinutes(String(body.settings.joinLeadMinutes));
         setAutoCloseHours(String(body.settings.lessonAutoCloseHours));
+        setInstallmentReminderDays(
+          String(body.settings.installmentReminderDays),
+        );
+        setPaymentReviewStaleDays(String(body.settings.paymentReviewStaleDays));
       }
       setMessage({ text: t('success'), type: 'success' });
     } catch {
@@ -121,6 +135,34 @@ export function RuntimeSettingsCard() {
           />
           <span className="text-[11px] font-semibold normal-case tracking-normal text-[#2E286C]/45">
             {t('lessonAutoCloseHoursHint')}
+          </span>
+        </label>
+        <label className="grid gap-2 text-xs font-bold uppercase tracking-wider text-[#2E286C]/55">
+          {t('installmentReminderDays')}
+          <Input
+            type="number"
+            min={0}
+            max={30}
+            value={installmentReminderDays}
+            disabled={loading || busy || loadFailed}
+            onChange={(event) => setInstallmentReminderDays(event.target.value)}
+          />
+          <span className="text-[11px] font-semibold normal-case tracking-normal text-[#2E286C]/45">
+            {t('installmentReminderDaysHint')}
+          </span>
+        </label>
+        <label className="grid gap-2 text-xs font-bold uppercase tracking-wider text-[#2E286C]/55">
+          {t('paymentReviewStaleDays')}
+          <Input
+            type="number"
+            min={1}
+            max={30}
+            value={paymentReviewStaleDays}
+            disabled={loading || busy || loadFailed}
+            onChange={(event) => setPaymentReviewStaleDays(event.target.value)}
+          />
+          <span className="text-[11px] font-semibold normal-case tracking-normal text-[#2E286C]/45">
+            {t('paymentReviewStaleDaysHint')}
           </span>
         </label>
       </div>

@@ -11,11 +11,13 @@ import {
   assignments,
   assignmentSubmissionAttachments,
   assignmentSubmissions,
+  candidateProfiles,
   conversations,
   enrollments,
   instructorProfiles,
   messageAttachments,
   messages,
+  paymentRecords,
   studentProfiles,
 } from '@/lib/server/db/schema';
 import { isProfilePhotoAsset } from '@/lib/server/services/profile-photo';
@@ -188,6 +190,80 @@ async function canReadMessageMedia(
   return false;
 }
 
+// A payment receipt (dekont) is sensitive financial data: beyond the uploader
+// (owner) and admin, it is readable only by the parties of that payment — the
+// student who paid, the teacher who received the money, and the advisor who
+// owns the student's candidate record.
+async function canReadPaymentReceiptMedia(
+  principal: WorkspacePrincipal,
+  assetId: string,
+): Promise<boolean> {
+  // Guards the uuid cast in the queries below — a malformed id can't match a
+  // media asset anyway.
+  if (
+    !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(
+      assetId,
+    )
+  ) {
+    return false;
+  }
+
+  if (principal.role === 'teacher') {
+    const rows = await database
+      .select({ id: paymentRecords.id })
+      .from(paymentRecords)
+      .innerJoin(
+        instructorProfiles,
+        eq(instructorProfiles.id, paymentRecords.instructorId),
+      )
+      .where(
+        and(
+          eq(paymentRecords.receiptMediaAssetId, assetId),
+          eq(instructorProfiles.userId, principal.id),
+        ),
+      )
+      .limit(1);
+    return rows.length > 0;
+  }
+
+  if (principal.role === 'student') {
+    const rows = await database
+      .select({ id: paymentRecords.id })
+      .from(paymentRecords)
+      .innerJoin(enrollments, eq(enrollments.id, paymentRecords.enrollmentId))
+      .innerJoin(studentProfiles, eq(studentProfiles.id, enrollments.studentId))
+      .where(
+        and(
+          eq(paymentRecords.receiptMediaAssetId, assetId),
+          eq(studentProfiles.userId, principal.id),
+        ),
+      )
+      .limit(1);
+    return rows.length > 0;
+  }
+
+  if (principal.role === 'advisor') {
+    const rows = await database
+      .select({ id: paymentRecords.id })
+      .from(paymentRecords)
+      .innerJoin(enrollments, eq(enrollments.id, paymentRecords.enrollmentId))
+      .innerJoin(
+        candidateProfiles,
+        eq(candidateProfiles.id, enrollments.candidateId),
+      )
+      .where(
+        and(
+          eq(paymentRecords.receiptMediaAssetId, assetId),
+          eq(candidateProfiles.advisorId, principal.id),
+        ),
+      )
+      .limit(1);
+    return rows.length > 0;
+  }
+
+  return false;
+}
+
 export const mediaAuthorizationService: MediaAuthorizationService = {
   async canRead(principal, asset) {
     if (asset.visibility === 'public') {
@@ -217,6 +293,10 @@ export const mediaAuthorizationService: MediaAuthorizationService = {
     }
 
     if (await canReadAssignmentMedia(principal, asset.id)) {
+      return true;
+    }
+
+    if (await canReadPaymentReceiptMedia(principal, asset.id)) {
       return true;
     }
 

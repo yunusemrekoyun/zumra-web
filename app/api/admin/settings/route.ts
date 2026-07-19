@@ -14,15 +14,19 @@ import { getAllSettings, updateSettings } from '@/lib/server/services/settings';
 
 const patchSchema = z
   .object({
+    installmentReminderDays: z.number().int().min(0).max(30).optional(),
     joinLeadMinutes: z.number().int().min(0).max(120).optional(),
     lessonAutoCloseHours: z.number().int().min(1).max(48).optional(),
     mailMode: z.enum(['live', 'test']).optional(),
+    paymentReviewStaleDays: z.number().int().min(1).max(30).optional(),
   })
   .refine(
     (value) =>
+      value.installmentReminderDays !== undefined ||
       value.joinLeadMinutes !== undefined ||
       value.lessonAutoCloseHours !== undefined ||
-      value.mailMode !== undefined,
+      value.mailMode !== undefined ||
+      value.paymentReviewStaleDays !== undefined,
     { message: 'no_fields' },
   );
 

@@ -45,7 +45,9 @@ import {
   resolveProgramBranchSelection,
   resolveProgramPricing,
 } from '@/lib/server/services/programs';
+import { closeSystemTasks, spawnSystemTask } from './advisor-tasks';
 import { notificationService } from './notifications';
+import { generateDefaultInstallmentPlan } from './payments';
 
 // Legacy contacts may hold national-format phones; normalize on read so the
 // enrollment wizard prefills a value that passes its own E.164 validation.
@@ -269,9 +271,10 @@ export async function beginEnrollmentDraft(
 ) {
   assertAdmin(principal);
 
-  return database.transaction(async (transaction) => {
+  const result = await database.transaction(async (transaction) => {
     const [candidate] = await transaction
       .select({
+        advisorId: candidateProfiles.advisorId,
         contactId: candidateProfiles.contactId,
         email: contacts.email,
         firstName: contacts.firstName,
@@ -304,7 +307,7 @@ export async function beginEnrollmentDraft(
       .limit(1);
 
     if (existing) {
-      return { created: false, id: existing.id };
+      return { advisorId: candidate.advisorId, created: false, id: existing.id };
     }
 
     const [draft] = await transaction
@@ -342,7 +345,11 @@ export async function beginEnrollmentDraft(
         )
         .limit(1);
       if (concurrent) {
-        return { created: false, id: concurrent.id };
+        return {
+          advisorId: candidate.advisorId,
+          created: false,
+          id: concurrent.id,
+        };
       }
       throw new Error('Enrollment draft could not be created.');
     }
@@ -359,8 +366,20 @@ export async function beginEnrollmentDraft(
       .set({ lastActivityAt: now, updatedAt: now })
       .where(eq(candidateProfiles.id, candidateId));
 
-    return { created: true, id: draft.id };
+    return { advisorId: candidate.advisorId, created: true, id: draft.id };
   });
+
+  // A fresh draft opens follow-through work for the owning advisor: chase the
+  // remaining steps until the enrollment is completed (closed on completion).
+  if (result.created) {
+    await spawnSystemTask({
+      assigneeUserId: result.advisorId,
+      candidateId,
+      kind: 'enrollment_wrapup',
+    });
+  }
+
+  return { created: result.created, id: result.id };
 }
 
 export async function getEnrollmentDraftForAdmin(
@@ -1252,6 +1271,7 @@ export async function completeEnrollment(
 
     const [candidate] = await transaction
       .select({
+        advisorId: candidateProfiles.advisorId,
         contactId: candidateProfiles.contactId,
         id: candidateProfiles.id,
       })
@@ -1360,6 +1380,17 @@ export async function completeEnrollment(
       throw new Error('Enrollment could not be created.');
     }
 
+    // Seed the agreed installment plan from the wizard's financial step; staff
+    // can reshape it later from the payments screens.
+    await generateDefaultInstallmentPlan(transaction, {
+      createdByUserId: principal.id,
+      enrolledAt: new Date(),
+      enrollmentId: enrollment.id,
+      finalPriceCents: draft.finalPriceCents!,
+      initialPaymentCents: draft.initialPaymentCents,
+      installmentCount: draft.installmentCount,
+    });
+
     const now = new Date();
     await transaction
       .update(enrollmentDrafts)
@@ -1426,11 +1457,35 @@ export async function completeEnrollment(
       type: 'candidate.enrollment_completed',
     });
 
-    return { id: enrollment.id, invitation, studentId: student.id };
+    return {
+      advisorId: candidate.advisorId,
+      candidateId: candidate.id,
+      id: enrollment.id,
+      invitation,
+      studentId: student.id,
+    };
   });
 
   if (result && 'invitation' in result && result.invitation) {
     await enqueueStudentInvitation(result.invitation);
+  }
+
+  if (result && 'candidateId' in result) {
+    // The wrap-up chase is satisfied; onboarding (welcome call, first lesson)
+    // becomes the advisor's next-day work item.
+    const onboardingDue = new Date();
+    onboardingDue.setDate(onboardingDue.getDate() + 1);
+    await closeSystemTasks(
+      result.candidateId,
+      ['enrollment_wrapup'],
+      principal.id,
+    );
+    await spawnSystemTask({
+      assigneeUserId: result.advisorId,
+      candidateId: result.candidateId,
+      dueAt: onboardingDue,
+      kind: 'enrollment_onboarding',
+    });
   }
 
   return result

@@ -20,6 +20,8 @@ export const advisorTaskKindEnum = pgEnum('advisor_task_kind', [
   'follow_up', // "thinking" verdict → follow-up call (dueAt optional)
   'retry_contact', // could not be reached → try again
   'manual', // advisor's own to-do (e.g. preparing a presentation)
+  'enrollment_wrapup', // enrollment draft opened → chase it to completion
+  'enrollment_onboarding', // enrollment completed → welcome the new student
 ]);
 
 export const advisorTaskStatusEnum = pgEnum('advisor_task_status', [

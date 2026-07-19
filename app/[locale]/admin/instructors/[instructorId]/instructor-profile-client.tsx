@@ -30,6 +30,7 @@ import {
   InstructorFields,
   type InstructorEditorValue,
 } from '../instructor-fields';
+import { InstructorBankPanel } from '../_components/instructor-bank-panel';
 
 export function InstructorProfileClient({
   initial,
@@ -435,6 +436,8 @@ export function InstructorProfileClient({
               </Button>
             </form>
           </ModulePanel>
+
+          <InstructorBankPanel instructorId={profile.id} />
 
           <div className="grid gap-6 lg:grid-cols-2">
             <ModulePanel className="rounded-3xl">

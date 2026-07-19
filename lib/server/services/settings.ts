@@ -7,17 +7,21 @@ import { workspaceSettings } from '@/lib/server/db/schema';
 export type MailMode = 'live' | 'test';
 
 export type SettingValues = {
+  installmentReminderDays: number;
   joinLeadMinutes: number;
   lessonAutoCloseHours: number;
   mailMode: MailMode;
+  paymentReviewStaleDays: number;
 };
 
 export type SettingKey = keyof SettingValues;
 
 export const SETTING_DEFAULTS: SettingValues = {
+  installmentReminderDays: 3,
   joinLeadMinutes: 15,
   lessonAutoCloseHours: 3,
   mailMode: 'live',
+  paymentReviewStaleDays: 3,
 };
 
 const SETTING_KEYS = Object.keys(SETTING_DEFAULTS) as SettingKey[];
@@ -28,11 +32,15 @@ const SETTING_KEYS = Object.keys(SETTING_DEFAULTS) as SettingKey[];
 const SETTING_VALIDATORS: {
   [K in SettingKey]: (value: unknown) => SettingValues[K] | undefined;
 } = {
+  installmentReminderDays: (value) =>
+    typeof value === 'number' ? value : undefined,
   joinLeadMinutes: (value) => (typeof value === 'number' ? value : undefined),
   lessonAutoCloseHours: (value) =>
     typeof value === 'number' ? value : undefined,
   mailMode: (value) =>
     value === 'live' || value === 'test' ? value : undefined,
+  paymentReviewStaleDays: (value) =>
+    typeof value === 'number' ? value : undefined,
 };
 
 function coerce<K extends SettingKey>(key: K, value: unknown): SettingValues[K] {
@@ -63,12 +71,20 @@ export async function getAllSettings(): Promise<SettingValues> {
   const byKey = new Map(rows.map((row) => [row.key, row.value]));
 
   return {
+    installmentReminderDays: coerce(
+      'installmentReminderDays',
+      byKey.get('installmentReminderDays'),
+    ),
     joinLeadMinutes: coerce('joinLeadMinutes', byKey.get('joinLeadMinutes')),
     lessonAutoCloseHours: coerce(
       'lessonAutoCloseHours',
       byKey.get('lessonAutoCloseHours'),
     ),
     mailMode: coerce('mailMode', byKey.get('mailMode')),
+    paymentReviewStaleDays: coerce(
+      'paymentReviewStaleDays',
+      byKey.get('paymentReviewStaleDays'),
+    ),
   };
 }
 

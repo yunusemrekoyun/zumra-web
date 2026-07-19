@@ -72,7 +72,23 @@ export function CandidatesClient({
   const [stageFilter, setStageFilter] = useState<'all' | (typeof STAGES)[number]>(
     'all',
   );
+  const [levelFilter, setLevelFilter] = useState('all');
+  const [languageFilter, setLanguageFilter] = useState('all');
   const [query, setQuery] = useState('');
+  const levelOptions = useMemo(
+    () =>
+      [...new Set(candidates.map((candidate) => candidate.resultLevel))]
+        .filter((value): value is string => Boolean(value))
+        .sort(),
+    [candidates],
+  );
+  const languageOptions = useMemo(
+    () =>
+      [...new Set(candidates.map((candidate) => candidate.language))]
+        .filter((value): value is string => Boolean(value))
+        .sort(),
+    [candidates],
+  );
   const visible = useMemo(() => {
     const normalizedQuery = query.trim().toLocaleLowerCase(locale);
 
@@ -84,6 +100,10 @@ export function CandidatesClient({
           .includes(normalizedQuery);
       const matchesStage =
         stageFilter === 'all' || candidate.stage === stageFilter;
+      const matchesLevel =
+        levelFilter === 'all' || candidate.resultLevel === levelFilter;
+      const matchesLanguage =
+        languageFilter === 'all' || candidate.language === languageFilter;
       const matchesFilter =
         filter === 'all' ||
         (filter === 'mine' && candidate.advisorId === currentUserId) ||
@@ -94,9 +114,24 @@ export function CandidatesClient({
           candidate.assessmentStatus === 'completed') ||
         (filter === 'appointment' &&
           candidate.appointmentStatus === 'requested');
-      return matchesQuery && matchesStage && matchesFilter;
+      return (
+        matchesQuery &&
+        matchesStage &&
+        matchesLevel &&
+        matchesLanguage &&
+        matchesFilter
+      );
     });
-  }, [candidates, currentUserId, filter, locale, query, stageFilter]);
+  }, [
+    candidates,
+    currentUserId,
+    filter,
+    languageFilter,
+    levelFilter,
+    locale,
+    query,
+    stageFilter,
+  ]);
   const [selectedId, setSelectedId] = useState(
     initialSelectedId ?? candidates[0]?.id,
   );
@@ -138,6 +173,32 @@ export function CandidatesClient({
             { label: t('appointmentRequested'), value: 'appointment' },
           ]}
         />
+        {levelOptions.length > 0 && (
+          <FilterTabs
+            activeValue={levelFilter}
+            onChange={setLevelFilter}
+            items={[
+              { label: t('levelFilterAll'), value: 'all' },
+              ...levelOptions.map((level) => ({
+                label: level,
+                value: level,
+              })),
+            ]}
+          />
+        )}
+        {languageOptions.length > 1 && (
+          <FilterTabs
+            activeValue={languageFilter}
+            onChange={setLanguageFilter}
+            items={[
+              { label: t('languageFilterAll'), value: 'all' },
+              ...languageOptions.map((language) => ({
+                label: languageLabel(language, locale),
+                value: language,
+              })),
+            ]}
+          />
+        )}
       </div>
 
       <div className="custom-scrollbar flex-1 space-y-2 overflow-y-auto p-3">

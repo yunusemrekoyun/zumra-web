@@ -24,6 +24,8 @@ function assertStaff(principal: WorkspacePrincipal) {
 
 export type AdvisorTaskKind =
   | 'appointment_request'
+  | 'enrollment_onboarding'
+  | 'enrollment_wrapup'
   | 'first_contact'
   | 'follow_up'
   | 'manual'
@@ -52,7 +54,9 @@ type SystemTaskKind =
   | 'appointment_request'
   | 'first_contact'
   | 'follow_up'
-  | 'retry_contact';
+  | 'retry_contact'
+  | 'enrollment_wrapup'
+  | 'enrollment_onboarding';
 
 /* ─── Internal engine: tasks are born from CRM events and closed by the
        action that satisfies them. Duplicate-safe via the partial unique. ─── */
