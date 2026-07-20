@@ -9,7 +9,9 @@ import {
 } from '@/lib/datetime';
 import { requireWorkspaceRole } from '@/lib/server/authorization';
 import {
+  type AdvisorFollowUpRow,
   type AppointmentOverviewRow,
+  getAdvisorFollowUps,
   getAdvisorOverview,
 } from '@/lib/server/services/advisor-overview';
 import { listAdvisorTasks } from '@/lib/server/services/advisor-tasks';
@@ -33,12 +35,13 @@ export default async function AdvisorDashboardPage({
 }: AdvisorDashboardPageProps) {
   const { locale } = await params;
   const principal = await requireWorkspaceRole('advisor', locale);
-  const [t, tasks, stages, overview, board] = await Promise.all([
+  const [t, tasks, stages, overview, board, followUps] = await Promise.all([
     getTranslations('advisor.dashboard'),
     getTranslations('advisor.tasks'),
     getTranslations('admin.leads.stages'),
     getAdvisorOverview(principal),
     listAdvisorTasks(principal),
+    getAdvisorFollowUps(principal),
   ]);
 
   // "Bugünüm": vadesi geçmiş ya da bugün dolan işler önce, sonra vadesizler.
@@ -130,6 +133,18 @@ export default async function AdvisorDashboardPage({
         />
       </div>
 
+      <FollowUpPanel
+        emptyLabel={t('followUpsEmpty')}
+        labels={{
+          absences: (count: number) => t('followUpAbsences', { count }),
+          installments: (count: number) =>
+            t('followUpInstallments', { count }),
+          reports: (count: number) => t('followUpReports', { count }),
+        }}
+        rows={followUps}
+        title={t('followUpsTitle')}
+      />
+
       <div className="grid gap-4 xl:grid-cols-2">
         <AppointmentListPanel
           emptyLabel={t('emptyRequests')}
@@ -149,6 +164,65 @@ export default async function AdvisorDashboardPage({
         />
       </div>
     </div>
+  );
+}
+
+function FollowUpPanel({
+  emptyLabel,
+  labels,
+  rows,
+  title,
+}: {
+  emptyLabel: string;
+  labels: {
+    absences: (count: number) => string;
+    installments: (count: number) => string;
+    reports: (count: number) => string;
+  };
+  rows: AdvisorFollowUpRow[];
+  title: string;
+}) {
+  return (
+    <ModulePanel className="rounded-3xl">
+      <h3 className="text-xs font-bold uppercase tracking-[0.16em] text-[#2E286C]/40">
+        {title}
+      </h3>
+      {rows.length ? (
+        <ul className="mt-4 space-y-3">
+          {rows.map((row) => (
+            <li
+              key={row.studentProfileId}
+              className="flex flex-wrap items-center justify-between gap-3 rounded-2xl bg-[#F8F7FB] px-4 py-3"
+            >
+              <span className="text-sm font-bold text-[#2E286C]">
+                {row.fullName}
+              </span>
+              <span className="flex flex-wrap gap-2">
+                {row.overdueInstallments > 0 && (
+                  <span className="rounded-full bg-red-50 px-3 py-1 text-xs font-bold text-red-700">
+                    {labels.installments(row.overdueInstallments)}
+                  </span>
+                )}
+                {row.pendingPaymentReports > 0 && (
+                  <span className="rounded-full bg-amber-50 px-3 py-1 text-xs font-bold text-amber-700">
+                    {labels.reports(row.pendingPaymentReports)}
+                  </span>
+                )}
+                {row.recentAbsences > 0 && (
+                  <span className="rounded-full bg-[#533089]/8 px-3 py-1 text-xs font-bold text-[#533089]">
+                    {labels.absences(row.recentAbsences)}
+                  </span>
+                )}
+              </span>
+            </li>
+          ))}
+        </ul>
+      ) : (
+        <p className="mt-4 text-sm font-medium text-[#2E286C]/45">
+          {emptyLabel}
+        </p>
+      )}
+    </ModulePanel>
   );
 }
 

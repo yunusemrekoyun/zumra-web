@@ -9,6 +9,12 @@ import {
   appointmentRequests,
   candidateProfiles,
   contacts,
+  enrollmentInstallments,
+  enrollments,
+  lessonAttendanceRecords,
+  lessonSessions,
+  paymentRecords,
+  studentProfiles,
 } from '@/lib/server/db/schema';
 import { AuthorizationDeniedError } from '@/lib/server/http/errors';
 
@@ -191,4 +197,135 @@ export async function listAppointmentsOverview(
   ]);
 
   return { past, requested, scheduled };
+}
+
+// ---------------------------------------------------------------------------
+// Follow-up list: which of MY students (advisor-owned candidates that became
+// students) currently need attention — overdue installments, payment reports
+// waiting for teacher review, or recent confirmed absences.
+// ---------------------------------------------------------------------------
+
+export type AdvisorFollowUpRow = {
+  fullName: string;
+  overdueInstallments: number;
+  pendingPaymentReports: number;
+  recentAbsences: number;
+  studentProfileId: string;
+};
+
+export async function getAdvisorFollowUps(
+  principal: WorkspacePrincipal,
+): Promise<AdvisorFollowUpRow[]> {
+  if (principal.role !== 'advisor' && principal.role !== 'admin') {
+    throw new AuthorizationDeniedError('Advisor access is required.');
+  }
+
+  const students = await database
+    .select({
+      firstName: contacts.firstName,
+      lastName: contacts.lastName,
+      studentProfileId: studentProfiles.id,
+    })
+    .from(candidateProfiles)
+    .innerJoin(contacts, eq(contacts.id, candidateProfiles.contactId))
+    .innerJoin(
+      studentProfiles,
+      eq(studentProfiles.contactId, candidateProfiles.contactId),
+    )
+    .where(eq(candidateProfiles.advisorId, principal.id));
+
+  if (!students.length) return [];
+
+  const studentIds = students.map((row) => row.studentProfileId);
+  const now = new Date();
+  const twoWeeksAgo = new Date(now.getTime() - 14 * 86_400_000);
+  // dueDate is a plain date column (string) keyed to Istanbul days.
+  const todayIso = isoToIstanbulWallClock(now.toISOString()).slice(0, 10);
+
+  const [installmentRows, reportRows, absenceRows] = await Promise.all([
+    database
+      .select({
+        overdue: sql<number>`count(*)::int`,
+        studentId: enrollments.studentId,
+      })
+      .from(enrollmentInstallments)
+      .innerJoin(
+        enrollments,
+        eq(enrollments.id, enrollmentInstallments.enrollmentId),
+      )
+      .where(
+        and(
+          inArray(enrollments.studentId, studentIds),
+          inArray(enrollments.status, ['active', 'paused']),
+          sql`${enrollmentInstallments.status} <> 'paid'`,
+          lt(enrollmentInstallments.dueDate, todayIso),
+        ),
+      )
+      .groupBy(enrollments.studentId),
+    database
+      .select({
+        pending: sql<number>`count(*)::int`,
+        studentId: enrollments.studentId,
+      })
+      .from(paymentRecords)
+      .innerJoin(enrollments, eq(enrollments.id, paymentRecords.enrollmentId))
+      .where(
+        and(
+          inArray(enrollments.studentId, studentIds),
+          eq(paymentRecords.status, 'reported'),
+        ),
+      )
+      .groupBy(enrollments.studentId),
+    database
+      .select({
+        absences: sql<number>`count(*)::int`,
+        studentId: lessonAttendanceRecords.studentProfileId,
+      })
+      .from(lessonAttendanceRecords)
+      .innerJoin(
+        lessonSessions,
+        eq(lessonSessions.id, lessonAttendanceRecords.lessonSessionId),
+      )
+      .where(
+        and(
+          inArray(lessonAttendanceRecords.studentProfileId, studentIds),
+          eq(lessonAttendanceRecords.status, 'absent'),
+          sql`${lessonAttendanceRecords.confirmedAt} is not null`,
+          gte(lessonSessions.startsAt, twoWeeksAgo),
+        ),
+      )
+      .groupBy(lessonAttendanceRecords.studentProfileId),
+  ]);
+
+  const overdueByStudent = new Map(
+    installmentRows.map((row) => [row.studentId, Number(row.overdue)]),
+  );
+  const reportsByStudent = new Map(
+    reportRows.map((row) => [row.studentId, Number(row.pending)]),
+  );
+  const absencesByStudent = new Map(
+    absenceRows.map((row) => [row.studentId, Number(row.absences)]),
+  );
+
+  return students
+    .map((student) => ({
+      fullName: `${student.firstName} ${student.lastName}`.trim(),
+      overdueInstallments:
+        overdueByStudent.get(student.studentProfileId) ?? 0,
+      pendingPaymentReports:
+        reportsByStudent.get(student.studentProfileId) ?? 0,
+      recentAbsences: absencesByStudent.get(student.studentProfileId) ?? 0,
+      studentProfileId: student.studentProfileId,
+    }))
+    .filter(
+      (row) =>
+        row.overdueInstallments > 0 ||
+        row.pendingPaymentReports > 0 ||
+        row.recentAbsences > 0,
+    )
+    .sort(
+      (a, b) =>
+        b.overdueInstallments + b.pendingPaymentReports + b.recentAbsences -
+        (a.overdueInstallments + a.pendingPaymentReports + a.recentAbsences),
+    );
 }

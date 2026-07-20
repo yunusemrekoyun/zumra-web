@@ -1,25 +1,36 @@
-import { Plus, Users } from 'lucide-react';
-import { useLocale, useTranslations } from 'next-intl';
-import { Avatar, Button, Card, IconButton, KpiCard, SectionHeader, StatusChip, TimelineItem } from '@/components/ui';
 import {
-  getDashboardData,
-  getDomainLanguageKey,
-  getDomainRelativeKey,
-} from '@/lib/domain';
+  AlertTriangle,
+  CalendarClock,
+  ClipboardList,
+  UserPlus,
+  Users,
+  Wallet,
+} from 'lucide-react';
+import { getTranslations } from 'next-intl/server';
+import type { LucideIcon } from 'lucide-react';
+import {
+  Avatar,
+  Card,
+  KpiCard,
+  SectionHeader,
+  StatusChip,
+  TimelineItem,
+} from '@/components/ui';
+import { Link } from '@/i18n/navigation';
 import { requireWorkspaceRole } from '@/lib/server/authorization';
+import { getAdminDashboard } from '@/lib/server/services/admin-dashboard';
 
-/* ─── Data ────────────────────────────────────────────────────────── */
-
-const leadStatusMeta = {
-  contacted: { labelKey: 'contacted', tone: 'blue' as const },
-  converted: { labelKey: 'converted', tone: 'emerald' as const },
-  lost: { labelKey: 'lost', tone: 'gray' as const },
-  meeting_scheduled: { labelKey: 'meeting_scheduled', tone: 'amber' as const },
-  new: { labelKey: 'new', tone: 'emerald' as const },
-  offer_pending: { labelKey: 'offer_pending', tone: 'amber' as const },
+const STAGE_TONES: Record<
+  string,
+  'emerald' | 'amber' | 'blue' | 'gray' | 'purple'
+> = {
+  contacted: 'blue',
+  enrolled: 'emerald',
+  lost: 'gray',
+  new: 'emerald',
+  offer_pending: 'amber',
+  qualified: 'purple',
 };
-
-/* ─── Component ───────────────────────────────────────────────────── */
 
 type AdminPageProps = {
   params: Promise<{ locale: string }>;
@@ -27,53 +38,54 @@ type AdminPageProps = {
 
 export default async function AdminPage({ params }: AdminPageProps) {
   const { locale } = await params;
-  await requireWorkspaceRole('admin', locale);
+  const principal = await requireWorkspaceRole('admin', locale);
+  const [t, stages, common, data] = await Promise.all([
+    getTranslations('admin.dashboard'),
+    getTranslations('admin.leads.stages'),
+    getTranslations('common.actions'),
+    getAdminDashboard(principal),
+  ]);
 
-  return <AdminPageContent />;
-}
+  const timeFormatter = new Intl.DateTimeFormat(
+    locale === 'en' ? 'en-US' : 'tr-TR',
+    { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Istanbul' },
+  );
+  const activityFormatter = new Intl.DateTimeFormat(
+    locale === 'en' ? 'en-US' : 'tr-TR',
+    { day: '2-digit', month: 'short', timeZone: 'Europe/Istanbul' },
+  );
 
-function AdminPageContent() {
-  const locale = useLocale();
-  const t = useTranslations('admin.dashboard');
-  const status = useTranslations('domain.leadStatus');
-  const domain = useTranslations('domain');
-  const common = useTranslations('common.actions');
-  const dashboard = getDashboardData('admin');
-  const leads = dashboard.leads.map((lead) => {
-    const languageKey = getDomainLanguageKey(lead.interestedProgram);
-    const relativeKey = getDomainRelativeKey(lead.lastActivityLabel);
-    const program = languageKey ? domain(`languages.${languageKey}`) : lead.interestedProgram;
-
-    return {
-      id: lead.id,
-      name: lead.fullName,
-      program: `${program}${lead.level ? ` • ${lead.level}` : ''}`,
-      statusKey: leadStatusMeta[lead.status].labelKey,
-      time: relativeKey ? domain(`relative.${relativeKey}`) : lead.lastActivityLabel,
-      tone: leadStatusMeta[lead.status].tone,
-    };
-  });
-  const schedule = dashboard.meetings.map((meeting) => {
-    const lead = meeting.leadId
-      ? dashboard.leads.find((item) => item.id === meeting.leadId)
-      : undefined;
-    const student = meeting.studentId
-      ? dashboard.students.find((item) => item.id === meeting.studentId)
-      : undefined;
-    const participantName = lead?.fullName ?? student?.fullName ?? meeting.title;
-
-    return {
-      id: meeting.id,
-      time: new Intl.DateTimeFormat(locale === 'en' ? 'en-US' : 'tr-TR', {
-        hour: '2-digit',
-        minute: '2-digit',
-      }).format(new Date(meeting.startsAt)),
-      title: lead
-        ? t('meetingIntake', { name: participantName })
-        : t('meetingLevel', { name: participantName }),
-      tone: 'brand' as const,
-    };
-  });
+  const alerts: Array<{
+    count: number;
+    href?: string;
+    icon: LucideIcon;
+    label: string;
+  }> = [
+    {
+      count: data.alerts.pendingPaymentReports,
+      href: '/admin/payments',
+      icon: Wallet,
+      label: t('alertPayments'),
+    },
+    {
+      count: data.alerts.pendingChangeRequests,
+      href: '/admin/calendar',
+      icon: CalendarClock,
+      label: t('alertChangeRequests'),
+    },
+    {
+      count: data.alerts.overdueInstallments,
+      href: '/admin/payments',
+      icon: AlertTriangle,
+      label: t('alertInstallments'),
+    },
+    {
+      count: data.alerts.tasksDue,
+      icon: ClipboardList,
+      label: t('alertTasks'),
+    },
+  ];
+  const openAlerts = alerts.filter((alert) => alert.count > 0);
 
   return (
     <div className="admin-page">
@@ -87,25 +99,55 @@ function AdminPageContent() {
           variant="gradient"
           icon={Users}
           label={t('totalStudents')}
-          value={dashboard.students.length}
-          trend={{ direction: 'up', label: t('trendMonth') }}
+          value={data.kpis.totalStudents}
         />
         <KpiCard
           label={t('activeStudents')}
-          value={dashboard.students.filter((student) => student.status === 'active').length}
-          trend={{ direction: 'up', label: t('trendWeek') }}
+          value={data.kpis.activeStudents}
         />
         <KpiCard
+          icon={UserPlus}
           label={t('newApplications')}
-          value={dashboard.leads.length}
-          trend={{ label: t('waiting'), direction: 'neutral' }}
+          value={data.kpis.newCandidates30d}
         />
         <KpiCard
           label={t('conversionRate')}
-          value="%68"
-          trend={{ direction: 'up', label: t('goodLevel') }}
+          value={`%${data.kpis.conversionPercent}`}
         />
       </div>
+
+      {/* Pending work alerts */}
+      <Card padded>
+        <SectionHeader title={t('alertsTitle')} />
+        {openAlerts.length ? (
+          <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+            {openAlerts.map((alert) => {
+              const content = (
+                <div className="flex items-center justify-between gap-3 rounded-2xl border border-amber-500/15 bg-amber-50/60 px-4 py-3 transition-colors hover:bg-amber-50">
+                  <span className="inline-flex items-center gap-2 text-sm font-bold text-[#2E286C]">
+                    <alert.icon className="h-4 w-4 text-amber-600" />
+                    {alert.label}
+                  </span>
+                  <span className="rounded-full bg-amber-500 px-2.5 py-0.5 text-xs font-black text-white">
+                    {alert.count}
+                  </span>
+                </div>
+              );
+              return alert.href ? (
+                <Link href={alert.href} key={alert.label}>
+                  {content}
+                </Link>
+              ) : (
+                <div key={alert.label}>{content}</div>
+              );
+            })}
+          </div>
+        ) : (
+          <p className="text-sm font-medium text-[#2E286C]/45">
+            {t('alertsEmpty')}
+          </p>
+        )}
+      </Card>
 
       <div className="grid grid-cols-1 xl:grid-cols-3 gap-4 lg:gap-6">
         {/* Recent candidates */}
@@ -113,57 +155,84 @@ function AdminPageContent() {
           <SectionHeader
             title={t('recentLeads')}
             action={
-              <Button variant="ghost" size="sm" className="normal-case tracking-normal">
+              <Link
+                className="rounded-xl px-3 py-1.5 text-sm font-bold text-[#533089] transition-colors hover:bg-[#533089]/7"
+                href="/admin/leads"
+              >
                 {common('viewAll')}
-              </Button>
+              </Link>
             }
           />
-          <div className="space-y-3">
-            {leads.map((lead) => (
-              <div
-                key={lead.id}
-                className="flex items-center justify-between p-4 rounded-2xl border border-black/[0.03] hover:shadow-md transition-shadow cursor-pointer bg-white group"
-              >
-                <div className="flex items-center gap-4">
-                  <Avatar name={lead.name} />
-                  <div>
-                    <div className="font-bold text-[#2E286C] mb-0.5 group-hover:text-[#533089] transition-colors">
-                      {lead.name}
+          {data.recentCandidates.length ? (
+            <div className="space-y-3">
+              {data.recentCandidates.map((candidate) => (
+                <Link
+                  key={candidate.id}
+                  href={`/admin/leads/${candidate.id}`}
+                  className="flex items-center justify-between p-4 rounded-2xl border border-black/[0.03] hover:shadow-md transition-shadow bg-white group"
+                >
+                  <div className="flex items-center gap-4">
+                    <Avatar name={candidate.fullName} />
+                    <div className="font-bold text-[#2E286C] group-hover:text-[#533089] transition-colors">
+                      {candidate.fullName}
                     </div>
-                    <div className="text-xs text-[#2E286C]/50 font-medium">{lead.program}</div>
                   </div>
-                </div>
-                <div className="flex flex-col items-end gap-2">
-                  <StatusChip tone={lead.tone}>{status(lead.statusKey)}</StatusChip>
-                  <div className="text-xs text-[#2E286C]/40 font-medium">{lead.time}</div>
-                </div>
-              </div>
-            ))}
-          </div>
+                  <div className="flex flex-col items-end gap-2">
+                    <StatusChip tone={STAGE_TONES[candidate.stage] ?? 'gray'}>
+                      {stages(candidate.stage as never)}
+                    </StatusChip>
+                    <div className="text-xs text-[#2E286C]/40 font-medium">
+                      {activityFormatter.format(
+                        new Date(candidate.lastActivityAt),
+                      )}
+                    </div>
+                  </div>
+                </Link>
+              ))}
+            </div>
+          ) : (
+            <p className="text-sm font-medium text-[#2E286C]/45">
+              {t('leadsEmpty')}
+            </p>
+          )}
         </Card>
 
-        {/* Schedule */}
+        {/* Today's lessons */}
         <Card padded>
           <SectionHeader
             title={t('todaySchedule')}
             action={
-              <IconButton
-                aria-label={common('add')}
-                icon={<Plus className="w-4 h-4" />}
-                size="sm"
-                variant="ghost"
-                className="rounded-full bg-[#F8F9FC]"
-              />
+              <Link
+                className="rounded-xl px-3 py-1.5 text-sm font-bold text-[#533089] transition-colors hover:bg-[#533089]/7"
+                href="/admin/calendar"
+              >
+                {common('viewAll')}
+              </Link>
             }
           />
-          <div className="relative">
-            <div className="absolute left-3 top-2 bottom-2 w-0.5 bg-black/[0.03]" />
-            <div className="space-y-6 relative z-10">
-              {schedule.map((item) => (
-                <TimelineItem key={item.id} time={item.time} title={item.title} tone={item.tone} />
-              ))}
+          {data.todayLessons.length ? (
+            <div className="relative">
+              <div className="absolute left-3 top-2 bottom-2 w-0.5 bg-black/[0.03]" />
+              <div className="space-y-6 relative z-10">
+                {data.todayLessons.map((lesson) => (
+                  <TimelineItem
+                    key={lesson.id}
+                    time={timeFormatter.format(new Date(lesson.startsAt))}
+                    title={
+                      lesson.instructorName
+                        ? `${lesson.title} — ${lesson.instructorName}`
+                        : lesson.title
+                    }
+                    tone="brand"
+                  />
+                ))}
+              </div>
             </div>
-          </div>
+          ) : (
+            <p className="text-sm font-medium text-[#2E286C]/45">
+              {t('todayEmpty')}
+            </p>
+          )}
         </Card>
       </div>
     </div>
