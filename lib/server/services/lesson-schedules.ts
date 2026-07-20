@@ -37,6 +37,7 @@ import {
   PublicFlowError,
 } from '@/lib/server/http/errors';
 import { ensureLessonMeetingsForSessions } from './lesson-meetings';
+import { notifyBranchScheduleUpdated } from './notify-events';
 import { getSetting } from './settings';
 
 export const LESSON_DURATION_MINUTES = 60;
@@ -282,10 +283,18 @@ export async function replaceBranchLessonSchedule(
     return {
       branchId: branch.id,
       lessonSessionIds: createdSessions.map((session) => session.id),
+      ruleId: rule.id,
     };
   });
 
   await ensureLessonMeetingsForSessions(result.lessonSessionIds);
+
+  // The schedule just got set or replaced — both sides of the classroom hear
+  // about it (in-app + email); the rule id keys the email dedupe.
+  await notifyBranchScheduleUpdated({
+    branchId: result.branchId,
+    eventKey: result.ruleId,
+  });
 
   const scheduleByBranch = await getBranchLessonScheduleMap([result.branchId]);
   return {

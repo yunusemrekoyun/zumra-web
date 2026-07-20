@@ -27,6 +27,7 @@ import {
   EntityPickerField,
   Button,
   DateRangePicker,
+  EmptyState,
   Input,
   ModulePanel,
   PageHeader,
@@ -34,6 +35,7 @@ import {
 } from '@/components/ui';
 import type {
   BranchArchivePreview,
+  PrivateLessonPackageView,
   ProgramCatalogItem,
   ProgramBranchStatus,
   ProgramBranchView,
@@ -41,6 +43,7 @@ import type {
   ProgramLevel,
   ProgramManagementData,
 } from '@/lib/server/services/programs';
+import { centsToInput, formatCents, parseTlToCents } from '@/lib/domain/money';
 
 const languages: ProgramLanguage[] = [
   'english',
@@ -109,6 +112,20 @@ type TransferDraft = {
   targetBranchId: string;
 };
 
+// Money fields stay as raw text so Turkish formats ("6.000", "6.000,50")
+// parse strictly via parseTlToCents on save.
+type PackageDraft = {
+  active: boolean;
+  displayOrder: number;
+  hourlyInput: string;
+  hours: number;
+  id?: string;
+  language: ProgramLanguage;
+  name: string;
+  note: string;
+  totalInput: string;
+};
+
 export function ProgramsClient({
   initial,
 }: {
@@ -117,10 +134,17 @@ export function ProgramsClient({
   const t = useTranslations('admin.programs');
   const tLessonStatus = useTranslations('admin.calendar.statuses');
   const locale = useLocale();
-  const [tab, setTab] = useState<'branches' | 'catalog' | 'rates'>('catalog');
+  const [tab, setTab] = useState<
+    'branches' | 'catalog' | 'packages' | 'rates'
+  >('catalog');
   const [programs, setPrograms] = useState(initial.programs);
   const [branches, setBranches] = useState(initial.branches);
   const [rates, setRates] = useState(initial.rates);
+  const [privateLessonPackages, setPrivateLessonPackages] = useState(
+    initial.privateLessonPackages,
+  );
+  const [packageDraft, setPackageDraft] = useState<PackageDraft | null>(null);
+  const [packageError, setPackageError] = useState('');
   const [showArchived, setShowArchived] = useState(false);
   const [archivePreview, setArchivePreview] =
     useState<BranchArchivePreview>();
@@ -398,6 +422,88 @@ export function ProgramsClient({
       } else {
         setMessage(t('saveError'));
       }
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  function openNewPackage() {
+    setPackageDraft(emptyPackageDraft());
+    setPackageError('');
+    setMessage('');
+  }
+
+  function editPackage(pkg: PrivateLessonPackageView) {
+    setPackageDraft({
+      active: pkg.active,
+      displayOrder: pkg.displayOrder,
+      hourlyInput: centsToInput(pkg.hourlyPriceCents),
+      hours: pkg.hours,
+      id: pkg.id,
+      language: pkg.language,
+      name: pkg.name,
+      note: pkg.note ?? '',
+      totalInput: centsToInput(pkg.totalPriceCents),
+    });
+    setPackageError('');
+    setMessage('');
+  }
+
+  async function savePackage(event: FormEvent) {
+    event.preventDefault();
+    if (!packageDraft) return;
+    const totalPriceCents = parseTlToCents(packageDraft.totalInput);
+    const hourlyPriceCents = parseTlToCents(packageDraft.hourlyInput);
+    if (totalPriceCents === null || hourlyPriceCents === null) return;
+    setBusy(true);
+    setPackageError('');
+    setMessage('');
+
+    try {
+      const response = await fetch(
+        packageDraft.id
+          ? `/api/admin/private-lesson-packages/${packageDraft.id}`
+          : '/api/admin/private-lesson-packages',
+        {
+          body: JSON.stringify({
+            active: packageDraft.active,
+            displayOrder: packageDraft.displayOrder,
+            hourlyPriceCents,
+            hours: packageDraft.hours,
+            language: packageDraft.language,
+            name: packageDraft.name.trim(),
+            note: packageDraft.note.trim() || null,
+            totalPriceCents,
+          }),
+          credentials: 'same-origin',
+          headers: { 'content-type': 'application/json' },
+          method: packageDraft.id ? 'PATCH' : 'POST',
+        },
+      );
+      const body = await response.json().catch(() => ({}));
+      if (!response.ok || !body.id) throw new Error('save_failed');
+
+      const next: PrivateLessonPackageView = {
+        active: packageDraft.active,
+        displayOrder: packageDraft.displayOrder,
+        hourlyPriceCents,
+        hours: packageDraft.hours,
+        id: body.id,
+        language: packageDraft.language,
+        name: packageDraft.name.trim(),
+        note: packageDraft.note.trim() || undefined,
+        totalPriceCents,
+      };
+      setPrivateLessonPackages((current) => {
+        const exists = current.some((pkg) => pkg.id === body.id);
+        return exists
+          ? current.map((pkg) => (pkg.id === body.id ? next : pkg))
+          : [...current, next];
+      });
+      setPackageDraft(null);
+      setMessage(t('packages.saved'));
+    } catch {
+      setPackageError(t('packages.error'));
     } finally {
       setBusy(false);
     }
@@ -796,31 +902,38 @@ export function ProgramsClient({
               <Plus className="h-4 w-4" />
               {t('newBranch')}
             </Button>
+          ) : tab === 'packages' ? (
+            <Button onClick={openNewPackage}>
+              <Plus className="h-4 w-4" />
+              {t('packages.new')}
+            </Button>
           ) : undefined
         }
       />
 
       <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
         <div className="flex w-fit rounded-2xl bg-white p-1 shadow-sm">
-          {(['catalog', 'branches', 'rates'] as const).map((item) => (
-            <button
-              key={item}
-              type="button"
-              onClick={() => {
-                setTab(item);
-                setMessage('');
-              }}
-              className={`min-h-10 rounded-xl px-5 text-xs font-bold transition-colors ${
-                tab === item
-                  ? 'bg-[#533089] text-white'
-                  : 'text-[#2E286C]/50 hover:bg-black/[0.03]'
-              }`}
-            >
-              {t(`tabs.${item}`)}
-            </button>
-          ))}
+          {(['catalog', 'branches', 'rates', 'packages'] as const).map(
+            (item) => (
+              <button
+                key={item}
+                type="button"
+                onClick={() => {
+                  setTab(item);
+                  setMessage('');
+                }}
+                className={`min-h-10 rounded-xl px-5 text-xs font-bold transition-colors ${
+                  tab === item
+                    ? 'bg-[#533089] text-white'
+                    : 'text-[#2E286C]/50 hover:bg-black/[0.03]'
+                }`}
+              >
+                {item === 'packages' ? t('packages.tab') : t(`tabs.${item}`)}
+              </button>
+            ),
+          )}
         </div>
-        {tab !== 'rates' && (
+        {(tab === 'catalog' || tab === 'branches') && (
           <label className="flex min-h-10 items-center gap-2 rounded-xl bg-white px-4 text-xs font-bold text-[#2E286C]/60 shadow-sm">
             <input
               type="checkbox"
@@ -1547,7 +1660,7 @@ export function ProgramsClient({
             )}
           </ModulePanel>
         </div>
-      ) : (
+      ) : tab === 'rates' ? (
         <div className="grid gap-6 xl:grid-cols-[24rem_minmax(0,1fr)]">
           <ModulePanel className="h-fit rounded-3xl p-6">
             <div className="mb-6 flex items-center gap-3">
@@ -1700,6 +1813,107 @@ export function ProgramsClient({
             </div>
           </ModulePanel>
         </div>
+      ) : (
+        <ModulePanel className="rounded-3xl p-6">
+          <div className="flex items-center gap-3">
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#533089]/8 text-[#533089]">
+              <Layers3 className="h-5 w-5" />
+            </div>
+            <div>
+              <h2 className="font-bold text-[#2E286C]">
+                {t('packages.title')}
+              </h2>
+              <p className="text-xs text-[#2E286C]/40">
+                {t('packages.description')}
+              </p>
+            </div>
+          </div>
+          {privateLessonPackages.length ? (
+            <div className="mt-6 overflow-x-auto rounded-2xl border border-black/[0.04]">
+              <table className="w-full border-collapse text-left">
+                <thead>
+                  <tr className="border-b border-black/[0.03] bg-[#F8F9FC] text-[10px] font-bold uppercase tracking-widest text-[#2E286C]/50">
+                    <th className="px-4 py-3 font-bold">
+                      {t('packages.colName')}
+                    </th>
+                    <th className="px-4 py-3 font-bold">
+                      {t('packages.colLanguage')}
+                    </th>
+                    <th className="px-4 py-3 text-right font-bold">
+                      {t('packages.colHours')}
+                    </th>
+                    <th className="px-4 py-3 text-right font-bold">
+                      {t('packages.colTotal')}
+                    </th>
+                    <th className="px-4 py-3 text-right font-bold">
+                      {t('packages.colHourly')}
+                    </th>
+                    <th className="px-4 py-3 font-bold">
+                      {t('packages.colStatus')}
+                    </th>
+                    <th className="px-4 py-3" />
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-black/[0.02] text-sm font-medium text-[#2E286C]/80">
+                  {privateLessonPackages
+                    .slice()
+                    .sort(
+                      (a, b) =>
+                        a.language.localeCompare(b.language) ||
+                        a.displayOrder - b.displayOrder ||
+                        a.hours - b.hours,
+                    )
+                    .map((pkg) => (
+                      <tr key={pkg.id}>
+                        <td className="px-4 py-3 font-bold text-[#2E286C]">
+                          {pkg.name}
+                        </td>
+                        <td className="px-4 py-3">
+                          {t(`languages.${pkg.language}`)}
+                        </td>
+                        <td className="px-4 py-3 text-right">{pkg.hours}</td>
+                        <td className="px-4 py-3 text-right font-bold text-[#533089]">
+                          {formatCents(pkg.totalPriceCents)}
+                        </td>
+                        <td className="px-4 py-3 text-right">
+                          {formatCents(pkg.hourlyPriceCents)}
+                        </td>
+                        <td className="px-4 py-3">
+                          <StatusChip tone={pkg.active ? 'emerald' : 'gray'}>
+                            {pkg.active
+                              ? t('packages.active')
+                              : t('packages.inactive')}
+                          </StatusChip>
+                        </td>
+                        <td className="px-4 py-3 text-right">
+                          <Button
+                            variant="secondary"
+                            size="sm"
+                            onClick={() => editPackage(pkg)}
+                          >
+                            <Pencil className="h-3.5 w-3.5" />
+                            {t('packages.edit')}
+                          </Button>
+                        </td>
+                      </tr>
+                    ))}
+                </tbody>
+              </table>
+            </div>
+          ) : (
+            <EmptyState
+              className="mt-6 min-h-0 p-10 lg:h-auto"
+              icon={Layers3}
+              title={t('packages.empty')}
+              action={
+                <Button onClick={openNewPackage}>
+                  <Plus className="h-4 w-4" />
+                  {t('packages.new')}
+                </Button>
+              }
+            />
+          )}
+        </ModulePanel>
       )}
 
       {schedulePlannerOpen && branchDraft.id && (
@@ -2227,6 +2441,203 @@ export function ProgramsClient({
           </div>
         </div>
       )}
+
+      {packageDraft && (
+        <div
+          className="zumra-modal-overlay fixed inset-0 z-[100] flex items-center justify-center overflow-y-auto bg-[#221B4B]/35 p-3 backdrop-blur-[3px]"
+          onMouseDown={(event) => {
+            if (event.target === event.currentTarget) {
+              setPackageDraft(null);
+            }
+          }}
+        >
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="lesson-package-title"
+            className="zumra-modal-panel max-h-[92dvh] w-full max-w-lg overflow-y-auto rounded-[2rem] bg-white p-4 shadow-2xl sm:p-6"
+          >
+            <div className="flex items-start justify-between gap-4">
+              <div className="flex gap-3">
+                <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-[#533089]/10 text-[#533089]">
+                  <Layers3 className="h-5 w-5" />
+                </div>
+                <div>
+                  <h2
+                    id="lesson-package-title"
+                    className="text-lg font-bold text-[#2E286C]"
+                  >
+                    {packageDraft.id
+                      ? t('packages.modalEditTitle')
+                      : t('packages.modalCreateTitle')}
+                  </h2>
+                  <p className="mt-1 max-w-2xl text-sm leading-5 text-[#2E286C]/50">
+                    {t('packages.description')}
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                aria-label={t('close')}
+                onClick={() => setPackageDraft(null)}
+                className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl text-[#2E286C]/45 transition-colors hover:bg-black/[0.04]"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+
+            {packageError && (
+              <div className="mt-4 rounded-2xl bg-red-50 px-4 py-3 text-sm font-semibold text-red-600">
+                {packageError}
+              </div>
+            )}
+
+            <form className="mt-5 space-y-4" onSubmit={savePackage}>
+              <FormField label={t('packages.nameLabel')}>
+                <Input
+                  value={packageDraft.name}
+                  onChange={(event) =>
+                    setPackageDraft(
+                      (current) =>
+                        current && { ...current, name: event.target.value },
+                    )
+                  }
+                />
+              </FormField>
+              <FormField label={t('packages.languageLabel')}>
+                <Select
+                  value={packageDraft.language}
+                  onChange={(value) =>
+                    setPackageDraft(
+                      (current) =>
+                        current && {
+                          ...current,
+                          language: value as ProgramLanguage,
+                        },
+                    )
+                  }
+                  options={languages.map((language) => [
+                    language,
+                    t(`languages.${language}`),
+                  ])}
+                />
+              </FormField>
+              <FormField label={t('packages.hoursLabel')}>
+                <Input
+                  type="number"
+                  min={1}
+                  step={1}
+                  value={packageDraft.hours}
+                  onChange={(event) =>
+                    setPackageDraft(
+                      (current) =>
+                        current && {
+                          ...current,
+                          hours: Math.max(
+                            1,
+                            Math.floor(Number(event.target.value) || 0),
+                          ),
+                        },
+                    )
+                  }
+                />
+              </FormField>
+              <FormField label={t('packages.totalLabel')}>
+                <TlInput
+                  invalidText={t('packages.invalidPrice')}
+                  value={packageDraft.totalInput}
+                  onChange={(totalInput) =>
+                    setPackageDraft(
+                      (current) => current && { ...current, totalInput },
+                    )
+                  }
+                />
+              </FormField>
+              <FormField label={t('packages.hourlyLabel')}>
+                <TlInput
+                  invalidText={t('packages.invalidPrice')}
+                  value={packageDraft.hourlyInput}
+                  onChange={(hourlyInput) =>
+                    setPackageDraft(
+                      (current) => current && { ...current, hourlyInput },
+                    )
+                  }
+                />
+              </FormField>
+              <FormField label={t('packages.orderLabel')}>
+                <Input
+                  type="number"
+                  min={0}
+                  value={packageDraft.displayOrder}
+                  onChange={(event) =>
+                    setPackageDraft(
+                      (current) =>
+                        current && {
+                          ...current,
+                          displayOrder: Math.max(
+                            0,
+                            Math.floor(Number(event.target.value) || 0),
+                          ),
+                        },
+                    )
+                  }
+                />
+              </FormField>
+              <label className="flex items-center gap-3 rounded-xl bg-[#F8F9FC] p-4 text-sm font-semibold text-[#2E286C]/65">
+                <input
+                  type="checkbox"
+                  checked={packageDraft.active}
+                  onChange={(event) =>
+                    setPackageDraft(
+                      (current) =>
+                        current && {
+                          ...current,
+                          active: event.target.checked,
+                        },
+                    )
+                  }
+                  className="h-4 w-4 accent-[#533089]"
+                />
+                {t('packages.activeLabel')}
+              </label>
+              <FormField label={t('packages.noteLabel')}>
+                <textarea
+                  value={packageDraft.note}
+                  onChange={(event) =>
+                    setPackageDraft(
+                      (current) =>
+                        current && { ...current, note: event.target.value },
+                    )
+                  }
+                  className="min-h-20 w-full resize-y rounded-xl border border-transparent bg-[#F8F9FC] px-4 py-3 text-sm text-[#2E286C] outline-none focus:border-[#533089]/30"
+                />
+              </FormField>
+              <div className="flex flex-wrap justify-end gap-3 border-t border-black/[0.06] pt-5">
+                <Button
+                  type="button"
+                  variant="secondary"
+                  onClick={() => setPackageDraft(null)}
+                >
+                  {t('packages.cancel')}
+                </Button>
+                <Button
+                  type="submit"
+                  disabled={
+                    busy ||
+                    packageDraft.name.trim().length < 2 ||
+                    packageDraft.hours < 1 ||
+                    parseTlToCents(packageDraft.totalInput) === null ||
+                    parseTlToCents(packageDraft.hourlyInput) === null
+                  }
+                >
+                  <Save className="h-4 w-4" />
+                  {busy ? t('saving') : t('packages.save')}
+                </Button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -2370,6 +2781,53 @@ function MoneyInput({
       </span>
     </div>
   );
+}
+
+// Free-text TL amount input validated with the strict Turkish-format parser;
+// an unparseable non-empty value surfaces an inline error.
+function TlInput({
+  invalidText,
+  onChange,
+  value,
+}: {
+  invalidText: string;
+  onChange: (value: string) => void;
+  value: string;
+}) {
+  const invalid = value.trim() !== '' && parseTlToCents(value) === null;
+  return (
+    <div>
+      <div className="relative">
+        <Input
+          value={value}
+          inputMode="decimal"
+          onChange={(event) => onChange(event.target.value)}
+          className="pr-14"
+        />
+        <span className="pointer-events-none absolute inset-y-0 right-4 flex items-center text-xs font-bold text-[#2E286C]/35">
+          TRY
+        </span>
+      </div>
+      {invalid && (
+        <p className="mt-2 text-xs font-semibold text-red-600">
+          {invalidText}
+        </p>
+      )}
+    </div>
+  );
+}
+
+function emptyPackageDraft(): PackageDraft {
+  return {
+    active: true,
+    displayOrder: 0,
+    hourlyInput: '',
+    hours: 1,
+    language: 'english',
+    name: '',
+    note: '',
+    totalInput: '',
+  };
 }
 
 function emptyProgram(): ProgramDraft {

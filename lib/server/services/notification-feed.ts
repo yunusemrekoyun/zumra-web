@@ -17,7 +17,9 @@ export type NotificationType =
   | 'payment_review_stale'
   | 'installment_due'
   | 'settlement_recorded'
-  | 'task_due';
+  | 'task_due'
+  | 'manual_discount_applied'
+  | 'branch_schedule_updated';
 
 export type NotificationView = {
   id: string;

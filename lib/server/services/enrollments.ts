@@ -19,11 +19,13 @@ import {
   candidateInquiries,
   candidateProfiles,
   contacts,
+  discountPackages,
   enrollmentDocuments,
   enrollmentDrafts,
   enrollmentParties,
   enrollments,
   mediaAssets,
+  privateLessonPackages,
   studentAccountInvitations,
   studentProfiles,
   userInvitations,
@@ -47,6 +49,7 @@ import {
 } from '@/lib/server/services/programs';
 import { closeSystemTasks, spawnSystemTask } from './advisor-tasks';
 import { notificationService } from './notifications';
+import { notifyManualDiscountApplied } from './notify-events';
 import { generateDefaultInstallmentPlan } from './payments';
 
 // Legacy contacts may hold national-format phones; normalize on read so the
@@ -129,6 +132,7 @@ export type EnrollmentDraftPatch =
         instagramHandle?: string;
         privateLessonHours?: number;
         privateLessonLanguage?: ProgramLanguage;
+        privateLessonPackageId?: string | null;
         programId: string;
         instructorProfileId?: string;
       };
@@ -154,6 +158,7 @@ export type EnrollmentDraftPatch =
       step: 7;
       data: {
         discountNote?: string;
+        discountPackageId?: string | null;
         discountType: 'none' | 'percentage' | 'fixed';
         discountValue: number;
         financialNotes?: string;
@@ -211,6 +216,8 @@ export type EnrollmentDraftView = {
     currentStep: number;
     discountCents: number;
     discountNote?: string;
+    discountPackageId?: string;
+    discountPackageName?: string;
     discountType: 'none' | 'percentage' | 'fixed';
     discountValue: number;
     email: string;
@@ -232,6 +239,8 @@ export type EnrollmentDraftView = {
     primaryPhone: string;
     privateLessonHours?: number;
     privateLessonLanguage?: ProgramLanguage;
+    privateLessonPackageId?: string;
+    privateLessonPackageName?: string;
     privateLessonRateId?: string;
     programLabel?: string;
     programReferenceId?: string;
@@ -264,6 +273,54 @@ export type EnrollmentDraftView = {
     roles: PartyRole[];
   }>;
 };
+
+// Validates a discount package against the draft's current target and returns
+// the server-authoritative type/value. Throws when the package is missing,
+// inactive, outside its campaign window, or scoped to a different target.
+async function resolveDraftDiscountPackage(
+  transaction: EnrollmentTransaction,
+  packageId: string,
+  draft: { branchId: string | null; courseMode: string | null },
+) {
+  const [pkg] = await transaction
+    .select({
+      active: discountPackages.active,
+      branchId: discountPackages.branchId,
+      discountType: discountPackages.discountType,
+      discountValue: discountPackages.discountValue,
+      endsAt: discountPackages.endsAt,
+      id: discountPackages.id,
+      scope: discountPackages.scope,
+      startsAt: discountPackages.startsAt,
+    })
+    .from(discountPackages)
+    .where(eq(discountPackages.id, packageId))
+    .limit(1);
+
+  if (!pkg || !pkg.active) {
+    throw new PublicFlowError('discount_package_not_found', 409);
+  }
+
+  const nowMs = Date.now();
+
+  if (
+    (pkg.startsAt && pkg.startsAt.getTime() > nowMs) ||
+    (pkg.endsAt && pkg.endsAt.getTime() <= nowMs)
+  ) {
+    throw new PublicFlowError('discount_package_expired', 409);
+  }
+
+  const scopeMatches =
+    draft.courseMode === 'group'
+      ? pkg.scope === 'branch' && pkg.branchId === draft.branchId
+      : pkg.scope === 'private';
+
+  if (!scopeMatches) {
+    throw new PublicFlowError('discount_package_scope_mismatch', 409);
+  }
+
+  return pkg;
+}
 
 export async function beginEnrollmentDraft(
   principal: WorkspacePrincipal,
@@ -406,6 +463,7 @@ export async function getEnrollmentDraftForAdmin(
       currentStep: enrollmentDrafts.currentStep,
       discountCents: enrollmentDrafts.discountCents,
       discountNote: enrollmentDrafts.discountNote,
+      discountPackageId: enrollmentDrafts.discountPackageId,
       discountType: enrollmentDrafts.discountType,
       discountValue: enrollmentDrafts.discountValue,
       draftBirthDate: enrollmentDrafts.birthDate,
@@ -436,6 +494,7 @@ export async function getEnrollmentDraftForAdmin(
       phone: contacts.phone,
       privateLessonHours: enrollmentDrafts.privateLessonHours,
       privateLessonLanguage: enrollmentDrafts.privateLessonLanguage,
+      privateLessonPackageId: enrollmentDrafts.privateLessonPackageId,
       privateLessonRateId: enrollmentDrafts.privateLessonRateId,
       programReferenceId: enrollmentDrafts.programReferenceId,
       programSelection: enrollmentDrafts.programSelection,
@@ -449,6 +508,10 @@ export async function getEnrollmentDraftForAdmin(
         enrollmentDrafts.selectedInstructorProfileId,
       status: enrollmentDrafts.status,
       studentIsContractParty: enrollmentDrafts.studentIsContractParty,
+      // Package names ride along so the wizard can label a stored package even
+      // when it has since expired out of the selectable catalog.
+      discountPackageName: discountPackages.name,
+      privateLessonPackageName: privateLessonPackages.name,
     })
     .from(enrollmentDrafts)
     .innerJoin(
@@ -457,6 +520,14 @@ export async function getEnrollmentDraftForAdmin(
     )
     .innerJoin(contacts, eq(contacts.id, candidateProfiles.contactId))
     .innerJoin(users, eq(users.id, enrollmentDrafts.createdByUserId))
+    .leftJoin(
+      discountPackages,
+      eq(discountPackages.id, enrollmentDrafts.discountPackageId),
+    )
+    .leftJoin(
+      privateLessonPackages,
+      eq(privateLessonPackages.id, enrollmentDrafts.privateLessonPackageId),
+    )
     .where(
       and(
         eq(enrollmentDrafts.candidateId, candidateId),
@@ -527,6 +598,8 @@ export async function getEnrollmentDraftForAdmin(
       currentStep: row.currentStep,
       discountCents: row.discountCents,
       discountNote: row.discountNote ?? undefined,
+      discountPackageId: row.discountPackageId ?? undefined,
+      discountPackageName: row.discountPackageName ?? undefined,
       discountType: row.discountType,
       discountValue: row.discountValue,
       email: row.draftEmail ?? row.email,
@@ -553,6 +626,8 @@ export async function getEnrollmentDraftForAdmin(
       privateLessonHours: row.privateLessonHours ?? undefined,
       privateLessonLanguage:
         (row.privateLessonLanguage as ProgramLanguage | null) ?? undefined,
+      privateLessonPackageId: row.privateLessonPackageId ?? undefined,
+      privateLessonPackageName: row.privateLessonPackageName ?? undefined,
       privateLessonRateId: row.privateLessonRateId ?? undefined,
       programLabel: row.programSelection.label,
       programReferenceId:
@@ -615,6 +690,7 @@ export async function updateEnrollmentDraft(
         capacityOverrideNote: enrollmentDrafts.capacityOverrideNote,
         courseMode: enrollmentDrafts.courseMode,
         discountNote: enrollmentDrafts.discountNote,
+        discountPackageId: enrollmentDrafts.discountPackageId,
         discountType: enrollmentDrafts.discountType,
         discountValue: enrollmentDrafts.discountValue,
         finalPriceCents: enrollmentDrafts.finalPriceCents,
@@ -622,6 +698,7 @@ export async function updateEnrollmentDraft(
         listPriceCents: enrollmentDrafts.listPriceCents,
         privateLessonHours: enrollmentDrafts.privateLessonHours,
         privateLessonLanguage: enrollmentDrafts.privateLessonLanguage,
+        privateLessonPackageId: enrollmentDrafts.privateLessonPackageId,
         privateLessonRateId: enrollmentDrafts.privateLessonRateId,
         programId: enrollmentDrafts.programId,
         selectedInstructorProfileId:
@@ -858,6 +935,7 @@ export async function updateEnrollmentDraft(
         capacityOverride: patch.data.capacityOverride,
         privateLessonHours: patch.data.privateLessonHours,
         privateLessonLanguage: patch.data.privateLessonLanguage,
+        privateLessonPackageId: patch.data.privateLessonPackageId ?? undefined,
         programId: patch.data.programId,
         instructorProfileId: patch.data.instructorProfileId,
       });
@@ -882,6 +960,7 @@ export async function updateEnrollmentDraft(
           discountAppliedByUserId: null,
           discountCents: 0,
           discountNote: null,
+          discountPackageId: null,
           discountType: 'none',
           discountValue: 0,
           finalPriceCents: pricing.basePriceCents,
@@ -889,11 +968,15 @@ export async function updateEnrollmentDraft(
           listPriceCents: pricing.basePriceCents,
           privateLessonHours:
             pricing.courseMode === 'private'
-              ? patch.data.privateLessonHours
+              ? pricing.privateLessonHours
               : null,
           privateLessonLanguage:
             pricing.courseMode === 'private'
               ? patch.data.privateLessonLanguage
+              : null,
+          privateLessonPackageId:
+            pricing.courseMode === 'private'
+              ? (pricing.lessonPackage?.id ?? null)
               : null,
           privateLessonRateId:
             pricing.courseMode === 'private' ? pricing.rate.id : null,
@@ -981,6 +1064,7 @@ export async function updateEnrollmentDraft(
         privateLessonHours: draft.privateLessonHours ?? undefined,
         privateLessonLanguage:
           draft.privateLessonLanguage as ProgramLanguage | undefined,
+        privateLessonPackageId: draft.privateLessonPackageId ?? undefined,
         programId: draft.programId,
         instructorProfileId: draft.selectedInstructorProfileId ?? undefined,
       });
@@ -988,11 +1072,44 @@ export async function updateEnrollmentDraft(
         pricing.courseMode === 'group' &&
         pricing.atCapacity &&
         draft.capacityOverride === true;
-      const discount = recalculateStoredDiscount(
-        pricing.basePriceCents,
-        draft.discountType,
-        draft.discountValue,
-      );
+      // Package discounts re-derive from the package row so a price change
+      // between steps can't ratchet the stored value; a package that no longer
+      // fits (expired, retargeted, fixed value above the new list price) drops
+      // the discount entirely, forcing a step-7 revisit.
+      let discountPackageId = draft.discountPackageId;
+      let discount: {
+        discountCents: number;
+        discountType: 'none' | 'percentage' | 'fixed';
+        discountValue: number;
+      };
+
+      if (discountPackageId) {
+        try {
+          const pkg = await resolveDraftDiscountPackage(
+            transaction,
+            discountPackageId,
+            { branchId: draft.branchId, courseMode: draft.courseMode },
+          );
+          discount = {
+            ...calculateDiscount(
+              pricing.basePriceCents,
+              pkg.discountType,
+              pkg.discountValue,
+            ),
+            discountType: pkg.discountType,
+          };
+        } catch {
+          discountPackageId = null;
+          discount = { discountCents: 0, discountType: 'none', discountValue: 0 };
+        }
+      } else {
+        discount = recalculateStoredDiscount(
+          pricing.basePriceCents,
+          draft.discountType,
+          draft.discountValue,
+        );
+      }
+
       const finalPriceCents = pricing.basePriceCents - discount.discountCents;
 
       await transaction
@@ -1014,17 +1131,22 @@ export async function updateEnrollmentDraft(
             discount.discountCents > 0
               ? cleanOptional(draft.discountNote ?? undefined)
               : null,
+          discountPackageId,
           discountType: discount.discountType,
           discountValue: discount.discountValue,
           finalPriceCents,
           listPriceCents: pricing.basePriceCents,
           privateLessonHours:
             pricing.courseMode === 'private'
-              ? draft.privateLessonHours
+              ? pricing.privateLessonHours
               : null,
           privateLessonLanguage:
             pricing.courseMode === 'private'
               ? (draft.privateLessonLanguage as ProgramLanguage)
+              : null,
+          privateLessonPackageId:
+            pricing.courseMode === 'private'
+              ? (pricing.lessonPackage?.id ?? null)
               : null,
           privateLessonRateId:
             pricing.courseMode === 'private' ? pricing.rate.id : null,
@@ -1072,10 +1194,34 @@ export async function updateEnrollmentDraft(
       if (draft.listPriceCents === null) {
         throw new PublicFlowError('program_price_missing', 409);
       }
+
+      // Package picks are server-authoritative: the type/value come from the
+      // package row, never from the client. Anything else is a MANUAL
+      // discount, which requires a note (and pings admins on completion).
+      let discountType = patch.data.discountType;
+      let discountValueInput = patch.data.discountValue;
+      let discountPackageId: string | null = null;
+
+      if (patch.data.discountPackageId) {
+        const pkg = await resolveDraftDiscountPackage(
+          transaction,
+          patch.data.discountPackageId,
+          { branchId: draft.branchId, courseMode: draft.courseMode },
+        );
+
+        discountType = pkg.discountType;
+        discountValueInput = pkg.discountValue;
+        discountPackageId = pkg.id;
+      } else if (patch.data.discountType !== 'none') {
+        if (!cleanOptional(patch.data.discountNote)) {
+          throw new PublicFlowError('discount_note_required', 400);
+        }
+      }
+
       const discount = calculateDiscount(
         draft.listPriceCents,
-        patch.data.discountType,
-        patch.data.discountValue,
+        discountType,
+        discountValueInput,
       );
       const finalPriceCents = draft.listPriceCents - discount.discountCents;
 
@@ -1095,7 +1241,9 @@ export async function updateEnrollmentDraft(
             discount.discountCents > 0
               ? cleanOptional(patch.data.discountNote)
               : null,
-          discountType: patch.data.discountType,
+          discountPackageId:
+            discount.discountCents > 0 ? discountPackageId : null,
+          discountType,
           discountValue: discount.discountValue,
           finalPriceCents,
           financialNotes: cleanOptional(patch.data.financialNotes),
@@ -1107,7 +1255,8 @@ export async function updateEnrollmentDraft(
       return {
         draft: {
           discountCents: discount.discountCents,
-          discountType: patch.data.discountType,
+          discountPackageId: discountPackageId ?? undefined,
+          discountType,
           discountValue: discount.discountValue,
           finalPriceCents,
         },
@@ -1353,6 +1502,13 @@ export async function completeEnrollment(
           discountCents: draft.discountCents,
           discountAppliedByUserId: draft.discountAppliedByUserId,
           discountNote: draft.discountNote,
+          discountPackageId: draft.discountPackageId,
+          discountSource:
+            draft.discountCents > 0
+              ? draft.discountPackageId
+                ? 'package'
+                : 'manual'
+              : null,
           discountType: draft.discountType,
           discountValue: draft.discountValue,
           financialNotes: draft.financialNotes,
@@ -1462,6 +1618,10 @@ export async function completeEnrollment(
       candidateId: candidate.id,
       id: enrollment.id,
       invitation,
+      manualDiscount:
+        draft.discountCents > 0 && !draft.discountPackageId
+          ? { cents: draft.discountCents, note: draft.discountNote }
+          : null,
       studentId: student.id,
     };
   });
@@ -1486,6 +1646,17 @@ export async function completeEnrollment(
       dueAt: onboardingDue,
       kind: 'enrollment_onboarding',
     });
+
+    // Off-catalog discounts are valid immediately but admins get pinged and
+    // the İndirimler screen lists them flagged.
+    if (result.manualDiscount) {
+      await notifyManualDiscountApplied({
+        appliedByName: principal.name,
+        discountCents: result.manualDiscount.cents,
+        enrollmentId: result.id,
+        note: result.manualDiscount.note,
+      });
+    }
   }
 
   return result

@@ -8,6 +8,7 @@ export * from './instructors';
 export * from './legal';
 export * from './notifications';
 export * from './payments';
+export * from './pricing';
 export * from './programs';
 export * from './schedule';
 export * from './settings';

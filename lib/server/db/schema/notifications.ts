@@ -22,6 +22,8 @@ export const notificationTypeEnum = pgEnum('notification_type', [
   'installment_due',
   'settlement_recorded',
   'task_due',
+  'manual_discount_applied',
+  'branch_schedule_updated',
 ]);
 
 // In-app notifications (the bell). Distinct from notification_outbox, which is

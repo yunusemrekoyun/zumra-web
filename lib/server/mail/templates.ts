@@ -241,6 +241,23 @@ export function renderMailTemplate(input: TemplateInput) {
     };
   }
 
+  if (input.templateKey === 'branch-schedule-updated') {
+    const course = escapeHtml(String(input.payload.course ?? ''));
+    return {
+      html: `<p>${english ? 'Hello' : 'Merhaba'} ${name},</p><p>${
+        english
+          ? `The lesson schedule for <strong>${course}</strong> has been set. You can see your lessons on your panel's calendar.`
+          : `<strong>${course}</strong> için ders programı belirlendi. Derslerini panelindeki takvimden görebilirsin.`
+      }</p>`,
+      subject: english
+        ? 'Your lesson schedule is ready'
+        : 'Ders programın hazır',
+      text: english
+        ? `The lesson schedule for ${course} has been set.`
+        : `${course} için ders programı belirlendi.`,
+    };
+  }
+
   if (input.templateKey === 'task-reminder') {
     const task = escapeHtml(String(input.payload.task ?? ''));
     return {

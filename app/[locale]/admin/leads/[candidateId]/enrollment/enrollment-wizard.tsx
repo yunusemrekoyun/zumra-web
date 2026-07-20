@@ -61,6 +61,8 @@ type DraftState = EnrollmentDraftView['draft'] & {
     string,
     { administrativeArea: string; locality: string }
   >;
+  // Client-only: how the step 7 discount is sourced. Never sent to the API.
+  discountMode: 'none' | 'package' | 'manual';
   identityDocument: string;
 };
 
@@ -94,6 +96,11 @@ export function EnrollmentWizard({
           },
         }
       : {},
+    discountMode: initial.draft.discountPackageId
+      ? 'package'
+      : initial.draft.discountType !== 'none'
+        ? 'manual'
+        : 'none',
     identityDocument: '',
   });
   const [parties, setParties] = useState(initial.parties);
@@ -180,6 +187,7 @@ export function EnrollmentWizard({
       draft,
       parties,
       birthDateIsMinor,
+      catalog,
       t,
     );
     if (Object.keys(errors).length) {
@@ -267,7 +275,11 @@ export function EnrollmentWizard({
           setFieldErrors(mappedErrors);
           setMessage(t('validation.stepHasErrors'));
           const targetStep =
-            mappedErrors.studentUsername || mappedErrors.email ? 2 : step;
+            mappedErrors.studentUsername || mappedErrors.email
+              ? 2
+              : mappedErrors.discountPackageId
+                ? 7
+                : step;
           setStep(targetStep);
           setHighestReachedStep((current) => Math.max(current, targetStep));
           focusField(Object.keys(mappedErrors)[0]);
@@ -558,6 +570,7 @@ export function EnrollmentWizard({
             )}
             {step === 7 && (
               <FinanceStep
+                catalog={catalog}
                 draft={draft}
                 errors={fieldErrors}
                 setDraft={setDraft}
@@ -574,6 +587,7 @@ export function EnrollmentWizard({
             )}
             {step === 9 && (
               <ReviewStep
+                catalog={catalog}
                 documents={documents}
                 draft={draft}
                 isMinor={birthDateIsMinor}
@@ -1265,6 +1279,24 @@ function ProgramStep({
       rate.instructorProfileId === draft.selectedInstructorProfileId &&
       rate.language === draft.privateLessonLanguage,
   );
+  const languageLessonPackages = draft.privateLessonLanguage
+    ? catalog.privateLessonPackages.filter(
+        (pkg) => pkg.language === draft.privateLessonLanguage,
+      )
+    : [];
+  const selectedLessonPackage = languageLessonPackages.find(
+    (pkg) => pkg.id === draft.privateLessonPackageId,
+  );
+  // A stored lesson package missing from the catalog would render as an
+  // empty selection; keep it visible with the name the draft carries (hours
+  // and price are unknown, so the name stands alone).
+  const retainedLessonPackageOption =
+    draft.privateLessonPackageId && !selectedLessonPackage
+      ? ([
+          draft.privateLessonPackageId,
+          draft.privateLessonPackageName ?? draft.privateLessonPackageId,
+        ] as const)
+      : undefined;
 
   function chooseProgram(programId: string) {
     const program = catalog.programs.find((item) => item.id === programId);
@@ -1278,7 +1310,9 @@ function ProgramStep({
       capacityOverrideNote: undefined,
       courseMode: program.kind,
       discountCents: 0,
+      discountMode: 'none',
       discountNote: undefined,
+      discountPackageId: undefined,
       discountType: 'none',
       discountValue: 0,
       finalPriceCents:
@@ -1287,6 +1321,7 @@ function ProgramStep({
         program.kind === 'group' ? program.listPriceCents : undefined,
       privateLessonHours: undefined,
       privateLessonLanguage: undefined,
+      privateLessonPackageId: undefined,
       privateLessonRateId: undefined,
       programLabel:
         program.systemKey === 'private-lesson'
@@ -1300,24 +1335,39 @@ function ProgramStep({
   function updatePrivateSelection(values: Partial<DraftState>) {
     setDraft((current) => {
       const next = { ...current, ...values };
+      // Dropping the package on a language mismatch mirrors the server's
+      // private_lesson_package_language_mismatch guard.
+      const lessonPackage = catalog.privateLessonPackages.find(
+        (pkg) =>
+          pkg.id === next.privateLessonPackageId &&
+          pkg.language === next.privateLessonLanguage,
+      );
       const rate = catalog.rates.find(
         (item) =>
           item.instructorProfileId === next.selectedInstructorProfileId &&
           item.language === next.privateLessonLanguage,
       );
-      const basePrice =
-        rate && next.privateLessonHours
-          ? rate.hourlyPriceCents * next.privateLessonHours
+      const privateLessonHours = lessonPackage
+        ? lessonPackage.hours
+        : next.privateLessonHours;
+      const basePrice = lessonPackage
+        ? lessonPackage.totalPriceCents
+        : rate && privateLessonHours
+          ? rate.hourlyPriceCents * privateLessonHours
           : undefined;
 
       return {
         ...next,
         discountCents: 0,
+        discountMode: 'none',
         discountNote: undefined,
+        discountPackageId: undefined,
         discountType: 'none',
         discountValue: 0,
         finalPriceCents: basePrice,
         listPriceCents: basePrice,
+        privateLessonHours,
+        privateLessonPackageId: lessonPackage?.id,
         privateLessonRateId: rate?.id,
       };
     });
@@ -1421,12 +1471,21 @@ function ProgramStep({
                   const branch = catalog.branches.find(
                     (candidate) => candidate.id === item.id,
                   );
+                  // The server drops any discount on a step 3 save; mirror it
+                  // so a stale branch-scoped package never survives locally.
                   setDraft((current) => ({
                     ...current,
                     branchId: branch?.id,
                     branchName: branch?.name,
                     capacityOverride: false,
                     capacityOverrideNote: undefined,
+                    discountCents: 0,
+                    discountMode: 'none',
+                    discountNote: undefined,
+                    discountPackageId: undefined,
+                    discountType: 'none',
+                    discountValue: 0,
+                    finalPriceCents: current.listPriceCents,
                   }));
                 }}
                 placeholder={t('select')}
@@ -1525,6 +1584,7 @@ function ProgramStep({
               onChange={(value) =>
                 updatePrivateSelection({
                   privateLessonLanguage: value as ProgramLanguage,
+                  privateLessonPackageId: undefined,
                   selectedInstructorProfileId: undefined,
                 })
               }
@@ -1536,6 +1596,38 @@ function ProgramStep({
                 ),
               ]}
             />
+            <div>
+              <SelectField
+                id="privateLessonPackageId"
+                label={t('lessonPackageLabel')}
+                value={draft.privateLessonPackageId ?? ''}
+                onChange={(value) =>
+                  updatePrivateSelection({
+                    privateLessonPackageId: value || undefined,
+                  })
+                }
+                options={[
+                  ['', t('lessonPackageFree')],
+                  ...(retainedLessonPackageOption
+                    ? [retainedLessonPackageOption]
+                    : []),
+                  ...languageLessonPackages.map(
+                    (pkg) =>
+                      [
+                        pkg.id,
+                        t('lessonPackageOption', {
+                          hours: pkg.hours,
+                          name: pkg.name,
+                          price: formatTry(pkg.totalPriceCents, locale),
+                        }),
+                      ] as const,
+                  ),
+                ]}
+              />
+              <p className="mt-2 text-xs font-medium leading-5 text-[#2E286C]/45">
+                {t('lessonPackageHint')}
+              </p>
+            </div>
             <EntityPickerField
               error={errors.privateLesson}
               label={t('fields.teacher')}
@@ -1574,6 +1666,7 @@ function ProgramStep({
               })()}
             />
             <Field
+              disabled={Boolean(selectedLessonPackage)}
               error={errors.privateLesson}
               id="privateLessonHours"
               label={t('fields.privateLessonHours')}
@@ -1591,9 +1684,11 @@ function ProgramStep({
                 {t('fields.hourlyStudentPrice')}
               </div>
               <div className="mt-2 text-lg font-bold text-[#533089]">
-                {selectedRate
-                  ? formatTry(selectedRate.hourlyPriceCents, locale)
-                  : '-'}
+                {selectedLessonPackage
+                  ? formatTry(selectedLessonPackage.hourlyPriceCents, locale)
+                  : selectedRate
+                    ? formatTry(selectedRate.hourlyPriceCents, locale)
+                    : '-'}
               </div>
             </div>
           </div>
@@ -1845,16 +1940,65 @@ function DocumentsStep({
 }
 
 function FinanceStep({
+  catalog,
   draft,
   errors,
   setDraft,
   t,
 }: {
+  catalog: ProgramManagementData;
   draft: DraftState;
   errors: EnrollmentFieldErrors;
   setDraft: SetDraft;
   t: WizardT;
 }) {
+  const locale = useLocale();
+  const tDiscounts = useTranslations('admin.discounts');
+  // Mirrors the server's step 7 eligibility: active catalog entries whose
+  // campaign window covers now and whose scope matches the draft. Fixed
+  // packages larger than the list price are dropped too — the server's
+  // calculateDiscount rejects them with discount_exceeds_price.
+  const nowMs = Date.now();
+  const eligiblePackages = catalog.discountPackages.filter((pkg) => {
+    if (!pkg.active) return false;
+    if (pkg.startsAt && new Date(pkg.startsAt).getTime() > nowMs) return false;
+    if (pkg.endsAt && new Date(pkg.endsAt).getTime() <= nowMs) return false;
+    if (
+      pkg.discountType === 'fixed' &&
+      pkg.discountValue > (draft.listPriceCents ?? 0)
+    ) {
+      return false;
+    }
+    return draft.courseMode === 'group'
+      ? pkg.scope === 'branch' && pkg.branchId === draft.branchId
+      : pkg.scope === 'private';
+  });
+  const selectedPackage =
+    draft.discountMode === 'package'
+      ? catalog.discountPackages.find(
+          (pkg) => pkg.id === draft.discountPackageId,
+        )
+      : undefined;
+  // Keep a previously stored package selectable even if it just left the
+  // eligible window; the server re-validates on save.
+  const packageOptions =
+    selectedPackage &&
+    !eligiblePackages.some((pkg) => pkg.id === selectedPackage.id)
+      ? [selectedPackage, ...eligiblePackages]
+      : eligiblePackages;
+  // A stored package that vanished from the catalog would otherwise render
+  // as an empty selection; surface it with the name the draft carries so the
+  // admin sees what is applied (the server rejects it on save anyway).
+  const retainedPackageOption =
+    draft.discountMode === 'package' && draft.discountPackageId && !selectedPackage
+      ? ([
+          draft.discountPackageId,
+          draft.discountPackageName ??
+            t('discountPackageApplied', { name: draft.discountPackageId }),
+        ] as const)
+      : undefined;
+  const isManual = draft.discountMode === 'manual';
+
   function updateDiscount(
     discountType: DraftState['discountType'],
     discountValue: number,
@@ -1864,30 +2008,100 @@ function FinanceStep({
     );
   }
 
+  function chooseDiscountSource(value: string) {
+    if (value === '__manual') {
+      setDraft((current) =>
+        applyDiscount(
+          { ...current, discountMode: 'manual', discountPackageId: undefined },
+          'none',
+          0,
+        ),
+      );
+      return;
+    }
+    const pkg = catalog.discountPackages.find((item) => item.id === value);
+    if (!pkg) {
+      setDraft((current) =>
+        applyDiscount(
+          { ...current, discountMode: 'none', discountPackageId: undefined },
+          'none',
+          0,
+        ),
+      );
+      return;
+    }
+    setDraft((current) =>
+      applyDiscount(
+        { ...current, discountMode: 'package', discountPackageId: pkg.id },
+        pkg.discountType,
+        pkg.discountValue,
+      ),
+    );
+  }
+
+  function packageOptionLabel(pkg: ProgramManagementData['discountPackages'][number]) {
+    return pkg.discountType === 'percentage'
+      ? `${pkg.name} — ${tDiscounts('percentValue', { value: pkg.discountValue / 100 })}`
+      : `${pkg.name} — ${formatTry(pkg.discountValue, locale)}`;
+  }
+
   return (
     <div className="grid gap-5 sm:grid-cols-2">
+      <div className="sm:col-span-2">
+        <SelectField
+          error={errors.discountPackageId}
+          id="discountPackageId"
+          label={t('discountPackageLabel')}
+          value={
+            draft.discountMode === 'package'
+              ? (draft.discountPackageId ?? '')
+              : isManual
+                ? '__manual'
+                : ''
+          }
+          onChange={chooseDiscountSource}
+          options={[
+            ['', t('discountPackageNone')],
+            ...(retainedPackageOption ? [retainedPackageOption] : []),
+            ...packageOptions.map(
+              (pkg) => [pkg.id, packageOptionLabel(pkg)] as const,
+            ),
+            ['__manual', t('discountPackageManual')],
+          ]}
+        />
+        <p className="mt-2 text-xs font-medium leading-5 text-[#2E286C]/45">
+          {t('discountPackageHint')}
+        </p>
+      </div>
+      {selectedPackage && (
+        <div className="rounded-xl bg-emerald-50 p-4 text-sm font-semibold text-emerald-700 sm:col-span-2">
+          {t('discountPackageApplied', { name: selectedPackage.name })}
+        </div>
+      )}
       <MoneyField
         label={t('fields.listPrice')}
         cents={draft.listPriceCents}
         disabled
         onChange={() => undefined}
       />
-      <SelectField
-        label={t('fields.discountType')}
-        value={draft.discountType}
-        onChange={(value) =>
-          updateDiscount(
-            value as DraftState['discountType'],
-            value === 'none' ? 0 : draft.discountValue,
-          )
-        }
-        options={[
-          ['none', t('options.discountNone')],
-          ['percentage', t('options.discountPercentage')],
-          ['fixed', t('options.discountFixed')],
-        ]}
-      />
-      {draft.discountType === 'percentage' && (
+      {isManual && (
+        <SelectField
+          label={t('fields.discountType')}
+          value={draft.discountType}
+          onChange={(value) =>
+            updateDiscount(
+              value as DraftState['discountType'],
+              value === 'none' ? 0 : draft.discountValue,
+            )
+          }
+          options={[
+            ['none', t('options.discountNone')],
+            ['percentage', t('options.discountPercentage')],
+            ['fixed', t('options.discountFixed')],
+          ]}
+        />
+      )}
+      {isManual && draft.discountType === 'percentage' && (
         <Field
           label={t('fields.discountPercentage')}
           type="number"
@@ -1900,7 +2114,7 @@ function FinanceStep({
           }
         />
       )}
-      {draft.discountType === 'fixed' && (
+      {isManual && draft.discountType === 'fixed' && (
         <MoneyField
           label={t('fields.discountAmount')}
           cents={draft.discountValue}
@@ -1949,16 +2163,24 @@ function FinanceStep({
           ['mixed', t('options.mixed')],
         ]}
       />
-      {draft.discountType !== 'none' && (
+      {draft.discountMode !== 'none' && (
         <div className="sm:col-span-2">
           <TextAreaField
+            error={errors.discountNote}
+            id="discountNote"
             label={t('fields.discountNote')}
+            required={isManual}
             value={draft.discountNote ?? ''}
             onChange={(value) =>
               setDraft((current) => ({ ...current, discountNote: value }))
             }
             placeholder={t('fields.discountNotePlaceholder')}
           />
+          {isManual && (
+            <p className="mt-2 text-xs font-medium leading-5 text-[#2E286C]/45">
+              {t('discountNoteRequiredHint')}
+            </p>
+          )}
         </div>
       )}
       <div className="sm:col-span-2">
@@ -2102,6 +2324,7 @@ function buildSchedulePrintUrl(draftId: string, branchId?: string) {
 }
 
 function ReviewStep({
+  catalog,
   closeOpenItems,
   confirmationPassword,
   documents,
@@ -2114,6 +2337,7 @@ function ReviewStep({
   setDraft,
   t,
 }: {
+  catalog: ProgramManagementData;
   closeOpenItems: boolean;
   confirmationPassword: string;
   documents: EnrollmentDraftView['documents'];
@@ -2129,7 +2353,7 @@ function ReviewStep({
   const messages = validationMessages(t);
   const issues = [1, 2, 3, 4, 5, 7].flatMap((reviewStep) =>
     Object.entries(
-      validateCurrentStep(reviewStep, draft, parties, isMinor, t),
+      validateCurrentStep(reviewStep, draft, parties, isMinor, catalog, t),
     ).map(([field, message]) => ({
       field,
       message,
@@ -2483,6 +2707,7 @@ function buildPatch(
         instagramHandle: draft.instagramHandle,
         privateLessonHours: draft.privateLessonHours,
         privateLessonLanguage: draft.privateLessonLanguage,
+        privateLessonPackageId: draft.privateLessonPackageId ?? null,
         programId: draft.programReferenceId ?? '',
         instructorProfileId: draft.selectedInstructorProfileId,
       },
@@ -2511,8 +2736,14 @@ function buildPatch(
     return {
       data: {
         discountNote: draft.discountNote,
-        discountType: draft.discountType,
-        discountValue: draft.discountValue,
+        discountPackageId:
+          draft.discountMode === 'package'
+            ? (draft.discountPackageId ?? null)
+            : null,
+        discountType:
+          draft.discountMode === 'none' ? 'none' : draft.discountType,
+        discountValue:
+          draft.discountMode === 'none' ? 0 : draft.discountValue,
         financialNotes: draft.financialNotes,
         initialPaymentCents: draft.initialPaymentCents,
         installmentCount: draft.installmentCount,
@@ -2626,8 +2857,28 @@ function canAutosaveStep(
   }
 
   if (step === 7) {
+    // A manual discount without a note would 400 (discount_note_required);
+    // keep the background autosave from hammering the server with it.
+    const manualNoteMissing =
+      draft.discountMode === 'manual' &&
+      draft.discountType !== 'none' &&
+      !draft.discountNote?.trim();
+    // Same for a fixed package above the list price (discount_exceeds_price).
+    const selectedPackage =
+      draft.discountMode === 'package' && draft.discountPackageId
+        ? catalog.discountPackages.find(
+            (pkg) => pkg.id === draft.discountPackageId,
+          )
+        : undefined;
+    const packageExceedsPrice = Boolean(
+      selectedPackage &&
+        selectedPackage.discountType === 'fixed' &&
+        selectedPackage.discountValue > (draft.listPriceCents ?? 0),
+    );
     return Boolean(
-      draft.listPriceCents !== undefined &&
+      !manualNoteMissing &&
+        !packageExceedsPrice &&
+        draft.listPriceCents !== undefined &&
         draft.finalPriceCents !== undefined &&
         draft.finalPriceCents ===
           draft.listPriceCents - draft.discountCents &&
@@ -2678,6 +2929,25 @@ function localizeServerFieldErrors(
 
 function enrollmentApiFieldErrors(code: string, t: WizardT) {
   const errors: EnrollmentFieldErrors = {};
+
+  if (code === 'discount_note_required') {
+    errors.discountNote = t('discountNoteRequiredError');
+    return errors;
+  }
+
+  if (code === 'discount_exceeds_price') {
+    errors.discountPackageId = t('discountExceedsPrice');
+    return errors;
+  }
+
+  if (
+    code === 'discount_package_expired' ||
+    code === 'discount_package_not_found' ||
+    code === 'discount_package_scope_mismatch'
+  ) {
+    errors.discountPackageId = t('discountPackageInvalid');
+    return errors;
+  }
 
   if (
     code === 'username_already_registered' ||
@@ -2732,6 +3002,7 @@ function validateCurrentStep(
   draft: DraftState,
   parties: EnrollmentDraftView['parties'],
   isMinor: boolean,
+  catalog: ProgramManagementData,
   t: WizardT,
 ) {
   const errors = validateEnrollmentStep(
@@ -2777,6 +3048,34 @@ function validateCurrentStep(
     !draft.correctedSourceDetail?.trim()
   ) {
     errors.correctedSourceDetail = t('fieldErrors.sourceDetail');
+  }
+
+  if (
+    step === 7 &&
+    draft.discountMode === 'manual' &&
+    draft.discountType !== 'none' &&
+    !draft.discountNote?.trim()
+  ) {
+    errors.discountNote = t('discountNoteRequiredError');
+  }
+
+  // Mirror of the server's discount_exceeds_price guard: a fixed package
+  // larger than the list price can never be saved.
+  if (
+    step === 7 &&
+    draft.discountMode === 'package' &&
+    draft.discountPackageId
+  ) {
+    const pkg = catalog.discountPackages.find(
+      (item) => item.id === draft.discountPackageId,
+    );
+    if (
+      pkg &&
+      pkg.discountType === 'fixed' &&
+      pkg.discountValue > (draft.listPriceCents ?? 0)
+    ) {
+      errors.discountPackageId = t('discountExceedsPrice');
+    }
   }
 
   return errors;

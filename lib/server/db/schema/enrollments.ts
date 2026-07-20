@@ -18,6 +18,11 @@ import { candidateProfiles, contacts } from './candidates';
 import { mediaAssets, userInvitations } from './foundation';
 import { instructorProfiles } from './instructors';
 import {
+  discountPackages,
+  discountTypeEnum,
+  privateLessonPackages,
+} from './pricing';
+import {
   privateLessonStudentRates,
   programBranches,
   programs,
@@ -63,12 +68,6 @@ export const enrollmentStatusEnum = pgEnum('enrollment_status', [
   'cancelled',
 ]);
 
-export const discountTypeEnum = pgEnum('discount_type', [
-  'none',
-  'percentage',
-  'fixed',
-]);
-
 export type EnrollmentPartyRole =
   | 'guardian'
   | 'payer'
@@ -87,6 +86,8 @@ export type ProgramSelectionSnapshot = {
   language?: string;
   levels?: string[];
   privateLessonHours?: number;
+  privateLessonPackageId?: string;
+  privateLessonPackageName?: string;
   privateLessonRateId?: string;
   programId?: string;
   sectionId?: string;
@@ -164,6 +165,10 @@ export const enrollmentDrafts = pgTable(
       () => privateLessonStudentRates.id,
       { onDelete: 'restrict' },
     ),
+    privateLessonPackageId: uuid('private_lesson_package_id').references(
+      () => privateLessonPackages.id,
+      { onDelete: 'set null' },
+    ),
     programSelection: jsonb('program_selection')
       .$type<ProgramSelectionSnapshot>()
       .notNull()
@@ -180,6 +185,11 @@ export const enrollmentDrafts = pgTable(
       { onDelete: 'restrict' },
     ),
     discountNote: text('discount_note'),
+    // Null + a non-'none' discountType marks a MANUAL discount.
+    discountPackageId: uuid('discount_package_id').references(
+      () => discountPackages.id,
+      { onDelete: 'set null' },
+    ),
     finalPriceCents: integer('final_price_cents'),
     initialPaymentCents: integer('initial_payment_cents').notNull().default(0),
     currency: text('currency').notNull().default('TRY'),

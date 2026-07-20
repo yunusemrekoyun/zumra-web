@@ -9,6 +9,8 @@ import {
   conversations,
   enrollments,
   instructorProfiles,
+  programBranches,
+  programs,
   studentProfiles,
   users,
 } from '@/lib/server/db/schema';
@@ -619,5 +621,153 @@ export async function notifyPaymentReviewStale(input: {
     ]);
   } catch (error) {
     logFailure('payment_review_stale', error);
+  }
+}
+
+// Enrollment completed with an off-catalog discount → flag it to every admin
+// (the discount stays valid; this is oversight, not approval).
+export async function notifyManualDiscountApplied(input: {
+  appliedByName: string;
+  discountCents: number;
+  enrollmentId: string;
+  note: string | null;
+}): Promise<void> {
+  try {
+    const [enrollment] = await database
+      .select({
+        firstName: contacts.firstName,
+        lastName: contacts.lastName,
+      })
+      .from(enrollments)
+      .innerJoin(studentProfiles, eq(studentProfiles.id, enrollments.studentId))
+      .innerJoin(contacts, eq(contacts.id, studentProfiles.contactId))
+      .where(eq(enrollments.id, input.enrollmentId))
+      .limit(1);
+    if (!enrollment) return;
+
+    const admins = await database
+      .select({ id: users.id })
+      .from(users)
+      .where(eq(users.role, 'admin'));
+
+    await createNotifications(
+      admins.map((admin) => ({
+        userId: admin.id,
+        type: 'manual_discount_applied' as const,
+        payload: {
+          amount: formatLira(input.discountCents),
+          appliedBy: input.appliedByName,
+          note: input.note ?? '',
+          studentName: fullName(enrollment.firstName, enrollment.lastName),
+        },
+        href: '/admin/indirimler',
+      })),
+    );
+  } catch (error) {
+    logFailure('manual_discount_applied', error);
+  }
+}
+
+// Branch lesson schedule assigned or replaced → tell the enrolled students and
+// the branch teacher on both channels.
+export async function notifyBranchScheduleUpdated(input: {
+  branchId: string;
+  eventKey: string;
+}): Promise<void> {
+  try {
+    const [branch] = await database
+      .select({
+        branchName: programBranches.name,
+        instructorId: programBranches.instructorProfileId,
+        programName: programs.name,
+      })
+      .from(programBranches)
+      .innerJoin(programs, eq(programs.id, programBranches.programId))
+      .where(eq(programBranches.id, input.branchId))
+      .limit(1);
+    if (!branch) return;
+
+    const courseLabel = `${branch.programName} — ${branch.branchName}`;
+
+    const students = await database
+      .select({
+        email: users.email,
+        name: users.name,
+        userId: studentProfiles.userId,
+      })
+      .from(enrollments)
+      .innerJoin(studentProfiles, eq(studentProfiles.id, enrollments.studentId))
+      .innerJoin(users, eq(users.id, studentProfiles.userId))
+      .where(
+        and(
+          eq(enrollments.branchId, input.branchId),
+          inArray(enrollments.status, activeEnrollmentStatuses),
+        ),
+      );
+
+    const entries: NotificationEntry[] = students.map((student) => ({
+      userId: student.userId as string,
+      type: 'branch_schedule_updated' as const,
+      payload: { course: courseLabel },
+      href: '/ogrenci/takvim',
+    }));
+
+    let instructor: { email: string; name: string; userId: string | null } | null =
+      null;
+
+    if (branch.instructorId) {
+      const [row] = await database
+        .select({
+          email: instructorProfiles.email,
+          firstName: instructorProfiles.firstName,
+          userId: instructorProfiles.userId,
+        })
+        .from(instructorProfiles)
+        .where(eq(instructorProfiles.id, branch.instructorId))
+        .limit(1);
+
+      if (row) {
+        instructor = {
+          email: row.email,
+          name: row.firstName,
+          userId: row.userId,
+        };
+
+        if (row.userId) {
+          entries.push({
+            userId: row.userId,
+            type: 'branch_schedule_updated' as const,
+            payload: { course: courseLabel },
+            href: '/ogretmen/takvim',
+          });
+        }
+      }
+    }
+
+    await createNotifications(entries);
+
+    for (const student of students) {
+      await notificationService.enqueue({
+        channel: 'email',
+        idempotencyKey: `branch-schedule:${input.eventKey}:${student.userId}`,
+        locale: 'tr',
+        payload: { course: courseLabel, name: student.name },
+        recipient: student.email,
+        templateKey: 'branch-schedule-updated',
+      });
+    }
+
+    if (instructor) {
+      await notificationService.enqueue({
+        channel: 'email',
+        idempotencyKey: `branch-schedule:${input.eventKey}:instructor`,
+        locale: 'tr',
+        payload: { course: courseLabel, name: instructor.name },
+        recipient: instructor.email,
+        templateKey: 'branch-schedule-updated',
+      });
+    }
+  } catch (error) {
+    logFailure('branch_schedule_updated', error);
   }
 }

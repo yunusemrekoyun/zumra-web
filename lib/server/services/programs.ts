@@ -18,9 +18,11 @@ import {
   enrollments,
   enrollmentBranchTransfers,
   enrollmentDrafts,
+  discountPackages,
   instructorLanguageCompetencies,
   instructorProfiles,
   lessonSessions,
+  privateLessonPackages,
   privateLessonStudentRates,
   programBranches,
   programs,
@@ -125,13 +127,41 @@ export type InstructorCompetencySummary = {
   levels: string[];
 };
 
+export type PrivateLessonPackageView = {
+  active: boolean;
+  displayOrder: number;
+  hourlyPriceCents: number;
+  hours: number;
+  id: string;
+  language: ProgramLanguage;
+  name: string;
+  note?: string;
+  totalPriceCents: number;
+};
+
+export type DiscountPackageView = {
+  active: boolean;
+  branchId?: string;
+  branchName?: string;
+  discountType: 'percentage' | 'fixed';
+  discountValue: number;
+  endsAt?: string;
+  id: string;
+  name: string;
+  note?: string;
+  scope: 'branch' | 'private';
+  startsAt?: string;
+};
+
 export type ProgramManagementData = {
   branches: ProgramBranchView[];
+  discountPackages: DiscountPackageView[];
   instructors: Array<{
     id: string;
     name: string;
     competencies: InstructorCompetencySummary[];
   }>;
+  privateLessonPackages: PrivateLessonPackageView[];
   programs: ProgramCatalogItem[];
   rates: PrivateLessonRateView[];
 };
@@ -200,6 +230,8 @@ export async function getProgramManagementData(
     instructorRows,
     rateRows,
     competencyRows,
+    lessonPackageRows,
+    discountPackageRows,
   ] =
     await Promise.all([
       database
@@ -311,6 +343,34 @@ export async function getProgramManagementData(
         levels: instructorLanguageCompetencies.levels,
       })
       .from(instructorLanguageCompetencies),
+    database
+      .select()
+      .from(privateLessonPackages)
+      .orderBy(
+        asc(privateLessonPackages.language),
+        asc(privateLessonPackages.displayOrder),
+        asc(privateLessonPackages.hours),
+      ),
+    database
+      .select({
+        active: discountPackages.active,
+        branchId: discountPackages.branchId,
+        branchName: programBranches.name,
+        discountType: discountPackages.discountType,
+        discountValue: discountPackages.discountValue,
+        endsAt: discountPackages.endsAt,
+        id: discountPackages.id,
+        name: discountPackages.name,
+        note: discountPackages.note,
+        scope: discountPackages.scope,
+        startsAt: discountPackages.startsAt,
+      })
+      .from(discountPackages)
+      .leftJoin(
+        programBranches,
+        eq(programBranches.id, discountPackages.branchId),
+      )
+      .orderBy(asc(discountPackages.scope), asc(discountPackages.name)),
     ]);
 
   const [
@@ -412,6 +472,30 @@ export async function getProgramManagementData(
       canDelete:
         !program.systemManaged && !usedProgramIds.has(program.id),
     })),
+    privateLessonPackages: lessonPackageRows.map((pkg) => ({
+      active: pkg.active,
+      displayOrder: pkg.displayOrder,
+      hourlyPriceCents: pkg.hourlyPriceCents,
+      hours: pkg.hours,
+      id: pkg.id,
+      language: pkg.language as ProgramLanguage,
+      name: pkg.name,
+      note: pkg.note ?? undefined,
+      totalPriceCents: pkg.totalPriceCents,
+    })),
+    discountPackages: discountPackageRows.map((pkg) => ({
+      active: pkg.active,
+      branchId: pkg.branchId ?? undefined,
+      branchName: pkg.branchName ?? undefined,
+      discountType: pkg.discountType as 'percentage' | 'fixed',
+      discountValue: pkg.discountValue,
+      endsAt: pkg.endsAt ? pkg.endsAt.toISOString() : undefined,
+      id: pkg.id,
+      name: pkg.name,
+      note: pkg.note ?? undefined,
+      scope: pkg.scope,
+      startsAt: pkg.startsAt ? pkg.startsAt.toISOString() : undefined,
+    })),
     rates: rateRows.map((rate) => ({
       hourlyPriceCents: rate.hourlyPriceCents,
       id: rate.id,
@@ -429,11 +513,24 @@ export async function getEnrollmentProgramCatalog(
   principal: WorkspacePrincipal,
 ): Promise<ProgramManagementData> {
   const data = await getProgramManagementData(principal);
+  const now = Date.now();
+
   return {
     ...data,
     branches: data.branches.filter(
       (branch) =>
         !branch.archivedAt && branch.status === 'enrollment_open',
+    ),
+    // The wizard only offers currently valid packages; the admin management
+    // screen (getProgramManagementData) still sees everything.
+    discountPackages: data.discountPackages.filter(
+      (pkg) =>
+        pkg.active &&
+        (!pkg.startsAt || Date.parse(pkg.startsAt) <= now) &&
+        (!pkg.endsAt || Date.parse(pkg.endsAt) > now),
+    ),
+    privateLessonPackages: data.privateLessonPackages.filter(
+      (pkg) => pkg.active,
     ),
     programs: data.programs.filter(
       (program) => program.active && !program.archivedAt,
@@ -902,6 +999,13 @@ export async function deleteUnusedProgramBranch(
       .from(lessonSessions)
       .where(eq(lessonSessions.branchId, branchId))
       .limit(1),
+    // The FK is cascade, but silently destroying discount packages/campaigns
+    // with the branch would be surprising — force cleaning them up first.
+    database
+      .select({ id: discountPackages.id })
+      .from(discountPackages)
+      .where(eq(discountPackages.branchId, branchId))
+      .limit(1),
   ]);
   if (references.some((rows) => rows.length > 0)) {
     throw new PublicFlowError('program_branch_in_use', 409);
@@ -1100,6 +1204,7 @@ export async function resolveProgramPricing(
     capacityOverride?: boolean;
     privateLessonHours?: number;
     privateLessonLanguage?: ProgramLanguage;
+    privateLessonPackageId?: string;
     programId: string;
     instructorProfileId?: string;
   },
@@ -1161,11 +1266,59 @@ export async function resolveProgramPricing(
     };
   }
 
+  // A catalog package ("ana paket") pins the hours and the total price; the
+  // free-hours path stays as hourly rate × hours.
+  let lessonPackage:
+    | {
+        hourlyPriceCents: number;
+        hours: number;
+        id: string;
+        language: string;
+        name: string;
+        totalPriceCents: number;
+      }
+    | null = null;
+
+  if (input.privateLessonPackageId) {
+    const [pkg] = await transaction
+      .select({
+        hourlyPriceCents: privateLessonPackages.hourlyPriceCents,
+        hours: privateLessonPackages.hours,
+        id: privateLessonPackages.id,
+        language: privateLessonPackages.language,
+        name: privateLessonPackages.name,
+        totalPriceCents: privateLessonPackages.totalPriceCents,
+      })
+      .from(privateLessonPackages)
+      .where(
+        and(
+          eq(privateLessonPackages.id, input.privateLessonPackageId),
+          eq(privateLessonPackages.active, true),
+        ),
+      )
+      .limit(1);
+
+    if (!pkg) {
+      throw new PublicFlowError('private_lesson_package_not_found', 409);
+    }
+
+    if (pkg.language !== input.privateLessonLanguage) {
+      throw new PublicFlowError(
+        'private_lesson_package_language_mismatch',
+        409,
+      );
+    }
+
+    lessonPackage = pkg;
+  }
+
+  const privateLessonHours = lessonPackage?.hours ?? input.privateLessonHours;
+
   if (
     !input.instructorProfileId ||
     !input.privateLessonLanguage ||
-    !input.privateLessonHours ||
-    input.privateLessonHours < 1
+    !privateLessonHours ||
+    privateLessonHours < 1
   ) {
     throw new PublicFlowError('private_lesson_selection_incomplete', 400);
   }
@@ -1218,21 +1371,30 @@ export async function resolveProgramPricing(
     throw new PublicFlowError('private_lesson_rate_not_found', 409);
   }
 
-  const basePriceCents =
-    rate.hourlyPriceCents * input.privateLessonHours;
+  const hourlyStudentPriceCents =
+    lessonPackage?.hourlyPriceCents ?? rate.hourlyPriceCents;
+  const basePriceCents = lessonPackage
+    ? lessonPackage.totalPriceCents
+    : rate.hourlyPriceCents * privateLessonHours;
 
   return {
     atCapacity: false,
     basePriceCents,
     courseMode: 'private' as const,
+    lessonPackage,
+    privateLessonHours,
     program,
     rate,
     snapshot: {
       basePriceCents,
-      hourlyStudentPriceCents: rate.hourlyPriceCents,
-      label: program.name,
+      hourlyStudentPriceCents,
+      label: lessonPackage
+        ? `${program.name} — ${lessonPackage.name}`
+        : program.name,
       language: input.privateLessonLanguage,
-      privateLessonHours: input.privateLessonHours,
+      privateLessonHours,
+      privateLessonPackageId: lessonPackage?.id,
+      privateLessonPackageName: lessonPackage?.name,
       privateLessonRateId: rate.id,
       programId: program.id,
       instructorProfileId: rate.instructorProfileId,

@@ -116,6 +116,7 @@ const patchSchema = z.discriminatedUnion('step', [
       instagramHandle: z.string().trim().max(80).optional().or(z.literal('')),
       privateLessonHours: z.number().int().min(1).max(1000).optional(),
       privateLessonLanguage: z.enum(supportedProgramLanguages).optional(),
+      privateLessonPackageId: z.string().uuid().nullable().optional(),
       programId: z.string().uuid(),
       instructorProfileId: z.string().uuid().optional(),
     }),
@@ -175,6 +176,7 @@ const patchSchema = z.discriminatedUnion('step', [
     step: z.literal(7),
     data: z.object({
       discountNote: z.string().trim().max(500).optional().or(z.literal('')),
+      discountPackageId: z.string().uuid().nullable().optional(),
       discountType: z.enum(['none', 'percentage', 'fixed']),
       discountValue: z.number().int().nonnegative(),
       financialNotes: z.string().trim().max(1000).optional().or(z.literal('')),

@@ -17,7 +17,9 @@ type NotificationType =
   | 'payment_review_stale'
   | 'installment_due'
   | 'settlement_recorded'
-  | 'task_due';
+  | 'task_due'
+  | 'manual_discount_applied'
+  | 'branch_schedule_updated';
 
 type NotificationItem = {
   id: string;
@@ -138,6 +140,14 @@ export function NotificationBell() {
         return t('settlementRecorded', { amount: String(p.amount ?? '') });
       case 'task_due':
         return t('taskDue', { title: String(p.title ?? '') });
+      case 'manual_discount_applied':
+        return t('manualDiscountApplied', {
+          amount: String(p.amount ?? ''),
+          staff: String(p.appliedBy ?? ''),
+          student: String(p.studentName ?? ''),
+        });
+      case 'branch_schedule_updated':
+        return t('branchScheduleUpdated', { course: String(p.course ?? '') });
       default:
         return '';
     }
