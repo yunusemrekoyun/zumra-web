@@ -1,17 +1,45 @@
-import { useTranslations } from 'next-intl';
+import { getTranslations } from 'next-intl/server';
 import { PageHeader } from '@/components/ui';
-import { withWorkspacePage } from '@/lib/server/workspace-page';
+import { ChatModeTabs } from '@/components/staff-chat/chat-mode-tabs';
+import { StaffChatSection } from '@/components/staff-chat/staff-chat-section';
+import { requireWorkspaceRole } from '@/lib/server/authorization';
 import { AdminMessagesClient } from './admin-messages-client';
 
-function MessagesPage() {
-  const t = useTranslations('admin.messages');
+type AdminMessagesPageProps = {
+  params: Promise<{ locale: string }>;
+  searchParams: Promise<{ tab?: string }>;
+};
+
+export default async function AdminMessagesPage({
+  params,
+  searchParams,
+}: AdminMessagesPageProps) {
+  const { locale } = await params;
+  const { tab } = await searchParams;
+  const principal = await requireWorkspaceRole('admin', locale);
+  const [t, staffT] = await Promise.all([
+    getTranslations('admin.messages'),
+    getTranslations('staffChat'),
+  ]);
+  const staffTab = tab === 'staff';
 
   return (
     <div className="admin-page">
-      <PageHeader title={t('title')} description={t('description')} />
-      <AdminMessagesClient />
+      <PageHeader
+        title={staffTab ? staffT('title') : t('title')}
+        description={staffTab ? staffT('description') : t('description')}
+      />
+      <ChatModeTabs
+        active={staffTab ? 'staff' : 'primary'}
+        basePath="/admin/messages"
+        primaryLabel={staffT('tabOversight')}
+        staffLabel={staffT('tabStaff')}
+      />
+      {staffTab ? (
+        <StaffChatSection locale={locale} principal={principal} />
+      ) : (
+        <AdminMessagesClient />
+      )}
     </div>
   );
 }
-
-export default withWorkspacePage('admin', MessagesPage);

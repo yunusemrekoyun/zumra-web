@@ -1,22 +1,23 @@
-import { MessageSquare } from 'lucide-react';
-import { useTranslations } from 'next-intl';
-import { Button, EmptyState } from '@/components/ui';
-import { withWorkspacePage } from '@/lib/server/workspace-page';
+import { getTranslations } from 'next-intl/server';
+import { PageHeader } from '@/components/ui';
+import { StaffChatSection } from '@/components/staff-chat/staff-chat-section';
+import { requireWorkspaceRole } from '@/lib/server/authorization';
 
-function AdvisorMessagesPage() {
-  const t = useTranslations('advisor.empty.messages');
-  const common = useTranslations('common.actions');
+type AdvisorMessagesPageProps = {
+  params: Promise<{ locale: string }>;
+};
+
+export default async function AdvisorMessagesPage({
+  params,
+}: AdvisorMessagesPageProps) {
+  const { locale } = await params;
+  const principal = await requireWorkspaceRole('advisor', locale);
+  const t = await getTranslations('staffChat');
 
   return (
     <div className="workspace-page">
-      <EmptyState
-        icon={MessageSquare}
-        title={t('title')}
-        description={t('description')}
-        action={<Button variant="secondary" disabled>{common('soon')}</Button>}
-      />
+      <PageHeader title={t('title')} description={t('description')} />
+      <StaffChatSection locale={locale} principal={principal} />
     </div>
   );
 }
-
-export default withWorkspacePage('advisor', AdvisorMessagesPage);

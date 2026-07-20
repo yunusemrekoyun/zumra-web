@@ -2018,6 +2018,27 @@
     "lessonSessionCancelled": "Ders iptal edildi: {course} — {date}",
     "lessonSessionPostponed": "Ders ertelendi: {course} — {date}"
   },
+  "staffChat": {
+    "title": "Personel Mesajları",
+    "description": "Admin, danışman ve öğretmenler arası kurum içi yazışma.",
+    "conversationsTitle": "Konuşmalar",
+    "conversationsEmpty": "Henüz konuşma yok — yukarıdan yeni bir mesaj başlat.",
+    "newMessage": "Yeni mesaj",
+    "start": "Başlat",
+    "roles": {
+      "admin": "Admin",
+      "advisor": "Danışman",
+      "teacher": "Öğretmen"
+    },
+    "threadEmpty": "Henüz mesaj yok. İlk mesajı yaz.",
+    "placeholder": "Mesajını yaz...",
+    "send": "Gönder",
+    "error": "İşlem tamamlanamadı. Tekrar deneyin.",
+    "selectHint": "Soldan bir konuşma seç veya yeni mesaj başlat.",
+    "tabStudents": "Öğrenciler",
+    "tabStaff": "Personel",
+    "tabOversight": "Öğrenci Yazışmaları"
+  },
   "advisorScorecard": {
     "title": "Danışman Karneleri",
     "description": "Danışman bazlı aktivite, dönüşüm ve görev performansı.",

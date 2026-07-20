@@ -2018,6 +2018,27 @@
     "lessonSessionCancelled": "Lesson cancelled: {course} — {date}",
     "lessonSessionPostponed": "Lesson postponed: {course} — {date}"
   },
+  "staffChat": {
+    "title": "Staff Messages",
+    "description": "Internal messaging between admins, advisors and teachers.",
+    "conversationsTitle": "Conversations",
+    "conversationsEmpty": "No conversations yet — start a new message above.",
+    "newMessage": "New message",
+    "start": "Start",
+    "roles": {
+      "admin": "Admin",
+      "advisor": "Advisor",
+      "teacher": "Teacher"
+    },
+    "threadEmpty": "No messages yet. Write the first one.",
+    "placeholder": "Write your message...",
+    "send": "Send",
+    "error": "The action could not be completed. Try again.",
+    "selectHint": "Pick a conversation on the left or start a new message.",
+    "tabStudents": "Students",
+    "tabStaff": "Staff",
+    "tabOversight": "Student Conversations"
+  },
   "advisorScorecard": {
     "title": "Advisor Scorecards",
     "description": "Per-advisor activity, conversion and task performance.",

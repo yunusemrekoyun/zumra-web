@@ -1,4 +1,6 @@
+import { sql } from 'drizzle-orm';
 import {
+  check,
   index,
   pgEnum,
   pgTable,
@@ -104,5 +106,70 @@ export const messageAttachments = pgTable(
       table.mediaAssetId,
     ),
     index('message_attachments_message_idx').on(table.messageId),
+  ],
+);
+
+// ---------------------------------------------------------------------------
+// Staff messaging (admin/advisor/teacher ↔ each other). Deliberately separate
+// from the student↔teacher conversations above: the anti-leakage rules of the
+// student channel stay untouched, and staff threads are plain user pairs.
+// Participants are stored in canonical order (A < B) so a pair maps to
+// exactly one conversation.
+// ---------------------------------------------------------------------------
+
+export const staffConversations = pgTable(
+  'staff_conversations',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    participantAUserId: text('participant_a_user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    participantBUserId: text('participant_b_user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    lastMessageAt: timestamp('last_message_at', { withTimezone: true }),
+    aLastReadAt: timestamp('a_last_read_at', { withTimezone: true }),
+    bLastReadAt: timestamp('b_last_read_at', { withTimezone: true }),
+    createdAt: timestamp('created_at', { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => [
+    uniqueIndex('staff_conversations_pair_unique').on(
+      table.participantAUserId,
+      table.participantBUserId,
+    ),
+    index('staff_conversations_a_idx').on(table.participantAUserId),
+    index('staff_conversations_b_idx').on(table.participantBUserId),
+    check(
+      'staff_conversations_order_check',
+      sql`${table.participantAUserId} < ${table.participantBUserId}`,
+    ),
+  ],
+);
+
+export const staffMessages = pgTable(
+  'staff_messages',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    conversationId: uuid('conversation_id')
+      .notNull()
+      .references(() => staffConversations.id, { onDelete: 'cascade' }),
+    senderUserId: text('sender_user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'restrict' }),
+    body: text('body').notNull(),
+    createdAt: timestamp('created_at', { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => [
+    index('staff_messages_conversation_created_idx').on(
+      table.conversationId,
+      table.createdAt,
+    ),
   ],
 );
