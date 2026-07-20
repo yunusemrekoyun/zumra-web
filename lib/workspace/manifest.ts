@@ -109,6 +109,7 @@ export const workspaceModules = [
   { scope: 'admin', kind: 'nav', labelKey: 'admin.nav.payments', path: '/admin/payments', iconKey: 'creditCard', mobile: 'more' },
   { scope: 'admin', kind: 'nav', labelKey: 'admin.nav.discounts', path: '/admin/indirimler', iconKey: 'target', mobile: 'more' },
   { scope: 'admin', kind: 'nav', labelKey: 'admin.nav.discovery', path: '/admin/demo-dersler', iconKey: 'presentation', mobile: 'more' },
+  { scope: 'admin', kind: 'nav', labelKey: 'admin.nav.advisors', path: '/admin/danismanlar', iconKey: 'trending', mobile: 'more' },
   { scope: 'admin', kind: 'nav', labelKey: 'admin.nav.reports', path: '/admin/reports', iconKey: 'barChart', mobile: 'more' },
   { scope: 'admin', kind: 'nav', labelKey: 'admin.nav.storage', path: '/admin/depolama', iconKey: 'hardDrive', mobile: 'more' },
   { scope: 'admin', kind: 'nav', labelKey: 'admin.nav.legal', path: '/admin/legal', iconKey: 'fileText', mobile: 'more' },
