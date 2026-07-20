@@ -1,7 +1,9 @@
 import { getTranslations } from 'next-intl/server';
-import { CalendarBoard, PageHeader } from '@/components/ui';
+import { CalendarBoard, PageHeader, WorldClock } from '@/components/ui';
+import { APP_TIME_ZONE } from '@/lib/datetime';
 import { requireWorkspaceRole } from '@/lib/server/authorization';
 import { getStudentCalendarData } from '@/lib/server/services/lesson-schedules';
+import { getUserTimezone } from '@/lib/server/services/user-preferences';
 
 type StudentCalendarPageProps = {
   params: Promise<{ locale: string }>;
@@ -16,10 +18,15 @@ export default async function StudentCalendarPage({
   const { month } = await searchParams;
   const principal = await requireWorkspaceRole('student', locale);
   const t = await getTranslations('student.calendar');
-  const data = await getStudentCalendarData(principal);
+  const [data, timezone] = await Promise.all([
+    getStudentCalendarData(principal),
+    getUserTimezone(principal.id),
+  ]);
   const returnPath = `/${locale}/ogrenci/takvim${
     month ? `?month=${encodeURIComponent(month)}` : ''
   }`;
+  const zoneCity =
+    timezone.split('/').pop()?.replaceAll('_', ' ') ?? timezone;
 
   return (
     <div className="workspace-page">
@@ -31,11 +38,13 @@ export default async function StudentCalendarPage({
             : t('missingProfileDescription')
         }
       />
+      <WorldClock title={t('worldClock')} viewerTimezone={timezone} />
       <CalendarBoard
         currentMonth={month}
         events={data.events}
         locale={locale}
         returnPath={returnPath}
+        timezone={timezone}
         labels={{
           absenceNotePlaceholder: t('absenceNotePlaceholder'),
           absenceReported: t('absenceReported'),
@@ -88,6 +97,15 @@ export default async function StudentCalendarPage({
             submit: t('changeRequest.submit'),
           },
           changeRequestPending: t('changeRequest.pending'),
+          upcomingTitle: t('upcomingTitle'),
+          upcomingEmpty: t('upcomingEmpty'),
+          pastTitle: t('pastTitle'),
+          todayLabel: t('today'),
+          tomorrowLabel: t('tomorrow'),
+          timezoneNote:
+            timezone === APP_TIME_ZONE
+              ? undefined
+              : t('timezoneNote', { zone: zoneCity }),
         }}
       />
     </div>

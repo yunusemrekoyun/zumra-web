@@ -1,9 +1,11 @@
 import { getTranslations } from 'next-intl/server';
-import { CalendarBoard, PageHeader } from '@/components/ui';
+import { CalendarBoard, PageHeader, WorldClock } from '@/components/ui';
 import { AddPrivateLessonButton } from '@/components/add-private-lesson-button';
+import { APP_TIME_ZONE } from '@/lib/datetime';
 import { requireWorkspaceRole } from '@/lib/server/authorization';
 import { listTeacherChangeRequests } from '@/lib/server/services/lesson-change-requests';
 import { getTeacherCalendarData } from '@/lib/server/services/lesson-schedules';
+import { getUserTimezone } from '@/lib/server/services/user-preferences';
 import { ChangeRequestsPanel } from './change-requests-panel';
 
 type TeacherCalendarPageProps = {
@@ -20,13 +22,16 @@ export default async function TeacherCalendarPage({
   const principal = await requireWorkspaceRole('teacher', locale);
   const t = await getTranslations('teacher.calendar');
   const tp = await getTranslations('privateLesson');
-  const [data, changeRequests] = await Promise.all([
+  const [data, changeRequests, timezone] = await Promise.all([
     getTeacherCalendarData(principal),
     listTeacherChangeRequests(principal),
+    getUserTimezone(principal.id),
   ]);
   const returnPath = `/${locale}/ogretmen/takvim${
     month ? `?month=${encodeURIComponent(month)}` : ''
   }`;
+  const zoneCity =
+    timezone.split('/').pop()?.replaceAll('_', ' ') ?? timezone;
 
   return (
     <div className="workspace-page">
@@ -46,9 +51,11 @@ export default async function TeacherCalendarPage({
           ) : undefined
         }
       />
+      <WorldClock title={t('worldClock')} viewerTimezone={timezone} />
       <ChangeRequestsPanel
         locale={locale}
         requests={changeRequests}
+        timezone={timezone}
         labels={{
           approve: t('changeRequests.approve'),
           badge: t('changeRequests.badge'),
@@ -71,6 +78,7 @@ export default async function TeacherCalendarPage({
         events={data.events}
         locale={locale}
         returnPath={returnPath}
+        timezone={timezone}
         labels={{
           absenceNotePlaceholder: t('absenceNotePlaceholder'),
           absenceReported: t('absenceReported'),
@@ -125,6 +133,15 @@ export default async function TeacherCalendarPage({
             dismiss: t('lessonStatus.dismiss'),
             error: t('lessonStatus.error'),
           },
+          upcomingTitle: t('upcomingTitle'),
+          upcomingEmpty: t('upcomingEmpty'),
+          pastTitle: t('pastTitle'),
+          todayLabel: t('today'),
+          tomorrowLabel: t('tomorrow'),
+          timezoneNote:
+            timezone === APP_TIME_ZONE
+              ? undefined
+              : t('timezoneNote', { zone: zoneCity }),
         }}
       />
     </div>

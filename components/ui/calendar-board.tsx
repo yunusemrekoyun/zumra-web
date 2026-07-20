@@ -10,7 +10,7 @@ import {
   Users,
   Video,
 } from 'lucide-react';
-import { isoToIstanbulWallClock } from '@/lib/datetime';
+import { APP_TIME_ZONE } from '@/lib/datetime';
 import { cn } from '@/lib/utils';
 import type {
   CalendarEventKind,
@@ -63,6 +63,12 @@ type CalendarBoardLabels = {
   lessonStatus?: LessonStatusActionLabels;
   changeRequest?: LessonChangeRequestLabels;
   changeRequestPending?: string;
+  upcomingTitle?: string;
+  upcomingEmpty?: string;
+  pastTitle?: string;
+  todayLabel?: string;
+  tomorrowLabel?: string;
+  timezoneNote?: string;
 };
 
 type CalendarBoardProps = {
@@ -71,6 +77,9 @@ type CalendarBoardProps = {
   labels: CalendarBoardLabels;
   locale: string;
   returnPath?: string;
+  // Display timezone (IANA). Storage stays Istanbul; this only changes what
+  // the viewer sees.
+  timezone?: string;
 };
 
 const kindStyles: Record<
@@ -108,9 +117,29 @@ export function CalendarBoard({
   labels,
   locale,
   returnPath,
+  timezone,
 }: CalendarBoardProps) {
-  const sortedEvents = [...events].sort(compareCalendarEvents);
-  const monthStart = getDisplayMonth(sortedEvents, currentMonth);
+  const displayZone = timezone ?? APP_TIME_ZONE;
+  // The server precomputes date/startTime as Istanbul wall-clock; re-derive
+  // them in the viewer's timezone so every downstream piece (grid, popover,
+  // list) shows local times without further changes.
+  const sortedEvents = [...events].sort(compareCalendarEvents).map((event) => ({
+    ...event,
+    date: zonedDateKey(event.startsAt, displayZone),
+    endTime: zonedTime(event.endsAt, displayZone),
+    startTime: zonedTime(event.startsAt, displayZone),
+  }));
+  const now = new Date();
+  const todayKey = zonedDateKey(now.toISOString(), displayZone);
+  const tomorrowKey = zonedDateKey(
+    new Date(now.getTime() + 86_400_000).toISOString(),
+    displayZone,
+  );
+  const upcomingEvents = sortedEvents.filter((event) => event.date >= todayKey);
+  const pastEvents = sortedEvents
+    .filter((event) => event.date < todayKey)
+    .reverse();
+  const monthStart = getDisplayMonth(sortedEvents, todayKey, currentMonth);
   const monthKey = serializeMonth(monthStart);
   const previousMonth = serializeMonth(addMonths(monthStart, -1));
   const nextMonth = serializeMonth(addMonths(monthStart, 1));
@@ -123,6 +152,7 @@ export function CalendarBoard({
   const monthEvents = sortedEvents.filter((event) =>
     event.date.startsWith(monthKey),
   );
+  const upcomingByDay = groupEventsByDate(upcomingEvents);
 
   if (!events.length) {
     return (
@@ -145,29 +175,127 @@ export function CalendarBoard({
       <ModulePanel className="rounded-3xl p-4 sm:p-6">
         <div className="flex flex-wrap items-center justify-between gap-4">
           <div>
-            <h2 className="text-xl font-bold capitalize text-[#2E286C]">
-              {monthLabel}
+            <h2 className="text-xl font-bold text-[#2E286C]">
+              {labels.upcomingTitle ?? labels.agendaTitle}
             </h2>
-            <p className="mt-1 text-sm font-medium text-[#2E286C]/45">
+            {labels.timezoneNote ? (
+              <p className="mt-1 text-sm font-medium text-[#2E286C]/45">
+                {labels.timezoneNote}
+              </p>
+            ) : null}
+          </div>
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="rounded-full bg-[#533089]/7 px-3 py-1 text-xs font-bold text-[#533089]">
+              {upcomingEvents.length}
+            </span>
+            <CalendarLegend labels={labels} />
+          </div>
+        </div>
+
+        <div className="mt-6 space-y-6">
+          {Array.from(upcomingByDay.entries()).map(([dateKey, dayEvents]) => (
+            <div key={dateKey}>
+              <div className="mb-3 flex items-center gap-3">
+                <span
+                  className={cn(
+                    'rounded-full px-3 py-1 text-[11px] font-bold uppercase tracking-wider',
+                    dateKey === todayKey
+                      ? 'bg-[#533089] text-white shadow-sm'
+                      : 'bg-[#F8F9FC] text-[#2E286C]/55',
+                  )}
+                >
+                  {dateKey === todayKey && labels.todayLabel
+                    ? labels.todayLabel
+                    : dateKey === tomorrowKey && labels.tomorrowLabel
+                      ? labels.tomorrowLabel
+                      : formatDayHeading(dateKey, locale)}
+                </span>
+                <span className="h-px flex-1 bg-black/[0.04]" />
+              </div>
+              <div className="space-y-3">
+                {dayEvents.map((event) => (
+                  <CalendarListRow
+                    currentMonth={currentMonth}
+                    event={event}
+                    key={event.id}
+                    labels={labels}
+                    locale={locale}
+                    returnPath={returnPath}
+                    timezone={displayZone}
+                  />
+                ))}
+              </div>
+            </div>
+          ))}
+          {!upcomingEvents.length && (
+            <div className="rounded-2xl bg-[#F8F9FC] p-5 text-sm font-semibold leading-6 text-[#2E286C]/45">
+              {labels.upcomingEmpty ?? labels.noEventsInMonth}
+            </div>
+          )}
+        </div>
+      </ModulePanel>
+
+      {pastEvents.length > 0 && (
+        <details className="group/past rounded-3xl border border-black/[0.02] bg-white shadow-sm">
+          <summary className="flex cursor-pointer list-none items-center justify-between gap-3 rounded-3xl p-4 transition-colors duration-150 ease-out hover:bg-[#F8F9FC] sm:p-5 [&::-webkit-details-marker]:hidden">
+            <div className="text-sm font-bold text-[#2E286C]">
+              {labels.pastTitle ?? labels.detailView}
+            </div>
+            <div className="flex items-center gap-3">
+              <span className="rounded-full bg-[#533089]/7 px-3 py-1 text-xs font-bold text-[#533089]">
+                {pastEvents.length}
+              </span>
+              <span className="relative h-6 w-11 rounded-full bg-[#F0ECF7] transition-colors duration-150 ease-out group-open/past:bg-[#533089]">
+                <span className="absolute left-1 top-1 h-4 w-4 rounded-full bg-white shadow-sm transition-transform duration-150 ease-out group-open/past:translate-x-5" />
+              </span>
+            </div>
+          </summary>
+          <div className="space-y-3 border-t border-black/[0.04] p-4 sm:p-6">
+            {pastEvents.slice(0, 40).map((event) => (
+              <CalendarListRow
+                currentMonth={currentMonth}
+                event={event}
+                key={event.id}
+                labels={labels}
+                locale={locale}
+                returnPath={returnPath}
+                timezone={displayZone}
+              />
+            ))}
+          </div>
+        </details>
+      )}
+
+      <details className="group/details rounded-3xl border border-black/[0.02] bg-white shadow-sm">
+        <summary className="flex cursor-pointer list-none items-center justify-between gap-3 rounded-3xl p-4 transition-colors duration-150 ease-out hover:bg-[#F8F9FC] sm:p-5 [&::-webkit-details-marker]:hidden">
+          <div>
+            <div className="text-sm font-bold text-[#2E286C]">
+              {labels.monthView}
+            </div>
+            <p className="mt-1 text-xs font-medium text-[#2E286C]/40">
               {labels.hoverHint}
             </p>
           </div>
-          <div className="flex flex-wrap items-center gap-2">
-            <div className="flex rounded-full bg-[#F8F9FC] p-1 shadow-inner shadow-black/[0.03]">
-              <MonthNavLink
-                href={`?month=${previousMonth}`}
-                label={labels.previousMonth}
-              >
-                <ChevronLeft className="h-4 w-4" />
-              </MonthNavLink>
-              <MonthNavLink href={`?month=${nextMonth}`} label={labels.nextMonth}>
-                <ChevronRight className="h-4 w-4" />
-              </MonthNavLink>
-            </div>
-            <span className="rounded-full bg-[#533089] px-3 py-1.5 text-xs font-bold text-white shadow-sm">
-              {labels.monthView}
-            </span>
-            <CalendarLegend labels={labels} />
+          <span className="relative h-6 w-11 rounded-full bg-[#F0ECF7] transition-colors duration-150 ease-out group-open/details:bg-[#533089]">
+            <span className="absolute left-1 top-1 h-4 w-4 rounded-full bg-white shadow-sm transition-transform duration-150 ease-out group-open/details:translate-x-5" />
+          </span>
+        </summary>
+
+        <div className="border-t border-black/[0.04] p-4 sm:p-6">
+        <div className="flex flex-wrap items-center justify-between gap-4">
+          <h2 className="text-xl font-bold capitalize text-[#2E286C]">
+            {monthLabel}
+          </h2>
+          <div className="flex rounded-full bg-[#F8F9FC] p-1 shadow-inner shadow-black/[0.03]">
+            <MonthNavLink
+              href={`?month=${previousMonth}`}
+              label={labels.previousMonth}
+            >
+              <ChevronLeft className="h-4 w-4" />
+            </MonthNavLink>
+            <MonthNavLink href={`?month=${nextMonth}`} label={labels.nextMonth}>
+              <ChevronRight className="h-4 w-4" />
+            </MonthNavLink>
           </div>
         </div>
 
@@ -250,52 +378,11 @@ export function CalendarBoard({
             );
           })}
         </div>
-      </ModulePanel>
-
-      <details className="group/details rounded-3xl border border-black/[0.02] bg-white shadow-sm">
-        <summary className="flex cursor-pointer list-none items-center justify-between gap-3 rounded-3xl p-4 transition-colors duration-150 ease-out marker:hidden hover:bg-[#F8F9FC] sm:p-5 [&::-webkit-details-marker]:hidden">
-          <div>
-            <div className="text-sm font-bold text-[#2E286C]">
-              {labels.detailView}
-            </div>
-            <p className="mt-1 text-xs font-medium text-[#2E286C]/40">
-              {labels.agendaTitle}
-            </p>
+        {!monthEvents.length && (
+          <div className="mt-4 rounded-2xl bg-[#F8F9FC] p-5 text-sm font-semibold leading-6 text-[#2E286C]/45">
+            {labels.noEventsInMonth}
           </div>
-          <div className="flex items-center gap-3">
-            <span className="rounded-full bg-[#533089]/7 px-3 py-1 text-xs font-bold text-[#533089]">
-              {monthEvents.length}
-            </span>
-            <span className="relative h-6 w-11 rounded-full bg-[#F0ECF7] transition-colors duration-150 ease-out group-open/details:bg-[#533089]">
-              <span className="absolute left-1 top-1 h-4 w-4 rounded-full bg-white shadow-sm transition-transform duration-150 ease-out group-open/details:translate-x-5" />
-            </span>
-          </div>
-        </summary>
-
-        <div className="border-t border-black/[0.04] p-4 sm:p-6">
-          <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
-            <p className="text-sm font-semibold text-[#2E286C]/45">
-              {labels.legendTitle}
-            </p>
-            <CalendarLegend labels={labels} />
-          </div>
-          <div className="grid gap-3 lg:grid-cols-2 xl:grid-cols-3">
-            {monthEvents.map((event) => (
-              <CalendarAgendaCard
-                currentMonth={currentMonth}
-                key={event.id}
-                event={event}
-                labels={labels}
-                locale={locale}
-                returnPath={returnPath}
-              />
-            ))}
-            {!monthEvents.length && (
-              <div className="rounded-2xl bg-[#F8F9FC] p-5 text-sm font-semibold leading-6 text-[#2E286C]/45">
-                {labels.noEventsInMonth}
-              </div>
-            )}
-          </div>
+        )}
         </div>
       </details>
     </div>
@@ -424,34 +511,63 @@ function CalendarDayPopover({
   );
 }
 
-function CalendarAgendaCard({
+function CalendarListRow({
   currentMonth,
   event,
   labels,
   locale,
   returnPath,
+  timezone,
 }: {
   currentMonth?: string;
-  event: CalendarEventView;
+  event: CalendarEventView & { endTime: string };
   labels: CalendarBoardLabels;
   locale: string;
   returnPath?: string;
+  timezone: string;
 }) {
   return (
     <div
       className={cn(
-        'rounded-2xl border border-black/[0.04] border-l-4 bg-white p-4 shadow-sm',
+        'rounded-2xl border border-black/[0.04] border-l-4 bg-white p-3 shadow-sm sm:p-4',
         kindStyles[event.kind].accent,
+        event.status === 'cancelled' && 'opacity-60',
       )}
     >
-      <div className="flex items-start justify-between gap-3">
-        <div>
-          <div className="text-sm font-bold text-[#2E286C]">{event.title}</div>
-          {event.subtitle && (
-            <div className="mt-1 text-xs font-semibold text-[#2E286C]/40">
-              {event.subtitle}
-            </div>
-          )}
+      <div className="flex flex-wrap items-center gap-3 sm:gap-4">
+        <div className="w-16 shrink-0 sm:w-20">
+          <div className="text-sm font-black tabular-nums text-[#2E286C]">
+            {event.startTime}
+          </div>
+          <div className="text-[11px] font-bold tabular-nums text-[#2E286C]/35">
+            {event.endTime}
+          </div>
+        </div>
+        <div className="min-w-0 flex-1">
+          <div className="truncate text-sm font-bold text-[#2E286C]">
+            {event.title}
+          </div>
+          <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] font-semibold text-[#2E286C]/45">
+            <span className="inline-flex items-center gap-1.5">
+              <span
+                className={cn('h-2 w-2 rounded-full', kindStyles[event.kind].dot)}
+              />
+              {labels.eventKinds[event.kind]}
+            </span>
+            {event.subtitle && (
+              <span className="max-w-56 truncate">{event.subtitle}</span>
+            )}
+            {event.instructorName && <span>{event.instructorName}</span>}
+            {event.studentCount !== undefined && (
+              <span className="inline-flex items-center gap-1">
+                <Users className="h-3 w-3 text-[#533089]" />
+                {labels.studentCount(event.studentCount)}
+              </span>
+            )}
+            {event.meetingStatus && event.meetingStatus !== 'ready' && (
+              <span>{labels.meetingStatuses[event.meetingStatus]}</span>
+            )}
+          </div>
         </div>
         <StatusChip
           tone={
@@ -466,44 +582,6 @@ function CalendarAgendaCard({
         >
           {labels.status[event.status]}
         </StatusChip>
-      </div>
-
-      <div className="mt-4 grid gap-2 text-xs font-semibold text-[#2E286C]/55">
-        <span className="inline-flex items-center gap-2">
-          <CalendarDays className="h-4 w-4 text-[#533089]" />
-          {formatDate(event.date, locale)}
-        </span>
-        <span className="inline-flex items-center gap-2">
-          <Clock3 className="h-4 w-4 text-[#533089]" />
-          {event.startTime}
-        </span>
-        {event.studentCount !== undefined && (
-          <span className="inline-flex items-center gap-2">
-            <Users className="h-4 w-4 text-[#533089]" />
-            {labels.studentCount(event.studentCount)}
-          </span>
-        )}
-      </div>
-
-      <div className="mt-4 flex flex-wrap gap-2">
-        <span
-          className={cn(
-            'rounded-full px-3 py-1 text-[10px] font-bold',
-            kindStyles[event.kind].soft,
-          )}
-        >
-          {labels.eventKinds[event.kind]}
-        </span>
-        {event.instructorName && (
-          <span className="rounded-full bg-[#F8F9FC] px-3 py-1 text-[10px] font-bold text-[#2E286C]/45">
-            {event.instructorName}
-          </span>
-        )}
-        {event.meetingStatus && event.meetingStatus !== 'ready' && (
-          <span className="rounded-full bg-[#F8F9FC] px-3 py-1 text-[10px] font-bold text-[#2E286C]/45">
-            {labels.meetingStatuses[event.meetingStatus]}
-          </span>
-        )}
       </div>
 
       {(labels.meetingAttempts || labels.meetingLastError) &&
@@ -526,6 +604,7 @@ function CalendarAgendaCard({
         labels={labels}
         locale={locale}
         returnPath={returnPath}
+        timezone={timezone}
       />
     </div>
   );
@@ -537,12 +616,14 @@ function CalendarEventActions({
   labels,
   locale,
   returnPath,
+  timezone,
 }: {
   currentMonth?: string;
   event: CalendarEventView;
   labels: CalendarBoardLabels;
   locale: string;
   returnPath?: string;
+  timezone?: string;
 }) {
   const returnTo = returnPath ?? buildCalendarReturnTo(locale, currentMonth);
   const showMeetingAction =
@@ -611,7 +692,7 @@ function CalendarEventActions({
         ) : event.joinOpensAt && labels.joinOpensAt ? (
           <div className="inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-[#F8F9FC] px-4 py-3 text-xs font-bold text-[#2E286C]/45">
             <Clock3 className="h-4 w-4" />
-            {labels.joinOpensAt(formatJoinTime(event.joinOpensAt, locale))}
+            {labels.joinOpensAt(formatJoinTime(event.joinOpensAt, locale, timezone))}
           </div>
         ) : null
       ) : null}
@@ -707,21 +788,58 @@ function buildCalendarReturnTo(locale: string, currentMonth?: string) {
   return `/${locale}/ogrenci/takvim${query}`;
 }
 
-function formatJoinTime(iso: string, locale: string) {
+function formatJoinTime(iso: string, locale: string, timezone?: string) {
   return new Intl.DateTimeFormat(locale === 'en' ? 'en-US' : 'tr-TR', {
     hour: '2-digit',
     minute: '2-digit',
-    timeZone: 'Europe/Istanbul',
+    timeZone: timezone ?? APP_TIME_ZONE,
   }).format(new Date(iso));
 }
 
-function getDisplayMonth(events: CalendarEventView[], requestedMonthKey?: string) {
+// 'YYYY-MM-DD' of an instant in the given timezone (en-CA emits ISO order).
+function zonedDateKey(iso: string, timezone: string) {
+  try {
+    return new Intl.DateTimeFormat('en-CA', {
+      day: '2-digit',
+      month: '2-digit',
+      timeZone: timezone,
+      year: 'numeric',
+    }).format(new Date(iso));
+  } catch {
+    return iso.slice(0, 10);
+  }
+}
+
+// 'HH:mm' of an instant in the given timezone.
+function zonedTime(iso: string, timezone: string) {
+  try {
+    return new Intl.DateTimeFormat('tr-TR', {
+      hour: '2-digit',
+      minute: '2-digit',
+      timeZone: timezone,
+    }).format(new Date(iso));
+  } catch {
+    return '--:--';
+  }
+}
+
+function formatDayHeading(dateKey: string, locale: string) {
+  return new Intl.DateTimeFormat(resolveLocale(locale), {
+    day: 'numeric',
+    month: 'long',
+    weekday: 'long',
+  }).format(new Date(`${dateKey}T12:00:00Z`));
+}
+
+function getDisplayMonth(
+  events: CalendarEventView[],
+  todayKey: string,
+  requestedMonthKey?: string,
+) {
   const requestedMonth = parseMonth(requestedMonthKey);
   if (requestedMonth) return requestedMonth;
 
-  // Event date keys are Istanbul wall-clock days, so resolve "today" in the
-  // same frame instead of the server's local timezone.
-  const todayKey = isoToIstanbulWallClock(new Date().toISOString()).slice(0, 10);
+  // Event date keys and "today" are both resolved in the viewer's timezone.
   const [todayYear, todayMonth] = todayKey.split('-').map(Number);
   const currentMonth = new Date(todayYear, todayMonth - 1, 1);
   const currentMonthKey = serializeMonth(currentMonth);
@@ -766,8 +884,8 @@ function calendarDays(monthStart: Date) {
   });
 }
 
-function groupEventsByDate(events: CalendarEventView[]) {
-  const result = new Map<string, CalendarEventView[]>();
+function groupEventsByDate<T extends CalendarEventView>(events: T[]) {
+  const result = new Map<string, T[]>();
   for (const event of events) {
     const items = result.get(event.date) ?? [];
     items.push(event);

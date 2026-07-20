@@ -58,6 +58,10 @@ export const users = pgTable(
       (): AnyPgColumn => mediaAssets.id,
       { onDelete: 'set null' },
     ),
+    // IANA timezone for DISPLAY only (e.g. 'Europe/Berlin'); null means the
+    // academy default (Istanbul). Lessons are always stored/entered in
+    // Istanbul time — this never changes what gets persisted.
+    timezone: text('timezone'),
   },
   (table) => [
     uniqueIndex('users_email_unique').on(table.email),

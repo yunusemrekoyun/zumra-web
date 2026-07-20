@@ -24,11 +24,11 @@ export type ChangeRequestsPanelLabels = {
   typePostpone: string;
 };
 
-function formatLessonTime(iso: string, locale: string) {
+function formatLessonTime(iso: string, locale: string, timezone?: string) {
   return new Intl.DateTimeFormat(locale === 'en' ? 'en-US' : 'tr-TR', {
     dateStyle: 'medium',
     timeStyle: 'short',
-    timeZone: 'Europe/Istanbul',
+    timeZone: timezone ?? 'Europe/Istanbul',
   }).format(new Date(iso));
 }
 
@@ -36,10 +36,12 @@ export function ChangeRequestsPanel({
   labels,
   locale,
   requests,
+  timezone,
 }: {
   labels: ChangeRequestsPanelLabels;
   locale: string;
   requests: TeacherChangeRequestView[];
+  timezone?: string;
 }) {
   const router = useRouter();
   const [busyId, setBusyId] = useState('');
@@ -150,12 +152,12 @@ export function ChangeRequestsPanel({
 
               <p className="text-xs font-semibold text-[#2E286C]/65">
                 {request.lessonTitle} —{' '}
-                {formatLessonTime(request.lessonStartsAt, locale)}
+                {formatLessonTime(request.lessonStartsAt, locale, timezone)}
               </p>
               {request.requestedStartsAt ? (
                 <p className="text-xs font-semibold text-[#2E286C]/65">
                   {labels.requestedTime(
-                    formatLessonTime(request.requestedStartsAt, locale),
+                    formatLessonTime(request.requestedStartsAt, locale, timezone),
                   )}
                 </p>
               ) : null}

@@ -16,6 +16,7 @@ import {
   InfoField,
   SectionHeader,
   StatusChip,
+  TimezoneCard,
 } from '@/components/ui';
 import { Link } from '@/i18n/navigation';
 import { LogoutButton } from '@/components/auth/logout-button';
@@ -27,6 +28,7 @@ import {
 import { googleIdentityService } from '@/lib/server/services/google-identities';
 import { getTeacherWorkspaceData } from '@/lib/server/services/teacher-workspace';
 import { getProfilePhotoUrl } from '@/lib/server/services/profile-photo';
+import { getUserTimezone } from '@/lib/server/services/user-preferences';
 import { ProfilePhotoUploader } from '@/components/profile-photo-uploader';
 
 type TeacherProfilePageProps = {
@@ -39,15 +41,17 @@ export default async function TeacherProfilePage({
   const { locale } = await params;
   const uiLocale = locale === 'en' ? 'en' : 'tr';
   const principal = await requireWorkspaceRole('teacher', locale);
-  const [data, photoUrl] = await Promise.all([
+  const [data, photoUrl, viewerTimezone] = await Promise.all([
     getTeacherWorkspaceData(principal),
     getProfilePhotoUrl(principal.id),
+    getUserTimezone(principal.id),
   ]);
-  const [t, workspace, nav, calendar] = await Promise.all([
+  const [t, workspace, nav, calendar, timezoneT] = await Promise.all([
     getTranslations('teacher.profilePage'),
     getTranslations('workspace.more'),
     getTranslations('workspace.nav'),
     getTranslations('teacher.calendar'),
+    getTranslations('timezoneCard'),
   ]);
 
   if (!data.instructor) {
@@ -101,6 +105,21 @@ export default async function TeacherProfilePage({
       </Card>
 
       <GoogleIdentitySection locale={uiLocale} />
+
+      <TimezoneCard
+        currentTimezone={viewerTimezone}
+        labels={{
+          badge: timezoneT('badge'),
+          title: timezoneT('title'),
+          description: timezoneT('description'),
+          detect: timezoneT('detect'),
+          save: timezoneT('save'),
+          saving: timezoneT('saving'),
+          success: timezoneT('success'),
+          error: timezoneT('error'),
+          defaultHint: timezoneT('defaultHint'),
+        }}
+      />
 
       <Card padded={false}>
         <SectionHeader

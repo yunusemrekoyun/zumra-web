@@ -7,6 +7,7 @@ import {
   StaggerContainer,
   StaggerItem,
   StatusChip,
+  TimezoneCard,
 } from '@/components/ui';
 import {
   BookOpen,
@@ -31,6 +32,7 @@ import {
 import { googleIdentityService } from '@/lib/server/services/google-identities';
 import { getProfilePhotoUrl } from '@/lib/server/services/profile-photo';
 import { getStudentWorkspaceData } from '@/lib/server/services/student-workspace';
+import { getUserTimezone } from '@/lib/server/services/user-preferences';
 
 const KNOWN_STATUS = new Set([
   'active',
@@ -50,15 +52,17 @@ export default async function StudentProfilePage({
   const { locale } = await params;
   const uiLocale = locale === 'en' ? 'en' : 'tr';
   const principal = await requireWorkspaceRole('student', locale);
-  const [data, photoUrl] = await Promise.all([
+  const [data, photoUrl, viewerTimezone] = await Promise.all([
     getStudentWorkspaceData(principal),
     getProfilePhotoUrl(principal.id),
+    getUserTimezone(principal.id),
   ]);
-  const [t, workspace, commonStatus, calendar] = await Promise.all([
+  const [t, workspace, commonStatus, calendar, timezoneT] = await Promise.all([
     getTranslations('student.profilePage'),
     getTranslations('workspace.more'),
     getTranslations('common.status'),
     getTranslations('student.calendar'),
+    getTranslations('timezoneCard'),
   ]);
 
   if (!data.student) {
@@ -143,6 +147,23 @@ export default async function StudentProfilePage({
 
       <StaggerItem>
         <GoogleIdentitySection locale={uiLocale} />
+      </StaggerItem>
+
+      <StaggerItem>
+        <TimezoneCard
+          currentTimezone={viewerTimezone}
+          labels={{
+            badge: timezoneT('badge'),
+            title: timezoneT('title'),
+            description: timezoneT('description'),
+            detect: timezoneT('detect'),
+            save: timezoneT('save'),
+            saving: timezoneT('saving'),
+            success: timezoneT('success'),
+            error: timezoneT('error'),
+            defaultHint: timezoneT('defaultHint'),
+          }}
+        />
       </StaggerItem>
 
       {/* Account menu */}

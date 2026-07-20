@@ -1,8 +1,10 @@
 import { getTranslations } from 'next-intl/server';
-import { CalendarBoard, PageHeader } from '@/components/ui';
+import { CalendarBoard, PageHeader, WorldClock } from '@/components/ui';
 import { AddPrivateLessonButton } from '@/components/add-private-lesson-button';
+import { APP_TIME_ZONE } from '@/lib/datetime';
 import { requireWorkspaceRole } from '@/lib/server/authorization';
 import { getAdminCalendarData } from '@/lib/server/services/lesson-schedules';
+import { getUserTimezone } from '@/lib/server/services/user-preferences';
 
 type AdminCalendarPageProps = {
   params: Promise<{ locale: string }>;
@@ -18,10 +20,15 @@ export default async function AdminCalendarPage({
   const principal = await requireWorkspaceRole('admin', locale);
   const t = await getTranslations('admin.calendar');
   const tp = await getTranslations('privateLesson');
-  const data = await getAdminCalendarData(principal);
+  const [data, timezone] = await Promise.all([
+    getAdminCalendarData(principal),
+    getUserTimezone(principal.id),
+  ]);
   const returnPath = `/${locale}/admin/calendar${
     month ? `?month=${encodeURIComponent(month)}` : ''
   }`;
+  const zoneCity =
+    timezone.split('/').pop()?.replaceAll('_', ' ') ?? timezone;
 
   return (
     <div className="admin-page">
@@ -35,11 +42,13 @@ export default async function AdminCalendarPage({
           />
         }
       />
+      <WorldClock title={t('worldClock')} viewerTimezone={timezone} />
       <CalendarBoard
         currentMonth={month}
         events={data.events}
         locale={locale}
         returnPath={returnPath}
+        timezone={timezone}
         labels={{
           absenceNotePlaceholder: t('absenceNotePlaceholder'),
           absenceReported: t('absenceReported'),
@@ -93,6 +102,15 @@ export default async function AdminCalendarPage({
             dismiss: t('lessonStatus.dismiss'),
             error: t('lessonStatus.error'),
           },
+          upcomingTitle: t('upcomingTitle'),
+          upcomingEmpty: t('upcomingEmpty'),
+          pastTitle: t('pastTitle'),
+          todayLabel: t('today'),
+          tomorrowLabel: t('tomorrow'),
+          timezoneNote:
+            timezone === APP_TIME_ZONE
+              ? undefined
+              : t('timezoneNote', { zone: zoneCity }),
         }}
       />
     </div>
