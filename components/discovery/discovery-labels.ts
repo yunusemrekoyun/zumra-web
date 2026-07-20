@@ -1,0 +1,62 @@
+import type { DiscoveryLabels } from './discovery-client';
+
+type Translator = (key: string) => string;
+
+export function buildDiscoveryLabels(t: Translator): DiscoveryLabels {
+  return {
+    scheduleTitle: t('scheduleTitle'),
+    candidate: t('candidate'),
+    instructor: t('instructor'),
+    branch: t('branch'),
+    branchNone: t('branchNone'),
+    time: t('time'),
+    duration: t('duration'),
+    note: t('note'),
+    createAccount: t('createAccount'),
+    createAccountHint: t('createAccountHint'),
+    username: t('username'),
+    submit: t('submit'),
+    submitting: t('submitting'),
+    scheduleSuccess: t('scheduleSuccess'),
+    scheduleError: t('scheduleError'),
+    errorAccountExists: t('errorAccountExists'),
+    errorInvitationPending: t('errorInvitationPending'),
+    errorEmailTaken: t('errorEmailTaken'),
+    errorUsernameTaken: t('errorUsernameTaken'),
+    listTitle: t('listTitle'),
+    listEmpty: t('listEmpty'),
+    statuses: {
+      scheduled: t('statuses.scheduled'),
+      completed: t('statuses.completed'),
+      cancelled: t('statuses.cancelled'),
+      no_show: t('statuses.no_show'),
+    },
+    payments: {
+      free: t('payments.free'),
+      awaiting: t('payments.awaiting'),
+      reported: t('payments.reported'),
+      received: t('payments.received'),
+    },
+    accounts: {
+      none: t('accounts.none'),
+      invited: t('accounts.invited'),
+      active: t('accounts.active'),
+    },
+    markCompleted: t('markCompleted'),
+    markNoShow: t('markNoShow'),
+    markCancelled: t('markCancelled'),
+    markPaymentReceived: t('markPaymentReceived'),
+    actionError: t('actionError'),
+    feesTitle: t('feesTitle'),
+    feesDescription: t('feesDescription'),
+    feeScopeBranch: t('feeScopeBranch'),
+    feeScopeInstructor: t('feeScopeInstructor'),
+    feeAmount: t('feeAmount'),
+    feeFreeHint: t('feeFreeHint'),
+    feeSave: t('feeSave'),
+    feeSaved: t('feeSaved'),
+    feeError: t('feeError'),
+    feeListEmpty: t('feeListEmpty'),
+    feeFree: t('feeFree'),
+  };
+}

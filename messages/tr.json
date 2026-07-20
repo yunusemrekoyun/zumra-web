@@ -590,10 +590,12 @@
       "programs": "Programlar",
       "messages": "Mesajlar",
       "payments": "Ödemeler",
+      "discovery": "Demo Dersleri",
       "reports": "Raporlar",
       "storage": "Depolama",
       "legal": "Yasal Sayfalar",
-      "discounts": "İndirimler"
+      "discounts": "İndirimler",
+      "discovery": "Demo Dersleri"
     },
     "storage": {
       "title": "Depolama & Dosya Bakımı",
@@ -2014,6 +2016,84 @@
     "lessonChangeRejected": "{type} talebin reddedildi ({date} dersi)",
     "lessonSessionCancelled": "Ders iptal edildi: {course} — {date}",
     "lessonSessionPostponed": "Ders ertelendi: {course} — {date}"
+  },
+  "discovery": {
+    "title": "Demo / Deneme Dersleri",
+    "description": "Keşif derslerini planla, ücretlerini yönet ve aday takibini buradan yürüt.",
+    "scheduleTitle": "Keşif dersi planla",
+    "candidate": "Aday",
+    "instructor": "Eğitmen",
+    "branch": "Şube (isteğe bağlı)",
+    "branchNone": "Şubesiz / birebir",
+    "time": "Tarih ve saat (İstanbul)",
+    "duration": "Süre",
+    "note": "Not (isteğe bağlı)",
+    "createAccount": "Adaya süreli panel hesabı aç",
+    "createAccountHint": "Aktivasyon e-postası gider; hesap ders tarihinden 7 gün sonra otomatik kapanır. Kayda dönüşürse kalıcı olur.",
+    "username": "Kullanıcı adı",
+    "submit": "Dersi planla",
+    "submitting": "Planlanıyor...",
+    "scheduleSuccess": "Keşif dersi planlandı.",
+    "scheduleError": "Planlanamadı. Bilgileri kontrol edin.",
+    "errorAccountExists": "Bu adayın zaten aktif bir hesabı var.",
+    "errorInvitationPending": "Bu aday için bekleyen bir davet zaten var.",
+    "errorEmailTaken": "Bu e-posta ile kayıtlı bir hesap zaten var.",
+    "errorUsernameTaken": "Bu kullanıcı adı kullanımda.",
+    "listTitle": "Planlanan dersler",
+    "listEmpty": "Henüz keşif dersi planlanmadı.",
+    "statuses": {
+      "scheduled": "Planlandı",
+      "completed": "Yapıldı",
+      "cancelled": "İptal",
+      "no_show": "Gelmedi"
+    },
+    "payments": {
+      "free": "Ücretsiz",
+      "awaiting": "Ödeme bekleniyor",
+      "reported": "Ödeme bildirildi",
+      "received": "Ödeme alındı"
+    },
+    "accounts": {
+      "none": "Hesap yok",
+      "invited": "Davet gönderildi",
+      "active": "Hesap aktif"
+    },
+    "markCompleted": "Yapıldı",
+    "markNoShow": "Gelmedi",
+    "markCancelled": "İptal et",
+    "markPaymentReceived": "Ödeme alındı",
+    "actionError": "İşlem tamamlanamadı. Tekrar deneyin.",
+    "feesTitle": "Keşif dersi ücretleri",
+    "feesDescription": "Şube veya eğitmen bazında ücret belirleyin. Eğitmen ücreti şube ücretinin önüne geçer; tanımsız hedefler ücretsizdir.",
+    "feeScopeBranch": "Şube",
+    "feeScopeInstructor": "Eğitmen",
+    "feeAmount": "Ücret (TL)",
+    "feeFreeHint": "0 girerseniz o hedef için keşif dersi ücretsiz olur.",
+    "feeSave": "Kaydet",
+    "feeSaved": "Ücret kaydedildi.",
+    "feeError": "Kaydedilemedi. Tutarı kontrol edin.",
+    "feeListEmpty": "Henüz ücret tanımlanmadı — tüm keşif dersleri ücretsiz.",
+    "feeFree": "Ücretsiz",
+    "studentCard": {
+      "title": "Deneme Dersin",
+      "statuses": {
+        "scheduled": "Planlandı",
+        "completed": "Yapıldı",
+        "cancelled": "İptal edildi",
+        "no_show": "Katılmadın"
+      },
+      "payments": {
+        "free": "Ücretsiz",
+        "awaiting": "Ödeme bekleniyor",
+        "reported": "Ödeme bildirildi",
+        "received": "Ödeme alındı"
+      },
+      "payTo": "Havale için IBAN",
+      "reportPayment": "Ödeme yaptım",
+      "reporting": "Gönderiliyor...",
+      "reportError": "Bildirilemedi. Tekrar deneyin.",
+      "teacherLabel": "Eğitmen"
+    }
   },
   "progressDetail": {
     "attendanceTitle": "Yoklama",

@@ -1472,6 +1472,15 @@ export async function completeEnrollment(
       throw new Error('Student profile could not be created.');
     }
 
+    // A real enrollment turns a trial (discovery) account into a full one —
+    // the demo access window no longer applies.
+    if (existingStudent) {
+      await transaction
+        .update(studentProfiles)
+        .set({ demoExpiresAt: null, updatedAt: new Date() })
+        .where(eq(studentProfiles.id, student.id));
+    }
+
     // A returning student (account already activated) simply gets a second
     // enrollment — the invitation step only exists for brand-new accounts.
     const invitation = student.userId

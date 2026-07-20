@@ -40,6 +40,10 @@ import {
 import { ensureLessonMeetingsForSessions } from './lesson-meetings';
 import { notifyBranchScheduleUpdated } from './notify-events';
 import { getSetting } from './settings';
+import {
+  type DiscoveryCalendarRow,
+  listDiscoveryCalendarRows,
+} from './discovery';
 
 export const LESSON_DURATION_MINUTES = 60;
 
@@ -425,9 +429,16 @@ export async function getAdminCalendarData(
 ): Promise<AdminCalendarData> {
   assertAdmin(principal);
 
-  const leadMinutes = await getSetting('joinLeadMinutes');
+  const [leadMinutes, rawEvents, discoveryRows] = await Promise.all([
+    getSetting('joinLeadMinutes'),
+    loadCalendarEvents(),
+    listDiscoveryCalendarRows(),
+  ]);
   return {
-    events: applyJoinWindow(await loadCalendarEvents(), leadMinutes, true),
+    events: [
+      ...applyJoinWindow(rawEvents, leadMinutes, true),
+      ...discoveryRows.map(mapDiscoveryCalendarRow),
+    ],
   };
 }
 
@@ -462,7 +473,11 @@ export async function getTeacherCalendarData(
       event.status !== 'cancelled' &&
       new Date(event.endsAt).getTime() < now,
   }));
-  const events = applyJoinWindow(withAttendance, leadMinutes, true);
+  const discoveryRows = await listDiscoveryCalendarRows(profile.id);
+  const events = [
+    ...applyJoinWindow(withAttendance, leadMinutes, true),
+    ...discoveryRows.map(mapDiscoveryCalendarRow),
+  ];
 
   return {
     events,
@@ -841,6 +856,35 @@ function dedupeEvents(events: CalendarEventView[]) {
   return Array.from(
     new Map(events.map((event) => [event.id, event])).values(),
   ).sort((a, b) => a.startsAt.localeCompare(b.startsAt));
+}
+
+// Discovery/trial lessons surface on staff calendars as appointment-kind
+// events. They are display-only here: their lifecycle is managed on the
+// Demo Dersleri screen, so no join/manage flags are attached.
+function mapDiscoveryCalendarRow(row: DiscoveryCalendarRow): CalendarEventView {
+  const local = lessonSessionLocalParts(row.scheduledAt, 'Europe/Istanbul');
+  const endsAt = new Date(
+    row.scheduledAt.getTime() + row.durationMinutes * 60_000,
+  );
+  return {
+    date: local.date,
+    endsAt: endsAt.toISOString(),
+    id: row.id,
+    instructorName: row.instructorName,
+    kind: 'appointment',
+    meta: [],
+    source: 'private',
+    startTime: local.time,
+    startsAt: row.scheduledAt.toISOString(),
+    status:
+      row.status === 'scheduled'
+        ? 'scheduled'
+        : row.status === 'cancelled'
+          ? 'cancelled'
+          : 'completed',
+    subtitle: row.instructorName,
+    title: row.candidateName,
+  };
 }
 
 export function lessonSessionLocalParts(value: Date, timeZone: string) {

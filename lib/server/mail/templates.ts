@@ -140,6 +140,39 @@ export function renderMailTemplate(input: TemplateInput) {
     };
   }
 
+  if (input.templateKey === 'discovery-lesson-scheduled') {
+    const candidateName = escapeHtml(String(input.payload.candidateName ?? ''));
+    const note = escapeHtml(String(input.payload.note ?? ''));
+    const lessonDate = formatDate(
+      String(input.payload.lessonDate ?? ''),
+      english ? 'en-US' : 'tr-TR',
+    );
+    const noteLine = note
+      ? `<p>${english ? 'Note' : 'Not'}: ${note}</p>`
+      : '';
+
+    return {
+      html: `<p>${english ? 'Hello' : 'Merhaba'} ${name},</p><p>${
+        english
+          ? `A discovery lesson was scheduled for you with ${candidateName}.`
+          : `${candidateName} ile bir keşif dersi planlandı.`
+      }</p><p>${english ? 'Lesson' : 'Ders'}: <strong>${escapeHtml(
+        lessonDate,
+      )}</strong></p>${noteLine}`,
+      subject: english
+        ? 'Discovery lesson scheduled'
+        : 'Keşif dersi planlandı',
+      text: [
+        english ? 'Discovery lesson scheduled' : 'Keşif dersi planlandı',
+        `${english ? 'Candidate' : 'Aday'}: ${candidateName}`,
+        `${english ? 'Lesson' : 'Ders'}: ${lessonDate}`,
+        note ? `${english ? 'Note' : 'Not'}: ${note}` : '',
+      ]
+        .filter(Boolean)
+        .join('\n'),
+    };
+  }
+
   if (input.templateKey === 'lesson-change-requested') {
     const studentName = escapeHtml(String(input.payload.studentName ?? ''));
     const note = escapeHtml(String(input.payload.note ?? ''));

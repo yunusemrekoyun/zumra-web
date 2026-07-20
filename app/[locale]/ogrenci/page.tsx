@@ -10,7 +10,9 @@ import {
   StaggerContainer,
   StaggerItem,
 } from '@/components/ui';
+import { DemoLessonCard } from '@/components/discovery/demo-lesson-card';
 import { requireWorkspaceRole } from '@/lib/server/authorization';
+import { getMyDiscoveryLessons } from '@/lib/server/services/discovery';
 import {
   type CalendarEventView,
   getStudentWorkspaceData,
@@ -26,11 +28,15 @@ export default async function StudentDashboardPage({
 }: StudentDashboardPageProps) {
   const { locale } = await params;
   const principal = await requireWorkspaceRole('student', locale);
-  const data = await getStudentWorkspaceData(principal);
-  const [t, common, calendar] = await Promise.all([
+  const [data, demoLessons] = await Promise.all([
+    getStudentWorkspaceData(principal),
+    getMyDiscoveryLessons(principal),
+  ]);
+  const [t, common, calendar, demo] = await Promise.all([
     getTranslations('student.dashboard'),
     getTranslations('common.actions'),
     getTranslations('student.calendar'),
+    getTranslations('discovery.studentCard'),
   ]);
 
   if (!data.student) {
@@ -81,6 +87,35 @@ export default async function StudentDashboardPage({
           <BookOpen className="absolute -right-6 -bottom-6 w-40 h-40 text-white/5" />
         </Card>
       </StaggerItem>
+
+      {demoLessons.length > 0 && (
+        <StaggerItem>
+          <DemoLessonCard
+            lessons={demoLessons}
+            locale={locale}
+            labels={{
+              title: demo('title'),
+              statuses: {
+                scheduled: demo('statuses.scheduled'),
+                completed: demo('statuses.completed'),
+                cancelled: demo('statuses.cancelled'),
+                no_show: demo('statuses.no_show'),
+              },
+              payments: {
+                free: demo('payments.free'),
+                awaiting: demo('payments.awaiting'),
+                reported: demo('payments.reported'),
+                received: demo('payments.received'),
+              },
+              payTo: demo('payTo'),
+              reportPayment: demo('reportPayment'),
+              reporting: demo('reporting'),
+              reportError: demo('reportError'),
+              teacherLabel: demo('teacherLabel'),
+            }}
+          />
+        </StaggerItem>
+      )}
 
       {/* Next lesson highlight */}
       <StaggerItem>

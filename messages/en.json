@@ -590,10 +590,12 @@
       "programs": "Programs",
       "messages": "Messages",
       "payments": "Payments",
+      "discovery": "Demo Lessons",
       "reports": "Reports",
       "storage": "Storage",
       "legal": "Legal Pages",
-      "discounts": "Discounts"
+      "discounts": "Discounts",
+      "discovery": "Demo Lessons"
     },
     "storage": {
       "title": "Storage & File Care",
@@ -2014,6 +2016,84 @@
     "lessonChangeRejected": "Your request was rejected: {type} ({date} lesson)",
     "lessonSessionCancelled": "Lesson cancelled: {course} — {date}",
     "lessonSessionPostponed": "Lesson postponed: {course} — {date}"
+  },
+  "discovery": {
+    "title": "Demo / Trial Lessons",
+    "description": "Schedule discovery lessons, manage their fees and track candidates here.",
+    "scheduleTitle": "Schedule a discovery lesson",
+    "candidate": "Candidate",
+    "instructor": "Instructor",
+    "branch": "Branch (optional)",
+    "branchNone": "No branch / one-to-one",
+    "time": "Date and time (Istanbul)",
+    "duration": "Duration",
+    "note": "Note (optional)",
+    "createAccount": "Open a time-limited panel account",
+    "createAccountHint": "An activation email is sent; the account closes 7 days after the lesson. It becomes permanent on enrollment.",
+    "username": "Username",
+    "submit": "Schedule lesson",
+    "submitting": "Scheduling...",
+    "scheduleSuccess": "Discovery lesson scheduled.",
+    "scheduleError": "Could not schedule. Check the details.",
+    "errorAccountExists": "This candidate already has an active account.",
+    "errorInvitationPending": "An invitation is already pending for this candidate.",
+    "errorEmailTaken": "An account with this email already exists.",
+    "errorUsernameTaken": "This username is taken.",
+    "listTitle": "Scheduled lessons",
+    "listEmpty": "No discovery lessons scheduled yet.",
+    "statuses": {
+      "scheduled": "Scheduled",
+      "completed": "Completed",
+      "cancelled": "Cancelled",
+      "no_show": "No-show"
+    },
+    "payments": {
+      "free": "Free",
+      "awaiting": "Awaiting payment",
+      "reported": "Payment reported",
+      "received": "Payment received"
+    },
+    "accounts": {
+      "none": "No account",
+      "invited": "Invitation sent",
+      "active": "Account active"
+    },
+    "markCompleted": "Completed",
+    "markNoShow": "No-show",
+    "markCancelled": "Cancel",
+    "markPaymentReceived": "Payment received",
+    "actionError": "The action could not be completed. Try again.",
+    "feesTitle": "Discovery lesson fees",
+    "feesDescription": "Set fees per branch or per instructor. An instructor fee overrides the branch fee; unset targets are free.",
+    "feeScopeBranch": "Branch",
+    "feeScopeInstructor": "Instructor",
+    "feeAmount": "Fee (TL)",
+    "feeFreeHint": "Enter 0 to make discovery lessons free for that target.",
+    "feeSave": "Save",
+    "feeSaved": "Fee saved.",
+    "feeError": "Could not save. Check the amount.",
+    "feeListEmpty": "No fees defined yet — all discovery lessons are free.",
+    "feeFree": "Free",
+    "studentCard": {
+      "title": "Your Trial Lesson",
+      "statuses": {
+        "scheduled": "Scheduled",
+        "completed": "Completed",
+        "cancelled": "Cancelled",
+        "no_show": "Missed"
+      },
+      "payments": {
+        "free": "Free",
+        "awaiting": "Awaiting payment",
+        "reported": "Payment reported",
+        "received": "Payment received"
+      },
+      "payTo": "IBAN for the transfer",
+      "reportPayment": "I made the payment",
+      "reporting": "Sending...",
+      "reportError": "Could not report. Try again.",
+      "teacherLabel": "Instructor"
+    }
   },
   "progressDetail": {
     "attendanceTitle": "Attendance",

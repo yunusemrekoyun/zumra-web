@@ -14,7 +14,7 @@ import { canAuthorizeWorkspaceAction } from '@/lib/domain';
 import type { UserRole } from '@/lib/domain/types';
 import { auth } from '@/lib/server/auth';
 import { database } from '@/lib/server/db/client';
-import { accounts, sessions } from '@/lib/server/db/schema';
+import { accounts, sessions, studentProfiles } from '@/lib/server/db/schema';
 import {
   AuthenticationRequiredError,
   AuthorizationDeniedError,
@@ -340,6 +340,21 @@ export async function requireWorkspaceRole(role: UserRole, locale: string) {
         !principal.twoFactorEnabled))
   ) {
     redirect(`/${locale}/yetkisiz`);
+  }
+
+  // Trial (discovery-lesson) accounts stop working past their demo window.
+  if (role === 'student') {
+    const [profile] = await database
+      .select({ demoExpiresAt: studentProfiles.demoExpiresAt })
+      .from(studentProfiles)
+      .where(eq(studentProfiles.userId, principal.id))
+      .limit(1);
+    if (
+      profile?.demoExpiresAt &&
+      profile.demoExpiresAt.getTime() < Date.now()
+    ) {
+      redirect(`/${locale}/yetkisiz`);
+    }
   }
 
   return principal;

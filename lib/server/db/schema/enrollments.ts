@@ -368,6 +368,9 @@ export const studentProfiles = pgTable(
     }),
     status: text('status').notNull().default('active'),
     currentLevel: text('current_level'),
+    // Set for trial/discovery ("demo") accounts: panel access closes past this
+    // instant. Completing a real enrollment clears it (account becomes full).
+    demoExpiresAt: timestamp('demo_expires_at', { withTimezone: true }),
     createdAt: timestamp('created_at', { withTimezone: true })
       .notNull()
       .defaultNow(),
