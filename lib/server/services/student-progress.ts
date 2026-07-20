@@ -1,17 +1,25 @@
 import 'server-only';
 
-import { and, asc, eq, inArray, isNotNull, or } from 'drizzle-orm';
+import { and, asc, desc, eq, inArray, isNotNull, lt, or } from 'drizzle-orm';
 import type { WorkspacePrincipal } from '@/lib/domain';
 import { database } from '@/lib/server/db/client';
 import {
   assignments,
   assignmentSubmissions,
+  contacts,
   enrollments,
+  instructorProfiles,
   lessonAttendanceRecords,
   lessonSessions,
+  programBranches,
+  programs,
   studentProfiles,
+  studentTeacherEvaluations,
 } from '@/lib/server/db/schema';
-import { AuthorizationDeniedError } from '@/lib/server/http/errors';
+import {
+  AuthorizationDeniedError,
+  PublicFlowError,
+} from '@/lib/server/http/errors';
 
 const activeEnrollmentStatuses = ['active', 'paused'] as const;
 const CEFR = ['A1', 'A2', 'B1', 'B2', 'C1', 'C2'] as const;
@@ -467,4 +475,364 @@ export async function getStudentProgress(
     badges,
     gradeTrend,
   };
+}
+
+// ---------------------------------------------------------------------------
+// Progress detail: the four parameters — attendance, lesson history,
+// assignment grades and teacher evaluation notes. Shared by the student's own
+// screen and the teacher's student detail (which shows nothing financial).
+// ---------------------------------------------------------------------------
+
+export type ProgressLessonView = {
+  attendanceStatus:
+    | 'present'
+    | 'late'
+    | 'absent'
+    | 'excused'
+    | 'unconfirmed'
+    | null;
+  id: string;
+  startsAt: string;
+  status: 'scheduled' | 'cancelled' | 'postponed' | 'completed';
+  title: string;
+};
+
+export type ProgressGradeView = {
+  assignmentTitle: string;
+  gradedAt: string;
+  maxScore: number;
+  score: number;
+};
+
+export type ProgressEvaluationView = {
+  note: string;
+  teacherName: string;
+  updatedAt: string;
+};
+
+export type ProgressDetail = {
+  evaluations: ProgressEvaluationView[];
+  grades: ProgressGradeView[];
+  lessons: ProgressLessonView[];
+};
+
+const PROGRESS_HISTORY_LIMIT = 60;
+
+async function loadProgressDetail(
+  studentProfileId: string,
+): Promise<ProgressDetail> {
+  const now = new Date();
+
+  const enr = await database
+    .select({ branchId: enrollments.branchId, id: enrollments.id })
+    .from(enrollments)
+    .where(eq(enrollments.studentId, studentProfileId));
+  const branchIds = Array.from(
+    new Set(enr.map((e) => e.branchId).filter((v): v is string => Boolean(v))),
+  );
+
+  const lessonConditions = [
+    and(
+      eq(lessonSessions.source, 'private'),
+      eq(lessonSessions.studentProfileId, studentProfileId),
+    ),
+  ];
+  if (branchIds.length) {
+    lessonConditions.push(
+      and(
+        eq(lessonSessions.source, 'branch'),
+        inArray(lessonSessions.branchId, branchIds),
+      ),
+    );
+  }
+
+  const [lessonRows, gradeRows, evaluationRows] = await Promise.all([
+    database
+      .select({
+        attendanceConfirmedAt: lessonAttendanceRecords.confirmedAt,
+        attendanceStatus: lessonAttendanceRecords.status,
+        branchName: programBranches.name,
+        id: lessonSessions.id,
+        startsAt: lessonSessions.startsAt,
+        status: lessonSessions.status,
+      })
+      .from(lessonSessions)
+      .leftJoin(programBranches, eq(programBranches.id, lessonSessions.branchId))
+      .leftJoin(
+        lessonAttendanceRecords,
+        and(
+          eq(lessonAttendanceRecords.lessonSessionId, lessonSessions.id),
+          eq(lessonAttendanceRecords.studentProfileId, studentProfileId),
+        ),
+      )
+      .where(and(or(...lessonConditions), lt(lessonSessions.startsAt, now)))
+      .orderBy(desc(lessonSessions.startsAt))
+      .limit(PROGRESS_HISTORY_LIMIT),
+    database
+      .select({
+        assignmentTitle: assignments.title,
+        maxScore: assignments.maxScore,
+        score: assignmentSubmissions.score,
+        submittedAt: assignmentSubmissions.submittedAt,
+      })
+      .from(assignmentSubmissions)
+      .innerJoin(
+        assignments,
+        eq(assignments.id, assignmentSubmissions.assignmentId),
+      )
+      .where(
+        and(
+          eq(assignmentSubmissions.studentProfileId, studentProfileId),
+          eq(assignmentSubmissions.status, 'graded'),
+          isNotNull(assignmentSubmissions.score),
+        ),
+      )
+      .orderBy(desc(assignmentSubmissions.submittedAt))
+      .limit(PROGRESS_HISTORY_LIMIT),
+    database
+      .select({
+        firstName: instructorProfiles.firstName,
+        lastName: instructorProfiles.lastName,
+        note: studentTeacherEvaluations.note,
+        updatedAt: studentTeacherEvaluations.updatedAt,
+      })
+      .from(studentTeacherEvaluations)
+      .innerJoin(
+        instructorProfiles,
+        eq(instructorProfiles.id, studentTeacherEvaluations.instructorProfileId),
+      )
+      .where(eq(studentTeacherEvaluations.studentProfileId, studentProfileId))
+      .orderBy(desc(studentTeacherEvaluations.updatedAt)),
+  ]);
+
+  return {
+    evaluations: evaluationRows.map((row) => ({
+      note: row.note,
+      teacherName: `${row.firstName} ${row.lastName}`.trim(),
+      updatedAt: row.updatedAt.toISOString(),
+    })),
+    grades: gradeRows.map((row) => ({
+      assignmentTitle: row.assignmentTitle,
+      gradedAt: row.submittedAt.toISOString(),
+      maxScore: row.maxScore ?? 100,
+      score: row.score as number,
+    })),
+    lessons: lessonRows.map((row) => ({
+      attendanceStatus:
+        row.attendanceStatus == null
+          ? null
+          : row.attendanceConfirmedAt == null
+            ? ('unconfirmed' as const)
+            : row.attendanceStatus === 'pending' ||
+                row.attendanceStatus === 'needs_review'
+              ? ('unconfirmed' as const)
+              : row.attendanceStatus,
+      id: row.id,
+      startsAt: row.startsAt.toISOString(),
+      status: row.status,
+      title: row.branchName ?? '',
+    })),
+  };
+}
+
+/** The student's own four-parameter detail (attendance lives in lessons). */
+export async function getStudentProgressDetail(
+  principal: WorkspacePrincipal,
+): Promise<ProgressDetail> {
+  if (principal.role !== 'student') {
+    throw new AuthorizationDeniedError('Student access is required.');
+  }
+
+  const [profile] = await database
+    .select({ id: studentProfiles.id })
+    .from(studentProfiles)
+    .where(eq(studentProfiles.userId, principal.id))
+    .limit(1);
+  if (!profile) return { evaluations: [], grades: [], lessons: [] };
+
+  return loadProgressDetail(profile.id);
+}
+
+async function getTeacherProfileId(principal: WorkspacePrincipal) {
+  if (principal.role !== 'teacher') {
+    throw new AuthorizationDeniedError('Teacher access is required.');
+  }
+  const [profile] = await database
+    .select({ id: instructorProfiles.id })
+    .from(instructorProfiles)
+    .where(eq(instructorProfiles.userId, principal.id))
+    .limit(1);
+  if (!profile) {
+    throw new PublicFlowError('instructor_profile_not_found', 404);
+  }
+  return profile.id;
+}
+
+// A teacher may open a student only while an active/paused enrollment ties
+// them together — through their branch or a private-lesson assignment.
+async function assertTeacherOfStudent(
+  teacherProfileId: string,
+  studentProfileId: string,
+) {
+  const [match] = await database
+    .select({ id: enrollments.id })
+    .from(enrollments)
+    .leftJoin(programBranches, eq(programBranches.id, enrollments.branchId))
+    .where(
+      and(
+        eq(enrollments.studentId, studentProfileId),
+        inArray(enrollments.status, activeEnrollmentStatuses),
+        or(
+          eq(programBranches.instructorProfileId, teacherProfileId),
+          eq(enrollments.selectedInstructorProfileId, teacherProfileId),
+        ),
+      ),
+    )
+    .limit(1);
+
+  if (!match) {
+    throw new AuthorizationDeniedError('Student is not assigned to teacher.');
+  }
+}
+
+export type TeacherStudentProgressView = {
+  detail: ProgressDetail;
+  developmentScore: number;
+  myEvaluation: string | null;
+  student: {
+    branchName: string | null;
+    courseMode: 'group' | 'private';
+    currentLevel: string | null;
+    email: string;
+    enrolledAt: string;
+    fullName: string;
+    id: string;
+    programName: string | null;
+    status: string;
+  };
+};
+
+// The teacher's student detail: identity + the four progress parameters and
+// NOTHING else — pricing, discounts and balances are deliberately absent
+// (they are admin/advisor-only).
+export async function getTeacherStudentProgress(
+  principal: WorkspacePrincipal,
+  studentProfileId: string,
+): Promise<TeacherStudentProgressView> {
+  const teacherProfileId = await getTeacherProfileId(principal);
+  await assertTeacherOfStudent(teacherProfileId, studentProfileId);
+
+  const [studentRow] = await database
+    .select({
+      branchName: programBranches.name,
+      courseMode: enrollments.courseMode,
+      currentLevel: studentProfiles.currentLevel,
+      email: contacts.email,
+      enrolledAt: enrollments.enrolledAt,
+      firstName: contacts.firstName,
+      lastName: contacts.lastName,
+      programName: programs.name,
+      status: enrollments.status,
+    })
+    .from(enrollments)
+    .innerJoin(studentProfiles, eq(studentProfiles.id, enrollments.studentId))
+    .innerJoin(contacts, eq(contacts.id, studentProfiles.contactId))
+    .leftJoin(programs, eq(programs.id, enrollments.programId))
+    .leftJoin(programBranches, eq(programBranches.id, enrollments.branchId))
+    .where(
+      and(
+        eq(enrollments.studentId, studentProfileId),
+        inArray(enrollments.status, activeEnrollmentStatuses),
+        or(
+          eq(programBranches.instructorProfileId, teacherProfileId),
+          eq(enrollments.selectedInstructorProfileId, teacherProfileId),
+        ),
+      ),
+    )
+    .orderBy(desc(enrollments.enrolledAt))
+    .limit(1);
+
+  if (!studentRow) {
+    throw new PublicFlowError('student_profile_not_found', 404);
+  }
+
+  const [detail, scores, [evaluation]] = await Promise.all([
+    loadProgressDetail(studentProfileId),
+    getDevelopmentScores([studentProfileId]),
+    database
+      .select({ note: studentTeacherEvaluations.note })
+      .from(studentTeacherEvaluations)
+      .where(
+        and(
+          eq(studentTeacherEvaluations.studentProfileId, studentProfileId),
+          eq(
+            studentTeacherEvaluations.instructorProfileId,
+            teacherProfileId,
+          ),
+        ),
+      )
+      .limit(1),
+  ]);
+
+  return {
+    detail,
+    developmentScore: scores.get(studentProfileId) ?? 0,
+    myEvaluation: evaluation?.note ?? null,
+    student: {
+      branchName: studentRow.branchName,
+      courseMode: studentRow.courseMode,
+      currentLevel: studentRow.currentLevel,
+      email: studentRow.email,
+      enrolledAt: studentRow.enrolledAt.toISOString(),
+      fullName: `${studentRow.firstName} ${studentRow.lastName}`.trim(),
+      id: studentProfileId,
+      programName: studentRow.programName,
+      status: studentRow.status,
+    },
+  };
+}
+
+/** Upsert (or clear, with an empty note) the teacher's evaluation note. */
+export async function saveTeacherEvaluation(
+  principal: WorkspacePrincipal,
+  studentProfileId: string,
+  note: string,
+) {
+  const teacherProfileId = await getTeacherProfileId(principal);
+  await assertTeacherOfStudent(teacherProfileId, studentProfileId);
+
+  const cleaned = note.trim().slice(0, 2000);
+  const now = new Date();
+
+  if (!cleaned) {
+    await database
+      .delete(studentTeacherEvaluations)
+      .where(
+        and(
+          eq(studentTeacherEvaluations.studentProfileId, studentProfileId),
+          eq(
+            studentTeacherEvaluations.instructorProfileId,
+            teacherProfileId,
+          ),
+        ),
+      );
+    return { note: null };
+  }
+
+  await database
+    .insert(studentTeacherEvaluations)
+    .values({
+      instructorProfileId: teacherProfileId,
+      note: cleaned,
+      studentProfileId,
+    })
+    .onConflictDoUpdate({
+      target: [
+        studentTeacherEvaluations.studentProfileId,
+        studentTeacherEvaluations.instructorProfileId,
+      ],
+      set: { note: cleaned, updatedAt: now },
+    });
+
+  return { note: cleaned };
 }

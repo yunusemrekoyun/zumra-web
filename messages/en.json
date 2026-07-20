@@ -1991,6 +1991,32 @@
     "lessonSessionCancelled": "Lesson cancelled: {course} — {date}",
     "lessonSessionPostponed": "Lesson postponed: {course} — {date}"
   },
+  "progressDetail": {
+    "attendanceTitle": "Attendance",
+    "attendanceEmpty": "No attendance records yet.",
+    "attendanceRate": "Attendance {percent}%",
+    "attendanceStatuses": {
+      "present": "Present",
+      "late": "Late",
+      "absent": "Absent",
+      "excused": "Excused",
+      "unconfirmed": "Awaiting review"
+    },
+    "lessonsTitle": "Lesson history",
+    "lessonsEmpty": "No past lessons yet.",
+    "lessonStatuses": {
+      "scheduled": "Scheduled",
+      "cancelled": "Cancelled",
+      "postponed": "Postponed",
+      "completed": "Completed"
+    },
+    "privateLessonLabel": "Private lesson",
+    "gradesTitle": "Assignment grades",
+    "gradesEmpty": "No graded assignments yet.",
+    "gradeAverage": "Average {percent}%",
+    "evaluationsTitle": "Teacher evaluation",
+    "evaluationsEmpty": "No teacher evaluation yet."
+  },
   "timezoneCard": {
     "badge": "Timezone",
     "title": "Your timezone",
@@ -2581,6 +2607,25 @@
         "paused": "Paused"
       }
     },
+    "studentDetail": {
+      "description": "The student's course progress: attendance, lesson history, assignment grades and your evaluation.",
+      "back": "Back to students",
+      "developmentScore": "Development score",
+      "fields": {
+        "program": "Program",
+        "branch": "Branch",
+        "level": "Level",
+        "enrolledAt": "Enrolled at"
+      },
+      "evaluationTitle": "Your overall evaluation",
+      "evaluationDescription": "Shown on the student's progress screen with your name.",
+      "evaluationPlaceholder": "Your note about the student's overall development...",
+      "evaluationSave": "Save evaluation",
+      "evaluationSaving": "Saving...",
+      "evaluationSuccess": "Evaluation saved.",
+      "evaluationError": "Could not save. Try again.",
+      "evaluationHint": "Save with an empty note to remove the evaluation."
+    },
     "students": {
       "title": "Students",
       "description": "Active and paused students linked to {name}.",
@@ -2591,6 +2636,7 @@
       "programPending": "Program details pending",
       "privateLesson": "Private lesson",
       "levelPending": "Level pending",
+      "viewProgress": "View progress",
       "fields": {
         "courseMode": "Course model",
         "branch": "Branch",

@@ -19,9 +19,14 @@ import {
   SectionHeader,
   StatusChip,
 } from '@/components/ui';
+import {
+  ProgressDetailSections,
+  type ProgressDetailLabels,
+} from '@/components/progress-detail-sections';
 import { requireWorkspaceRole } from '@/lib/server/authorization';
 import {
   getStudentProgress,
+  getStudentProgressDetail,
   type StudentProgress,
 } from '@/lib/server/services/student-progress';
 import { cn } from '@/lib/utils';
@@ -42,8 +47,41 @@ type IlerlemePageProps = {
 export default async function IlerlemePage({ params }: IlerlemePageProps) {
   const { locale } = await params;
   const principal = await requireWorkspaceRole('student', locale);
-  const t = await getTranslations('student.progressPage');
-  const progress = await getStudentProgress(principal);
+  const [t, detailT] = await Promise.all([
+    getTranslations('student.progressPage'),
+    getTranslations('progressDetail'),
+  ]);
+  const [progress, detail] = await Promise.all([
+    getStudentProgress(principal),
+    getStudentProgressDetail(principal),
+  ]);
+
+  const detailLabels: ProgressDetailLabels = {
+    attendanceTitle: detailT('attendanceTitle'),
+    attendanceEmpty: detailT('attendanceEmpty'),
+    attendanceStatuses: {
+      present: detailT('attendanceStatuses.present'),
+      late: detailT('attendanceStatuses.late'),
+      absent: detailT('attendanceStatuses.absent'),
+      excused: detailT('attendanceStatuses.excused'),
+      unconfirmed: detailT('attendanceStatuses.unconfirmed'),
+    },
+    attendanceRate: (percent) => detailT('attendanceRate', { percent }),
+    lessonsTitle: detailT('lessonsTitle'),
+    lessonsEmpty: detailT('lessonsEmpty'),
+    lessonStatuses: {
+      scheduled: detailT('lessonStatuses.scheduled'),
+      cancelled: detailT('lessonStatuses.cancelled'),
+      postponed: detailT('lessonStatuses.postponed'),
+      completed: detailT('lessonStatuses.completed'),
+    },
+    privateLessonLabel: detailT('privateLessonLabel'),
+    gradesTitle: detailT('gradesTitle'),
+    gradesEmpty: detailT('gradesEmpty'),
+    gradeAverage: (percent) => detailT('gradeAverage', { percent }),
+    evaluationsTitle: detailT('evaluationsTitle'),
+    evaluationsEmpty: detailT('evaluationsEmpty'),
+  };
 
   if (!progress.hasData) {
     return (
@@ -190,6 +228,12 @@ export default async function IlerlemePage({ params }: IlerlemePageProps) {
           })}
         </div>
       </Card>
+
+      <ProgressDetailSections
+        detail={detail}
+        labels={detailLabels}
+        locale={locale}
+      />
     </div>
   );
 }

@@ -1991,6 +1991,32 @@
     "lessonSessionCancelled": "Ders iptal edildi: {course} — {date}",
     "lessonSessionPostponed": "Ders ertelendi: {course} — {date}"
   },
+  "progressDetail": {
+    "attendanceTitle": "Yoklama",
+    "attendanceEmpty": "Henüz yoklama kaydı yok.",
+    "attendanceRate": "Katılım %{percent}",
+    "attendanceStatuses": {
+      "present": "Katıldı",
+      "late": "Geç kaldı",
+      "absent": "Gelmedi",
+      "excused": "Mazeretli",
+      "unconfirmed": "Onay bekliyor"
+    },
+    "lessonsTitle": "Ders geçmişi",
+    "lessonsEmpty": "Henüz geçmiş ders yok.",
+    "lessonStatuses": {
+      "scheduled": "Planlandı",
+      "cancelled": "İptal edildi",
+      "postponed": "Ertelendi",
+      "completed": "Tamamlandı"
+    },
+    "privateLessonLabel": "Özel ders",
+    "gradesTitle": "Ödev notları",
+    "gradesEmpty": "Henüz notlanmış ödev yok.",
+    "gradeAverage": "Ortalama %{percent}",
+    "evaluationsTitle": "Öğretmen değerlendirmesi",
+    "evaluationsEmpty": "Henüz öğretmen değerlendirmesi yok."
+  },
   "timezoneCard": {
     "badge": "Saat dilimi",
     "title": "Saat dilimin",
@@ -2581,6 +2607,25 @@
         "paused": "Duraklatıldı"
       }
     },
+    "studentDetail": {
+      "description": "Öğrencinin kurs ilerlemesi: yoklama, ders geçmişi, ödev notları ve değerlendirmen.",
+      "back": "Öğrencilere dön",
+      "developmentScore": "Gelişim puanı",
+      "fields": {
+        "program": "Program",
+        "branch": "Şube",
+        "level": "Seviye",
+        "enrolledAt": "Kayıt tarihi"
+      },
+      "evaluationTitle": "Genel değerlendirmen",
+      "evaluationDescription": "Öğrencinin ilerleme ekranında adınla birlikte görünür.",
+      "evaluationPlaceholder": "Öğrencinin genel gelişimi hakkında notun...",
+      "evaluationSave": "Değerlendirmeyi kaydet",
+      "evaluationSaving": "Kaydediliyor...",
+      "evaluationSuccess": "Değerlendirme kaydedildi.",
+      "evaluationError": "Kaydedilemedi. Tekrar deneyin.",
+      "evaluationHint": "Notu boş bırakıp kaydedersen değerlendirme kaldırılır."
+    },
     "students": {
       "title": "Öğrenciler",
       "description": "{name} eğitmenine bağlı aktif ve duraklatılmış öğrenciler.",
@@ -2591,6 +2636,7 @@
       "programPending": "Program bilgisi bekliyor",
       "privateLesson": "Özel ders",
       "levelPending": "Seviye bekliyor",
+      "viewProgress": "İlerlemeyi gör",
       "fields": {
         "courseMode": "Ders modeli",
         "branch": "Şube",

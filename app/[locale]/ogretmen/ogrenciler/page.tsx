@@ -1,5 +1,6 @@
-import { BookOpenCheck, GraduationCap, Mail, Phone } from 'lucide-react';
+import { BookOpenCheck, GraduationCap, Mail, Phone, TrendingUp } from 'lucide-react';
 import { getTranslations } from 'next-intl/server';
+import { Link } from '@/i18n/navigation';
 import {
   EmptyState,
   InfoField,
@@ -101,9 +102,18 @@ export default async function TeacherStudentsPage({
                 )}
               </div>
 
-              <div className="mt-4 inline-flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-[#533089]">
-                <BookOpenCheck className="h-4 w-4" />
-                {student.branchName ?? t('privateLesson')}
+              <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
+                <span className="inline-flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-[#533089]">
+                  <BookOpenCheck className="h-4 w-4" />
+                  {student.branchName ?? t('privateLesson')}
+                </span>
+                <Link
+                  className="inline-flex items-center gap-2 rounded-2xl bg-[#533089] px-4 py-2.5 text-xs font-bold text-white shadow-sm transition-colors hover:bg-[#43236f]"
+                  href={`/ogretmen/ogrenciler/${student.studentId}`}
+                >
+                  <TrendingUp className="h-4 w-4" />
+                  {t('viewProgress')}
+                </Link>
               </div>
             </ModulePanel>
           ))}
