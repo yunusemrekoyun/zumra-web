@@ -11,6 +11,7 @@ export function RuntimeSettingsCard() {
   const [autoCloseHours, setAutoCloseHours] = useState('3');
   const [installmentReminderDays, setInstallmentReminderDays] = useState('3');
   const [paymentReviewStaleDays, setPaymentReviewStaleDays] = useState('3');
+  const [lessonChangeCutoffHours, setLessonChangeCutoffHours] = useState('12');
   const [loading, setLoading] = useState(true);
   const [loadFailed, setLoadFailed] = useState(false);
   const [reloadToken, setReloadToken] = useState(0);
@@ -37,6 +38,9 @@ export function RuntimeSettingsCard() {
           );
           setPaymentReviewStaleDays(
             String(body.settings.paymentReviewStaleDays),
+          );
+          setLessonChangeCutoffHours(
+            String(body.settings.lessonChangeCutoffHours),
           );
           setLoadFailed(false);
         } else {
@@ -71,6 +75,7 @@ export function RuntimeSettingsCard() {
           installmentReminderDays: Number(installmentReminderDays),
           joinLeadMinutes: Number(joinLeadMinutes),
           lessonAutoCloseHours: Number(autoCloseHours),
+          lessonChangeCutoffHours: Number(lessonChangeCutoffHours),
           paymentReviewStaleDays: Number(paymentReviewStaleDays),
         }),
         credentials: 'same-origin',
@@ -86,6 +91,9 @@ export function RuntimeSettingsCard() {
           String(body.settings.installmentReminderDays),
         );
         setPaymentReviewStaleDays(String(body.settings.paymentReviewStaleDays));
+        setLessonChangeCutoffHours(
+          String(body.settings.lessonChangeCutoffHours),
+        );
       }
       setMessage({ text: t('success'), type: 'success' });
     } catch {
@@ -163,6 +171,20 @@ export function RuntimeSettingsCard() {
           />
           <span className="text-[11px] font-semibold normal-case tracking-normal text-[#2E286C]/45">
             {t('paymentReviewStaleDaysHint')}
+          </span>
+        </label>
+        <label className="grid gap-2 text-xs font-bold uppercase tracking-wider text-[#2E286C]/55">
+          {t('lessonChangeCutoffHours')}
+          <Input
+            type="number"
+            min={0}
+            max={168}
+            value={lessonChangeCutoffHours}
+            disabled={loading || busy || loadFailed}
+            onChange={(event) => setLessonChangeCutoffHours(event.target.value)}
+          />
+          <span className="text-[11px] font-semibold normal-case tracking-normal text-[#2E286C]/45">
+            {t('lessonChangeCutoffHoursHint')}
           </span>
         </label>
       </div>

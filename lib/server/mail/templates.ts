@@ -140,6 +140,114 @@ export function renderMailTemplate(input: TemplateInput) {
     };
   }
 
+  if (input.templateKey === 'lesson-change-requested') {
+    const studentName = escapeHtml(String(input.payload.studentName ?? ''));
+    const note = escapeHtml(String(input.payload.note ?? ''));
+    const typeLabel = escapeHtml(
+      lessonChangeTypeLabel(String(input.payload.type ?? ''), english),
+    );
+    const lessonDate = formatDate(
+      String(input.payload.lessonDate ?? ''),
+      english ? 'en-US' : 'tr-TR',
+    );
+    const requestedRaw = String(input.payload.requestedDate ?? '');
+    const requestedDate = requestedRaw
+      ? formatDate(requestedRaw, english ? 'en-US' : 'tr-TR')
+      : '';
+    const requestedLine = requestedDate
+      ? `<p>${
+          english ? 'Suggested new time' : 'Önerilen yeni zaman'
+        }: <strong>${escapeHtml(requestedDate)}</strong></p>`
+      : '';
+    const noteLine = note
+      ? `<p>${english ? 'Note' : 'Not'}: ${note}</p>`
+      : '';
+
+    return {
+      html: `<p>${english ? 'Hello' : 'Merhaba'} ${name},</p><p>${
+        english
+          ? `${studentName} sent a request about a scheduled lesson.`
+          : `${studentName} planlanan bir ders için talep gönderdi.`
+      }</p><p>${english ? 'Lesson' : 'Ders'}: <strong>${escapeHtml(
+        lessonDate,
+      )}</strong></p><p>${
+        english ? 'Request' : 'Talep'
+      }: <strong>${typeLabel}</strong></p>${requestedLine}${noteLine}<p>${
+        english
+          ? 'You can approve or reject it from your calendar.'
+          : 'Takviminizden onaylayabilir veya reddedebilirsiniz.'
+      }</p>`,
+      subject: english
+        ? 'Lesson change request'
+        : 'Ders değişikliği talebi',
+      text: [
+        english ? 'Lesson change request' : 'Ders değişikliği talebi',
+        `${english ? 'Student' : 'Öğrenci'}: ${studentName}`,
+        `${english ? 'Lesson' : 'Ders'}: ${lessonDate}`,
+        `${english ? 'Request' : 'Talep'}: ${typeLabel}`,
+        requestedDate
+          ? `${english ? 'Suggested new time' : 'Önerilen yeni zaman'}: ${requestedDate}`
+          : '',
+        note ? `${english ? 'Note' : 'Not'}: ${note}` : '',
+      ]
+        .filter(Boolean)
+        .join('\n'),
+    };
+  }
+
+  if (input.templateKey === 'lesson-change-request-decided') {
+    const approved = String(input.payload.decision ?? '') === 'approved';
+    const note = escapeHtml(String(input.payload.note ?? ''));
+    const typeLabel = escapeHtml(
+      lessonChangeTypeLabel(String(input.payload.type ?? ''), english),
+    );
+    const lessonDate = formatDate(
+      String(input.payload.lessonDate ?? ''),
+      english ? 'en-US' : 'tr-TR',
+    );
+    const noteLine = note
+      ? `<p>${english ? 'Note' : 'Not'}: ${note}</p>`
+      : '';
+    const decisionLabel = approved
+      ? english
+        ? 'approved'
+        : 'onaylandı'
+      : english
+        ? 'rejected'
+        : 'reddedildi';
+
+    return {
+      html: `<p>${english ? 'Hello' : 'Merhaba'} ${name},</p><p>${
+        english
+          ? `Your lesson request (${typeLabel}) was ${decisionLabel}.`
+          : `Ders talebiniz (${typeLabel}) ${decisionLabel}.`
+      }</p><p>${english ? 'Lesson' : 'Ders'}: <strong>${escapeHtml(
+        lessonDate,
+      )}</strong></p>${noteLine}`,
+      subject: approved
+        ? english
+          ? 'Your lesson request was approved'
+          : 'Ders talebiniz onaylandı'
+        : english
+          ? 'Your lesson request was rejected'
+          : 'Ders talebiniz reddedildi',
+      text: [
+        approved
+          ? english
+            ? 'Your lesson request was approved'
+            : 'Ders talebiniz onaylandı'
+          : english
+            ? 'Your lesson request was rejected'
+            : 'Ders talebiniz reddedildi',
+        `${english ? 'Request' : 'Talep'}: ${typeLabel}`,
+        `${english ? 'Lesson' : 'Ders'}: ${lessonDate}`,
+        note ? `${english ? 'Note' : 'Not'}: ${note}` : '',
+      ]
+        .filter(Boolean)
+        .join('\n'),
+    };
+  }
+
   if (input.templateKey === 'lesson-session-status-updated') {
     const status = String(input.payload.status ?? '');
     const note = escapeHtml(String(input.payload.note ?? ''));
@@ -361,6 +469,15 @@ function formatDate(value: string, locale: string) {
     timeStyle: 'short',
     timeZone: 'Europe/Istanbul',
   }).format(date);
+}
+
+function lessonChangeTypeLabel(type: string, english: boolean) {
+  const labels: Record<string, { en: string; tr: string }> = {
+    cancel: { en: 'Cancellation', tr: 'İptal' },
+    postpone: { en: 'Postponement', tr: 'Erteleme' },
+  };
+  const label = labels[type];
+  return label ? (english ? label.en : label.tr) : type;
 }
 
 function lessonStatusLabel(status: string, english: boolean) {

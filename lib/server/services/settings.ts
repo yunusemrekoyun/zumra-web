@@ -10,6 +10,7 @@ export type SettingValues = {
   installmentReminderDays: number;
   joinLeadMinutes: number;
   lessonAutoCloseHours: number;
+  lessonChangeCutoffHours: number;
   mailMode: MailMode;
   paymentReviewStaleDays: number;
 };
@@ -20,6 +21,7 @@ export const SETTING_DEFAULTS: SettingValues = {
   installmentReminderDays: 3,
   joinLeadMinutes: 15,
   lessonAutoCloseHours: 3,
+  lessonChangeCutoffHours: 12,
   mailMode: 'live',
   paymentReviewStaleDays: 3,
 };
@@ -36,6 +38,8 @@ const SETTING_VALIDATORS: {
     typeof value === 'number' ? value : undefined,
   joinLeadMinutes: (value) => (typeof value === 'number' ? value : undefined),
   lessonAutoCloseHours: (value) =>
+    typeof value === 'number' ? value : undefined,
+  lessonChangeCutoffHours: (value) =>
     typeof value === 'number' ? value : undefined,
   mailMode: (value) =>
     value === 'live' || value === 'test' ? value : undefined,
@@ -79,6 +83,10 @@ export async function getAllSettings(): Promise<SettingValues> {
     lessonAutoCloseHours: coerce(
       'lessonAutoCloseHours',
       byKey.get('lessonAutoCloseHours'),
+    ),
+    lessonChangeCutoffHours: coerce(
+      'lessonChangeCutoffHours',
+      byKey.get('lessonChangeCutoffHours'),
     ),
     mailMode: coerce('mailMode', byKey.get('mailMode')),
     paymentReviewStaleDays: coerce(

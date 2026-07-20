@@ -2,7 +2,9 @@ import { getTranslations } from 'next-intl/server';
 import { CalendarBoard, PageHeader } from '@/components/ui';
 import { AddPrivateLessonButton } from '@/components/add-private-lesson-button';
 import { requireWorkspaceRole } from '@/lib/server/authorization';
+import { listTeacherChangeRequests } from '@/lib/server/services/lesson-change-requests';
 import { getTeacherCalendarData } from '@/lib/server/services/lesson-schedules';
+import { ChangeRequestsPanel } from './change-requests-panel';
 
 type TeacherCalendarPageProps = {
   params: Promise<{ locale: string }>;
@@ -18,7 +20,10 @@ export default async function TeacherCalendarPage({
   const principal = await requireWorkspaceRole('teacher', locale);
   const t = await getTranslations('teacher.calendar');
   const tp = await getTranslations('privateLesson');
-  const data = await getTeacherCalendarData(principal);
+  const [data, changeRequests] = await Promise.all([
+    getTeacherCalendarData(principal),
+    listTeacherChangeRequests(principal),
+  ]);
   const returnPath = `/${locale}/ogretmen/takvim${
     month ? `?month=${encodeURIComponent(month)}` : ''
   }`;
@@ -40,6 +45,26 @@ export default async function TeacherCalendarPage({
             />
           ) : undefined
         }
+      />
+      <ChangeRequestsPanel
+        locale={locale}
+        requests={changeRequests}
+        labels={{
+          approve: t('changeRequests.approve'),
+          badge: t('changeRequests.badge'),
+          empty: t('changeRequests.empty'),
+          error: t('changeRequests.error'),
+          errorConflict: t('changeRequests.errorConflict'),
+          errorTimeRequired: t('changeRequests.errorTimeRequired'),
+          newTimePlaceholder: t('changeRequests.newTimePlaceholder'),
+          notePlaceholder: t('changeRequests.notePlaceholder'),
+          reject: t('changeRequests.reject'),
+          requestedTime: (time) => t('changeRequests.requestedTime', { time }),
+          studentNote: (note) => t('changeRequests.studentNote', { note }),
+          title: t('changeRequests.title'),
+          typeCancel: t('changeRequests.typeCancel'),
+          typePostpone: t('changeRequests.typePostpone'),
+        }}
       />
       <CalendarBoard
         currentMonth={month}

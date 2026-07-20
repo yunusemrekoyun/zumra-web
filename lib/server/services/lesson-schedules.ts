@@ -22,6 +22,7 @@ import {
   enrollments,
   externalIdentities,
   lessonAbsenceReports,
+  lessonChangeRequests,
   lessonAttendanceRecords,
   lessonSessionMeetings,
   lessonSessions,
@@ -98,7 +99,9 @@ export type CalendarEventView = {
   branchName?: string;
   canEndLesson?: boolean;
   canManageStatus?: boolean;
+  canRequestChange?: boolean;
   canTakeAttendance?: boolean;
+  changeRequestPending?: boolean;
   date: string;
   endsAt: string;
   id: string;
@@ -598,8 +601,14 @@ export async function getStudentCalendarData(
 
   // These are all independent of each other (keyed on the same student) — run
   // them concurrently instead of one round-trip after another.
-  const [googleLinked, absenceRows, attendanceRows, joinLeadMinutes] =
-    await Promise.all([
+  const [
+    googleLinked,
+    absenceRows,
+    attendanceRows,
+    joinLeadMinutes,
+    changeCutoffHours,
+    pendingChangeRows,
+  ] = await Promise.all([
       hasLinkedGoogleIdentity(principal.id),
       database
         .select({ lessonSessionId: lessonAbsenceReports.lessonSessionId })
@@ -621,10 +630,26 @@ export async function getStudentCalendarData(
           ),
         ),
       getSetting('joinLeadMinutes'),
+      getSetting('lessonChangeCutoffHours'),
+      database
+        .select({
+          lessonSessionId: lessonChangeRequests.lessonSessionId,
+        })
+        .from(lessonChangeRequests)
+        .where(
+          and(
+            eq(lessonChangeRequests.studentProfileId, profile.id),
+            eq(lessonChangeRequests.status, 'pending'),
+          ),
+        ),
     ]);
   const absenceLessonIds = new Set(
     absenceRows.map((row) => row.lessonSessionId),
   );
+  const pendingChangeLessonIds = new Set(
+    pendingChangeRows.map((row) => row.lessonSessionId),
+  );
+  const changeCutoffMs = Date.now() + changeCutoffHours * 3_600_000;
   const attendanceBySession = new Map(
     attendanceRows.map((row) => [row.lessonSessionId, row]),
   );
@@ -632,9 +657,21 @@ export async function getStudentCalendarData(
     [...branchRows, ...privateRows].map((row) => mapCalendarRow(row)),
   ).map((event) => {
     const attendance = attendanceBySession.get(event.id);
+    const isOpen =
+      event.status === 'scheduled' || event.status === 'postponed';
+    const pendingChange = pendingChangeLessonIds.has(event.id);
     return {
       ...event,
       absenceReported: absenceLessonIds.has(event.id),
+      // Students can request a change only until the admin-set cutoff before
+      // the lesson, and only once per lesson at a time.
+      canRequestChange:
+        isOpen &&
+        !pendingChange &&
+        new Date(event.startsAt).getTime() > changeCutoffMs
+          ? true
+          : undefined,
+      changeRequestPending: pendingChange && isOpen ? true : undefined,
       absenceReportUrl:
         event.status === 'scheduled'
           ? `/api/lessons/${event.id}/absence-report`

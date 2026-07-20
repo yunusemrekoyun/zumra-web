@@ -722,7 +722,9 @@
         "installmentReminderDays": "Taksit hatırlatma (gün)",
         "installmentReminderDaysHint": "Vadeden kaç gün önce öğrenciye hatırlatma gitsin",
         "paymentReviewStaleDays": "Bekleyen onay uyarısı (gün)",
-        "paymentReviewStaleDaysHint": "Ödeme bildirimi kaç gün onaysız kalırsa personel uyarılsın"
+        "paymentReviewStaleDaysHint": "Ödeme bildirimi kaç gün onaysız kalırsa personel uyarılsın",
+        "lessonChangeCutoffHours": "İptal/erteleme talep sınırı (saat)",
+        "lessonChangeCutoffHoursHint": "Öğrenci, ders başlamadan en geç kaç saat öncesine kadar iptal/erteleme talebi gönderebilsin (0 = sınırsız)"
       },
       "mailMode": {
         "badge": "Mail",
@@ -1972,7 +1974,15 @@
     "settlementRecorded": "Kurum payı teslim alındı: {amount}",
     "taskDue": "Görev vadesi geldi: {title}",
     "manualDiscountApplied": "{staff}, {student} için manuel indirim uyguladı: {amount}",
-    "branchScheduleUpdated": "Ders programı hazır: {course}"
+    "branchScheduleUpdated": "Ders programı hazır: {course}",
+    "lessonChangeRequestedCancel": "{student}, {date} dersi için iptal talebi gönderdi",
+    "lessonChangeRequestedPostpone": "{student}, {date} dersi için erteleme talebi gönderdi",
+    "lessonChangeTypeCancel": "İptal",
+    "lessonChangeTypePostpone": "Erteleme",
+    "lessonChangeApproved": "{type} talebin onaylandı ({date} dersi)",
+    "lessonChangeRejected": "{type} talebin reddedildi ({date} dersi)",
+    "lessonSessionCancelled": "Ders iptal edildi: {course} — {date}",
+    "lessonSessionPostponed": "Ders ertelendi: {course} — {date}"
   },
   "chat": {
     "title": "Mesajlar",
@@ -2074,6 +2084,18 @@
       "descriptionWithName": "{name} için planlanan dersler.",
       "missingProfileTitle": "Öğrenci profili bulunamadı",
       "missingProfileDescription": "Bu öğrenci hesabı henüz bir öğrenci profiline bağlanmamış.",
+      "changeRequest": {
+        "requestCancel": "İptal talebi",
+        "requestPostpone": "Erteleme talebi",
+        "submit": "Talebi gönder",
+        "newTimePlaceholder": "Önerdiğin yeni zaman (isteğe bağlı)",
+        "notePlaceholder": "Talep nedenin (isteğe bağlı)",
+        "dismiss": "Vazgeç",
+        "pending": "Talebin öğretmen onayında",
+        "error": "Talep gönderilemedi. Tekrar deneyin.",
+        "errorCutoff": "Talep süresi geçti: derse çok az kaldı.",
+        "errorPending": "Bu ders için zaten bekleyen bir talebin var."
+      },
       "agendaTitle": "Ders takvimin",
       "monthView": "Ay görünümü",
       "detailView": "Detay listesi",
@@ -2564,6 +2586,22 @@
       "descriptionWithName": "{name} için planlanan ders oturumları.",
       "missingProfileTitle": "Eğitmen profili bulunamadı",
       "missingProfileDescription": "Bu öğretmen hesabı henüz bir eğitmen profiline bağlanmamış.",
+      "changeRequests": {
+        "badge": "Onay bekliyor",
+        "title": "Ders değişikliği talepleri",
+        "empty": "Bekleyen talep yok",
+        "typeCancel": "İptal",
+        "typePostpone": "Erteleme",
+        "requestedTime": "Önerilen yeni zaman: {time}",
+        "studentNote": "Öğrenci notu: {note}",
+        "newTimePlaceholder": "Yeni ders zamanı",
+        "notePlaceholder": "Karar notu (isteğe bağlı)",
+        "approve": "Onayla",
+        "reject": "Reddet",
+        "error": "İşlem tamamlanamadı. Tekrar deneyin.",
+        "errorConflict": "Seçilen zamanda çakışan bir ders var.",
+        "errorTimeRequired": "Erteleme için geçerli bir yeni zaman seçin."
+      },
       "emptyTitle": "Henüz ders yok",
       "emptyDescription": "Şubelere ders programı tanımlandığında oturumlar burada görünecek.",
       "agendaTitle": "Ders akışı",

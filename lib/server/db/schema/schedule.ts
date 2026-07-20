@@ -68,6 +68,16 @@ export const lessonAbsenceReportStatusEnum = pgEnum(
   ['submitted', 'acknowledged', 'dismissed'],
 );
 
+export const lessonChangeRequestTypeEnum = pgEnum(
+  'lesson_change_request_type',
+  ['cancel', 'postpone'],
+);
+
+export const lessonChangeRequestStatusEnum = pgEnum(
+  'lesson_change_request_status',
+  ['pending', 'approved', 'rejected'],
+);
+
 export const branchLessonScheduleRules = pgTable(
   'branch_lesson_schedule_rules',
   {
@@ -328,6 +338,50 @@ export const lessonAttendanceParticipantSessions = pgTable(
     check(
       'lesson_attendance_participant_session_duration_check',
       sql`${table.durationSeconds} >= 0`,
+    ),
+  ],
+);
+
+// Student-initiated cancel/postpone requests. The teacher (or an admin)
+// decides; approval applies the change through the same operational-status
+// path teachers use directly, so clash checks and fan-out stay in one place.
+export const lessonChangeRequests = pgTable(
+  'lesson_change_requests',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    lessonSessionId: uuid('lesson_session_id')
+      .notNull()
+      .references(() => lessonSessions.id, { onDelete: 'cascade' }),
+    studentProfileId: uuid('student_profile_id')
+      .notNull()
+      .references(() => studentProfiles.id, { onDelete: 'cascade' }),
+    type: lessonChangeRequestTypeEnum('type').notNull(),
+    requestedStartsAt: timestamp('requested_starts_at', { withTimezone: true }),
+    note: text('note'),
+    status: lessonChangeRequestStatusEnum('status')
+      .notNull()
+      .default('pending'),
+    decidedByUserId: text('decided_by_user_id').references(() => users.id, {
+      onDelete: 'set null',
+    }),
+    decisionNote: text('decision_note'),
+    decidedAt: timestamp('decided_at', { withTimezone: true }),
+    createdAt: timestamp('created_at', { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => [
+    uniqueIndex('lesson_change_requests_open_unique')
+      .on(table.lessonSessionId, table.studentProfileId)
+      .where(sql`${table.status} = 'pending'`),
+    index('lesson_change_requests_status_idx').on(table.status),
+    index('lesson_change_requests_student_idx').on(table.studentProfileId),
+    check(
+      'lesson_change_requests_requested_time_check',
+      sql`${table.requestedStartsAt} is null or ${table.type} = 'postpone'`,
     ),
   ],
 );

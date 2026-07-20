@@ -19,7 +19,10 @@ export type NotificationType =
   | 'settlement_recorded'
   | 'task_due'
   | 'manual_discount_applied'
-  | 'branch_schedule_updated';
+  | 'branch_schedule_updated'
+  | 'lesson_change_requested'
+  | 'lesson_change_request_decided'
+  | 'lesson_session_changed';
 
 export type NotificationView = {
   id: string;

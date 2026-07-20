@@ -722,7 +722,9 @@
         "installmentReminderDays": "Installment reminder (days)",
         "installmentReminderDaysHint": "How many days before the due date students get reminded",
         "paymentReviewStaleDays": "Stale review warning (days)",
-        "paymentReviewStaleDaysHint": "Warn staff when a payment report stays unreviewed this many days"
+        "paymentReviewStaleDaysHint": "Warn staff when a payment report stays unreviewed this many days",
+        "lessonChangeCutoffHours": "Change request cutoff (hours)",
+        "lessonChangeCutoffHoursHint": "How many hours before a lesson students can still request a cancel/postpone (0 = no limit)"
       },
       "mailMode": {
         "badge": "Mail",
@@ -1972,7 +1974,15 @@
     "settlementRecorded": "Institution share received: {amount}",
     "taskDue": "Task due: {title}",
     "manualDiscountApplied": "{staff} applied a manual discount for {student}: {amount}",
-    "branchScheduleUpdated": "Lesson schedule ready: {course}"
+    "branchScheduleUpdated": "Lesson schedule ready: {course}",
+    "lessonChangeRequestedCancel": "{student} requested to cancel the {date} lesson",
+    "lessonChangeRequestedPostpone": "{student} requested to postpone the {date} lesson",
+    "lessonChangeTypeCancel": "Cancellation",
+    "lessonChangeTypePostpone": "Postponement",
+    "lessonChangeApproved": "Your request was approved: {type} ({date} lesson)",
+    "lessonChangeRejected": "Your request was rejected: {type} ({date} lesson)",
+    "lessonSessionCancelled": "Lesson cancelled: {course} — {date}",
+    "lessonSessionPostponed": "Lesson postponed: {course} — {date}"
   },
   "chat": {
     "title": "Messages",
@@ -2074,6 +2084,18 @@
       "descriptionWithName": "Scheduled lessons for {name}.",
       "missingProfileTitle": "Student profile not found",
       "missingProfileDescription": "This student account is not linked to a student profile yet.",
+      "changeRequest": {
+        "requestCancel": "Request cancellation",
+        "requestPostpone": "Request postponement",
+        "submit": "Send request",
+        "newTimePlaceholder": "Suggested new time (optional)",
+        "notePlaceholder": "Reason for the request (optional)",
+        "dismiss": "Dismiss",
+        "pending": "Your request is awaiting teacher approval",
+        "error": "The request could not be sent. Try again.",
+        "errorCutoff": "The request window has closed: the lesson starts too soon.",
+        "errorPending": "You already have a pending request for this lesson."
+      },
       "agendaTitle": "Your lesson calendar",
       "monthView": "Month view",
       "detailView": "Detail list",
@@ -2564,6 +2586,22 @@
       "descriptionWithName": "Scheduled lesson sessions for {name}.",
       "missingProfileTitle": "Instructor profile not found",
       "missingProfileDescription": "This teacher account is not linked to an instructor profile yet.",
+      "changeRequests": {
+        "badge": "Awaiting decision",
+        "title": "Lesson change requests",
+        "empty": "No pending requests",
+        "typeCancel": "Cancellation",
+        "typePostpone": "Postponement",
+        "requestedTime": "Suggested new time: {time}",
+        "studentNote": "Student note: {note}",
+        "newTimePlaceholder": "New lesson time",
+        "notePlaceholder": "Decision note (optional)",
+        "approve": "Approve",
+        "reject": "Reject",
+        "error": "The action could not be completed. Try again.",
+        "errorConflict": "Another lesson clashes with the selected time.",
+        "errorTimeRequired": "Pick a valid new time for the postponement."
+      },
       "emptyTitle": "No lessons yet",
       "emptyDescription": "Sessions will appear here once a lesson schedule is defined for a branch.",
       "agendaTitle": "Lesson flow",

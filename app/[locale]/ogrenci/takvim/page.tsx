@@ -76,6 +76,18 @@ export default async function StudentCalendarPage({
           },
           studentCount: (count) => t('studentCount', { count }),
           joinOpensAt: (time) => t('joinOpensAt', { time }),
+          changeRequest: {
+            dismiss: t('changeRequest.dismiss'),
+            error: t('changeRequest.error'),
+            errorCutoff: t('changeRequest.errorCutoff'),
+            errorPending: t('changeRequest.errorPending'),
+            newTimePlaceholder: t('changeRequest.newTimePlaceholder'),
+            notePlaceholder: t('changeRequest.notePlaceholder'),
+            requestCancel: t('changeRequest.requestCancel'),
+            requestPostpone: t('changeRequest.requestPostpone'),
+            submit: t('changeRequest.submit'),
+          },
+          changeRequestPending: t('changeRequest.pending'),
         }}
       />
     </div>

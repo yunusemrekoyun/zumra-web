@@ -19,7 +19,10 @@ type NotificationType =
   | 'settlement_recorded'
   | 'task_due'
   | 'manual_discount_applied'
-  | 'branch_schedule_updated';
+  | 'branch_schedule_updated'
+  | 'lesson_change_requested'
+  | 'lesson_change_request_decided'
+  | 'lesson_session_changed';
 
 type NotificationItem = {
   id: string;
@@ -91,6 +94,18 @@ export function NotificationBell() {
     }
   }
 
+  function formatLessonDate(iso: string): string {
+    const date = new Date(iso);
+    if (!iso || Number.isNaN(date.getTime())) return iso;
+    return new Intl.DateTimeFormat(locale === 'en' ? 'en-US' : 'tr-TR', {
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+      month: 'short',
+      timeZone: 'Europe/Istanbul',
+    }).format(date);
+  }
+
   function titleFor(item: NotificationItem): string {
     const p = item.payload ?? {};
     switch (item.type) {
@@ -148,6 +163,40 @@ export function NotificationBell() {
         });
       case 'branch_schedule_updated':
         return t('branchScheduleUpdated', { course: String(p.course ?? '') });
+      case 'lesson_change_requested':
+        return t(
+          String(p.type ?? '') === 'cancel'
+            ? 'lessonChangeRequestedCancel'
+            : 'lessonChangeRequestedPostpone',
+          {
+            date: formatLessonDate(String(p.lessonDate ?? '')),
+            student: String(p.student ?? ''),
+          },
+        );
+      case 'lesson_change_request_decided':
+        return t(
+          String(p.decision ?? '') === 'approved'
+            ? 'lessonChangeApproved'
+            : 'lessonChangeRejected',
+          {
+            date: formatLessonDate(String(p.lessonDate ?? '')),
+            type: t(
+              String(p.type ?? '') === 'cancel'
+                ? 'lessonChangeTypeCancel'
+                : 'lessonChangeTypePostpone',
+            ),
+          },
+        );
+      case 'lesson_session_changed':
+        return t(
+          String(p.status ?? '') === 'cancelled'
+            ? 'lessonSessionCancelled'
+            : 'lessonSessionPostponed',
+          {
+            course: String(p.lessonTitle ?? ''),
+            date: formatLessonDate(String(p.lessonDate ?? '')),
+          },
+        );
       default:
         return '';
     }

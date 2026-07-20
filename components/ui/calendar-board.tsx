@@ -19,6 +19,10 @@ import type {
 } from '@/lib/server/services/lesson-schedules';
 import { EndLessonButton } from './end-lesson-button';
 import {
+  LessonChangeRequestForm,
+  type LessonChangeRequestLabels,
+} from './lesson-change-request-form';
+import {
   LessonStatusActions,
   type LessonStatusActionLabels,
 } from './lesson-status-actions';
@@ -57,6 +61,8 @@ type CalendarBoardLabels = {
   endLessonConfirm?: string;
   endLessonError?: string;
   lessonStatus?: LessonStatusActionLabels;
+  changeRequest?: LessonChangeRequestLabels;
+  changeRequestPending?: string;
 };
 
 type CalendarBoardProps = {
@@ -551,6 +557,12 @@ function CalendarEventActions({
   const showManageStatus = Boolean(
     event.canManageStatus && labels.lessonStatus,
   );
+  const showChangeRequest = Boolean(
+    event.canRequestChange && labels.changeRequest,
+  );
+  const showChangeRequestPending = Boolean(
+    event.changeRequestPending && labels.changeRequestPending,
+  );
 
   if (
     !showMeetingAction &&
@@ -558,7 +570,9 @@ function CalendarEventActions({
     !showRetryAction &&
     !showAttendanceAction &&
     !showEndLesson &&
-    !showManageStatus
+    !showManageStatus &&
+    !showChangeRequest &&
+    !showChangeRequestPending
   ) {
     return null;
   }
@@ -617,6 +631,21 @@ function CalendarEventActions({
           lessonSessionId={event.id}
           locale={locale}
         />
+      ) : null}
+
+      {showChangeRequest && labels.changeRequest ? (
+        <LessonChangeRequestForm
+          labels={labels.changeRequest}
+          lessonSessionId={event.id}
+          locale={locale}
+        />
+      ) : null}
+
+      {showChangeRequestPending ? (
+        <div className="inline-flex items-center gap-2 rounded-2xl bg-amber-50 px-4 py-3 text-xs font-bold text-amber-700">
+          <Clock3 className="h-4 w-4" />
+          {labels.changeRequestPending}
+        </div>
       ) : null}
 
       {event.meetingRetryUrl ? (

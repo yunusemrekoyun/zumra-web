@@ -19,6 +19,7 @@ import { tryAcquireAdvisoryLock } from '@/lib/server/db/advisory-lock';
 import { database } from '@/lib/server/db/client';
 import {
   accounts,
+  candidateProfiles,
   contacts,
   enrollments,
   externalIdentities,
@@ -28,6 +29,7 @@ import {
   lessonAttendanceRecords,
   lessonSessionMeetings,
   lessonSessions,
+  programBranches,
   studentProfiles,
   users,
 } from '@/lib/server/db/schema';
@@ -36,6 +38,7 @@ import {
   AuthorizationDeniedError,
   PublicFlowError,
 } from '@/lib/server/http/errors';
+import { createNotifications } from '@/lib/server/services/notification-feed';
 import { notificationService } from '@/lib/server/services/notifications';
 import { getSetting } from '@/lib/server/services/settings';
 import {
@@ -836,7 +839,12 @@ export async function updateLessonSessionOperationalStatus(
   const [updated] = await database
     .update(lessonSessions)
     .set({
+      changeNote: cleanText(input.note, 1000),
       endsAt: updatedEndsAt,
+      // Keep the FIRST original time across repeated postpones.
+      originalStartsAt: updatedStartsAt
+        ? sql`coalesce(${lessonSessions.originalStartsAt}, ${lessonSessions.startsAt})`
+        : undefined,
       startsAt: updatedStartsAt,
       status: input.status,
       updatedAt: new Date(),
@@ -858,6 +866,11 @@ export async function updateLessonSessionOperationalStatus(
     throw new PublicFlowError('lesson_session_not_open', 409);
   }
 
+  // Past this point the status row is committed: everything below is cleanup
+  // and fan-out and must not throw, otherwise callers (e.g. the change-request
+  // approval flow) would treat an APPLIED change as failed and roll back their
+  // own bookkeeping against it.
+  try {
   // Re-arm attendance sync for the new end time so the reconciliation sweep
   // doesn't fire against the old (now-past) time and mark everyone absent.
   if (updatedStartsAt) {
@@ -891,6 +904,9 @@ export async function updateLessonSessionOperationalStatus(
         startsAt: updated.startsAt,
         status: updated.status,
       },
+      // A teacher acts without approval; the disruption is surfaced to admins
+      // and the affected students' advisors instead.
+      initiatedByTeacher: principal.role === 'teacher',
       lessonSessionId,
       note: cleanText(input.note, 1000),
       status: updated.status,
@@ -901,6 +917,17 @@ export async function updateLessonSessionOperationalStatus(
   // can no longer be reused.
   if (updated.status === 'cancelled' || updated.status === 'completed') {
     await closeLessonMeetingAccess([lessonSessionId]);
+  }
+  } catch (error) {
+    console.error(
+      JSON.stringify({
+        event: 'lesson.status_change_followup_failed',
+        lessonSessionId,
+        message:
+          error instanceof Error ? error.message.slice(0, 300) : 'unknown',
+        timestamp: new Date().toISOString(),
+      }),
+    );
   }
 
   return {
@@ -1505,6 +1532,7 @@ async function notifyAbsenceReport(input: {
 
 async function notifyLessonSessionStatusChange(input: {
   context: LessonSessionContext;
+  initiatedByTeacher?: boolean;
   lessonSessionId: string;
   note?: string;
   status: LessonSessionOperationalStatus | 'completed';
@@ -1512,7 +1540,7 @@ async function notifyLessonSessionStatusChange(input: {
   const [expectedStudents, adminRows] = await Promise.all([
     loadExpectedStudents(input.context),
     database
-      .select({ email: users.email })
+      .select({ email: users.email, id: users.id })
       .from(users)
       .where(and(eq(users.role, 'admin'), eq(users.accountStatus, 'active'))),
   ]);
@@ -1523,6 +1551,77 @@ async function notifyLessonSessionStatusChange(input: {
 
   if (input.context.instructorEmail) {
     recipients.add(input.context.instructorEmail);
+  }
+
+  // Teacher-initiated cancel/postpone needs no approval, but admins and the
+  // affected students' advisors must hear about it. Advisors join the email
+  // fan-out; both groups also get a bell notification. A re-open back to
+  // 'scheduled' is not a disruption, so it stays out of this fan-out.
+  if (
+    input.initiatedByTeacher &&
+    (input.status === 'cancelled' || input.status === 'postponed')
+  ) {
+    try {
+      const studentProfileIds = expectedStudents.map(
+        (student) => student.studentProfileId,
+      );
+      const advisorRows = studentProfileIds.length
+        ? await database
+            .selectDistinct({ email: users.email, id: users.id })
+            .from(candidateProfiles)
+            .innerJoin(
+              studentProfiles,
+              eq(studentProfiles.contactId, candidateProfiles.contactId),
+            )
+            .innerJoin(users, eq(users.id, candidateProfiles.advisorId))
+            .where(
+              and(
+                inArray(studentProfiles.id, studentProfileIds),
+                eq(users.accountStatus, 'active'),
+              ),
+            )
+        : [];
+
+      for (const advisor of advisorRows) {
+        recipients.add(advisor.email);
+      }
+
+      let lessonTitle =
+        input.context.source === 'private'
+          ? (expectedStudents[0]?.fullName ?? '—')
+          : '—';
+      if (input.context.source === 'branch' && input.context.branchId) {
+        const [branch] = await database
+          .select({ name: programBranches.name })
+          .from(programBranches)
+          .where(eq(programBranches.id, input.context.branchId))
+          .limit(1);
+        lessonTitle = branch?.name ?? '—';
+      }
+
+      const payload = {
+        lessonDate: input.context.startsAt.toISOString(),
+        lessonTitle,
+        note: input.note ?? '',
+        status: input.status,
+      };
+      await createNotifications([
+        ...adminRows.map((admin) => ({
+          href: '/admin/calendar',
+          payload,
+          type: 'lesson_session_changed' as const,
+          userId: admin.id,
+        })),
+        ...advisorRows.map((advisor) => ({
+          payload,
+          type: 'lesson_session_changed' as const,
+          userId: advisor.id,
+        })),
+      ]);
+    } catch {
+      // Advisor/admin fan-out is best-effort; the lesson change itself and the
+      // primary email fan-out below must not be blocked by it.
+    }
   }
 
   await Promise.all(
