@@ -20,6 +20,12 @@ export const discountPackageSchema = z
     (value) =>
       value.scope === 'branch' ? Boolean(value.branchId) : !value.branchId,
     { message: 'scope_target_mismatch' },
+  )
+  // Percentage discounts arrive as basis points; 10000 bp = 100%.
+  .refine(
+    (value) =>
+      value.discountType !== 'percentage' || value.discountValue <= 10_000,
+    { message: 'discount_percentage_invalid' },
   );
 
 export const lessonPackageSchema = z.object({

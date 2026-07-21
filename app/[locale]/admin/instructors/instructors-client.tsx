@@ -20,8 +20,10 @@ import {
   PageHeader,
   SearchInput,
   StatusChip,
+  useToast,
 } from '@/components/ui';
 import { Link, useRouter } from '@/i18n/navigation';
+import { readApiErrorCode, useApiErrorText } from '@/lib/client/api-error';
 import { isValidTurkishIban, normalizeIban } from '@/lib/domain/iban';
 import type { InstructorSummary } from '@/lib/server/services/instructors';
 import {
@@ -38,6 +40,8 @@ export function InstructorsClient({
 }) {
   const t = useTranslations('admin.instructors');
   const router = useRouter();
+  const errorText = useApiErrorText();
+  const { toast } = useToast();
   const [query, setQuery] = useState('');
   const [creating, setCreating] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -108,8 +112,10 @@ export function InstructorsClient({
         throw new Error(String(body.error ?? 'save_failed'));
       }
       if (trimmedIban) {
-        // Best effort: the detail page bank panel allows a retry on failure.
-        await fetch('/api/admin/instructor-bank-accounts', {
+        // The instructor is already created; if the IBAN sub-save fails we
+        // still navigate but warn the user instead of failing silently — the
+        // detail page bank panel allows a retry.
+        const bankResponse = await fetch('/api/admin/instructor-bank-accounts', {
           body: JSON.stringify({
             holderName: bankHolder.trim() || undefined,
             iban: normalizeIban(trimmedIban),
@@ -118,15 +124,28 @@ export function InstructorsClient({
           credentials: 'same-origin',
           headers: { 'content-type': 'application/json' },
           method: 'POST',
-        }).catch(() => undefined);
+        }).catch(() => null);
+        if (!bankResponse || !bankResponse.ok) {
+          const bankCode = bankResponse
+            ? await readApiErrorCode(bankResponse)
+            : 'network_error';
+          router.push(`/admin/instructors/${body.id}`);
+          toast({
+            variant: 'error',
+            title: t('bank.saveFailedTitle'),
+            description: `${t('bank.saveFailedHint')} (${errorText(bankCode)})`,
+          });
+          return;
+        }
       }
       router.push(`/admin/instructors/${body.id}`);
+      toast({ variant: 'success', description: t('saved') });
     } catch (error) {
       const code = error instanceof Error ? error.message : '';
       setMessage(
         code === 'instructor_identity_conflict'
           ? t('identityConflict')
-          : t('saveError'),
+          : errorText(code || 'network_error'),
       );
       setBusy(false);
     }

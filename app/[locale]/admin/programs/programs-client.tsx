@@ -33,6 +33,7 @@ import {
   PageHeader,
   StatusChip,
 } from '@/components/ui';
+import { Link } from '@/i18n/navigation';
 import type {
   BranchArchivePreview,
   PrivateLessonPackageView,
@@ -1568,17 +1569,22 @@ export function ProgramsClient({
                           : null;
                       })()}
                     />
-                    <p
-                      className={
-                        compatibleTeacherExists
-                          ? 'mt-2 text-xs font-medium leading-5 text-[#2E286C]/45'
-                          : 'mt-2 rounded-xl bg-amber-50 px-3 py-2 text-xs font-semibold leading-5 text-amber-700'
-                      }
-                    >
-                      {compatibleTeacherExists
-                        ? t('branchTeacherHint')
-                        : t('branchTeacherNoneCompatible')}
-                    </p>
+                    {compatibleTeacherExists ? (
+                      <p className="mt-2 text-xs font-medium leading-5 text-[#2E286C]/45">
+                        {t('branchTeacherHint')}
+                      </p>
+                    ) : (
+                      <div className="mt-2 rounded-xl bg-amber-50 px-3 py-3 text-xs font-semibold leading-5 text-amber-700">
+                        <p>{t('branchTeacherNoneCompatible')}</p>
+                        <Link
+                          href="/admin/instructors"
+                          className="mt-2 inline-flex items-center gap-1.5 rounded-lg bg-amber-600 px-3 py-1.5 text-[11px] font-bold text-white transition-colors hover:bg-amber-700"
+                        >
+                          <Plus className="h-3.5 w-3.5" />
+                          {t('branchAddInstructorCta')}
+                        </Link>
+                      </div>
+                    )}
                   </FormField>
                   <FormField label={t('branchFields.notes')}>
                     <textarea

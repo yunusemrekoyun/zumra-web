@@ -19,6 +19,7 @@ import { MobileMoreSheet } from './mobile-more-sheet';
 import { MobileTabBar } from './mobile-tab-bar';
 import { NavCountBadge } from './nav-count-badge';
 import { NotificationBell } from './notification-bell';
+import { ToastProvider } from './toast';
 import { WorkspaceGlobalSearch } from './workspace-global-search';
 
 type WorkspaceShellProps = {
@@ -87,6 +88,7 @@ export function WorkspaceShell({
   );
 
   return (
+    <ToastProvider>
     <div className="min-h-dvh lg:min-h-screen bg-[#EBE9F1] p-0 lg:p-4 flex items-stretch lg:items-center justify-center font-neubau text-[#2E286C]">
       <MobileTabBar
         items={mobileTabs}
@@ -200,6 +202,7 @@ export function WorkspaceShell({
         </div>
       </div>
     </div>
+    </ToastProvider>
   );
 }
 

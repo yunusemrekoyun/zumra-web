@@ -27,7 +27,13 @@ export async function POST(request: Request) {
       await request.json().catch(() => null),
     );
     if (!parsed.success) {
-      return apiResponse({ error: 'invalid_request' }, 400, id);
+      const message = parsed.error.issues[0]?.message;
+      const code =
+        message === 'scope_target_mismatch' ||
+        message === 'discount_percentage_invalid'
+          ? message
+          : 'invalid_request';
+      return apiResponse({ error: code }, 400, id);
     }
 
     const result = await createDiscountPackage(principal, parsed.data);

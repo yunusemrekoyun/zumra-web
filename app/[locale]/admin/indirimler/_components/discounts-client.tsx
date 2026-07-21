@@ -14,7 +14,9 @@ import {
   Input,
   PageHeader,
   StatusChip,
+  useToast,
 } from '@/components/ui';
+import { errorCodeFromBody, useApiErrorText } from '@/lib/client/api-error';
 import { APP_TIME_ZONE, isoToIstanbulWallClock } from '@/lib/datetime';
 import { centsToInput, formatCents, parseTlToCents } from '@/lib/domain/money';
 import type { ManualDiscountView } from '@/lib/server/services/pricing';
@@ -70,11 +72,13 @@ export function DiscountsClient({
   const t = useTranslations('admin.discounts');
   const locale = useLocale();
   const router = useRouter();
+  const errorText = useApiErrorText();
+  const { toast } = useToast();
   const [draft, setDraft] = useState<PackageDraft | null>(null);
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState('');
   const [modalError, setModalError] = useState('');
-  const [valueError, setValueError] = useState(false);
+  const [valueErrorText, setValueErrorText] = useState('');
 
   const dateFormatter = useMemo(
     () =>
@@ -93,13 +97,13 @@ export function DiscountsClient({
   function openCreate() {
     setDraft(emptyDraft());
     setModalError('');
-    setValueError(false);
+    setValueErrorText('');
   }
 
   function openEdit(pkg: DiscountPackageView) {
     setDraft(draftFromPackage(pkg));
     setModalError('');
-    setValueError(false);
+    setValueErrorText('');
   }
 
   function closeModal() {
@@ -117,17 +121,29 @@ export function DiscountsClient({
     event.preventDefault();
     if (!draft) return;
 
+    // A valid number over 100% gets a specific message; genuinely malformed
+    // input falls through to the generic inline "enter a valid value" hint.
+    if (draft.discountType === 'percentage') {
+      const percent = Number.parseFloat(
+        draft.valueInput.trim().replace('%', '').replace(',', '.'),
+      );
+      if (Number.isFinite(percent) && percent > 100) {
+        setValueErrorText(errorText('discount_percentage_invalid'));
+        return;
+      }
+    }
+
     const discountValue =
       draft.discountType === 'percentage'
         ? parsePercentToBasisPoints(draft.valueInput)
         : parseTlToCents(draft.valueInput);
 
     if (discountValue === null) {
-      setValueError(true);
+      setValueErrorText(t('valueInvalid'));
       return;
     }
 
-    setValueError(false);
+    setValueErrorText('');
     setBusy(true);
     setModalError('');
 
@@ -155,14 +171,18 @@ export function DiscountsClient({
           method: draft.id ? 'PATCH' : 'POST',
         },
       );
-      const body = await response.json().catch(() => ({}));
-      if (!response.ok || !body.id) throw new Error('save_failed');
+      const body = await response.json().catch(() => null);
+      if (!response.ok || !body?.id) {
+        setModalError(errorText(errorCodeFromBody(body, response.status)));
+        return;
+      }
 
       setDraft(null);
       setMessage(t('saved'));
+      toast({ variant: 'success', description: t('saved') });
       router.refresh();
     } catch {
-      setModalError(t('errorGeneric'));
+      setModalError(errorText('network_error'));
     } finally {
       setBusy(false);
     }
@@ -508,7 +528,7 @@ export function DiscountsClient({
                     ? t('valuePercentLabel')
                     : t('valueFixedLabel')
                 }
-                error={valueError ? t('valueInvalid') : undefined}
+                error={valueErrorText || undefined}
               >
                 <div className="relative">
                   <Input
@@ -518,7 +538,7 @@ export function DiscountsClient({
                       draft.discountType === 'percentage' ? '15' : '1.500,00'
                     }
                     onChange={(event) => {
-                      setValueError(false);
+                      setValueErrorText('');
                       setDraft(
                         (current) =>
                           current && {

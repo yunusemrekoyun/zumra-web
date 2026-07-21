@@ -11,6 +11,7 @@ import {
 import { useLocale, useTranslations } from 'next-intl';
 import { CheckCircle2, MessageCircle, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { useApiErrorText } from '@/lib/client/api-error';
 
 const WHATSAPP_NUMBER = (
   process.env.NEXT_PUBLIC_WHATSAPP_NUMBER ?? '905550000000'
@@ -114,6 +115,7 @@ function LeadFormModal({
 }) {
   const t = useTranslations('public.leadForm');
   const cta = useTranslations('public.cta');
+  const errorText = useApiErrorText();
   const locale = useLocale();
   const [errorMessage, setErrorMessage] = useState('');
   const [firstName, setFirstName] = useState('');
@@ -199,7 +201,7 @@ function LeadFormModal({
       } else if (code === 'rate_limited') {
         setErrorMessage(t('errors.rateLimited'));
       } else {
-        setErrorMessage(t('errorText'));
+        setErrorMessage(errorText(code || 'network_error'));
       }
       setStatus('error');
     }
