@@ -43,7 +43,12 @@ export async function GET(request: Request, { params }: MediaRouteProps) {
     return NextResponse.json({ error: 'not_found' }, { status: 404 });
   }
 
-  const disposition = asset.kind === 'document' ? 'attachment' : 'inline';
+  // Documents download by default; `?view=1` serves them inline so our own
+  // in-app preview modal can render them in an iframe (CSP sandbox still applies).
+  const wantInline =
+    new URL(request.url).searchParams.get('view') === '1';
+  const disposition =
+    asset.kind === 'document' && !wantInline ? 'attachment' : 'inline';
   const headers = new Headers({
     'Accept-Ranges': 'bytes',
     'Cache-Control':

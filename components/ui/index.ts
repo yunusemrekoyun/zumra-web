@@ -25,6 +25,11 @@ export { MobileTabBar } from './mobile-tab-bar';
 export { ModulePanel } from './module-panel';
 export { TimezoneCard } from './timezone-card';
 export { ToastProvider, useToast } from './toast';
+export {
+  AttachmentList,
+  AudioPlayer,
+  type AttachmentItem,
+} from './attachment-viewer';
 export { WorldClock } from './world-clock';
 export { PageHeader } from './page-header';
 export { PhoneInput } from './phone-input';

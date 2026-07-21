@@ -5,6 +5,7 @@ import { useTranslations } from 'next-intl';
 import { ClipboardList, Search, Send, X } from 'lucide-react';
 import { type Attachment, AttachmentInput } from '@/components/attachment-input';
 import { VoiceRecorderButton } from '@/components/voice-recorder-button';
+import { AudioPlayer } from '@/components/ui';
 import { cn } from '@/lib/utils';
 
 type ChatAttachment = {
@@ -339,9 +340,9 @@ function MessageAttachment({ attachment }: { attachment: ChatAttachment }) {
   }
   if (attachment.kind === 'audio') {
     return (
-      <audio controls src={url} className="mt-2 w-56 max-w-full">
-        <track kind="captions" />
-      </audio>
+      <div className="mt-2">
+        <AudioPlayer attachment={attachment} />
+      </div>
     );
   }
   if (attachment.kind === 'video') {

@@ -7,11 +7,16 @@ import {
   CheckCircle2,
   Clock,
   MessageSquare,
-  Paperclip,
   Star,
 } from 'lucide-react';
 import type { AssignmentForGrading } from '@/lib/server/services/assignments';
-import { Avatar, Button, ModulePanel, StatusChip } from '@/components/ui';
+import {
+  AttachmentList,
+  Avatar,
+  Button,
+  ModulePanel,
+  StatusChip,
+} from '@/components/ui';
 import { useRouter } from '@/i18n/navigation';
 
 type Row = AssignmentForGrading['roster'][number] & {
@@ -323,37 +328,6 @@ export function GradingClient({
           </ModulePanel>
         ))
       )}
-    </div>
-  );
-}
-
-function AttachmentList({
-  attachments,
-  label,
-}: {
-  attachments: { mediaAssetId: string; name: string }[];
-  label: string;
-}) {
-  if (!attachments.length) return null;
-  return (
-    <div className="mt-3">
-      <p className="mb-2 text-[10px] font-bold uppercase tracking-wider text-[#2E286C]/40">
-        {label}
-      </p>
-      <div className="flex flex-wrap gap-2">
-        {attachments.map((attachment) => (
-          <a
-            key={attachment.mediaAssetId}
-            href={`/api/media/${attachment.mediaAssetId}`}
-            target="_blank"
-            rel="noreferrer"
-            className="inline-flex max-w-full items-center gap-1.5 rounded-lg border border-black/[0.06] bg-white px-2.5 py-1 text-xs font-medium text-[#533089] transition-colors hover:bg-[#533089]/5"
-          >
-            <Paperclip className="h-3.5 w-3.5 shrink-0" />
-            <span className="min-w-0 truncate">{attachment.name}</span>
-          </a>
-        ))}
-      </div>
     </div>
   );
 }
