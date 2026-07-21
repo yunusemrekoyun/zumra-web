@@ -13,6 +13,8 @@
  */
 import 'dotenv/config';
 import { randomUUID } from 'node:crypto';
+import { mkdir, writeFile } from 'node:fs/promises';
+import path from 'node:path';
 import { hashPassword } from 'better-auth/crypto';
 import { and, asc, eq, gte, inArray, like, sql } from 'drizzle-orm';
 import { database } from '@/lib/server/db/client';
@@ -25,7 +27,9 @@ import {
   assessments,
   assessmentVersions,
   assignments,
+  assignmentSubmissionAttachments,
   assignmentSubmissions,
+  mediaAssets,
   candidateActivities,
   candidateConsents,
   candidateInquiries,
@@ -48,6 +52,7 @@ import {
   studentProfiles,
   users,
 } from '@/lib/server/db/schema';
+import { introAudio } from './fixtures/intro-audio';
 
 const MARKER = 'showcase-elif-kaya-1';
 const TZ = 'Europe/Istanbul';
@@ -212,6 +217,70 @@ async function ensureDemoAdvisor(): Promise<string | null> {
   return advisorId;
 }
 
+// Runs even on an already-showcased DB: attaches a REAL, playable voice clip to
+// the showcase speaking-assignment submission so the teacher actually has an
+// audio to open (the submission text claims "ses kaydını ekledim"). Idempotent —
+// skips if the submission already has an attachment. Writes the file into the
+// shared MEDIA_ROOT volume (nginx serves it in prod via X-Accel-Redirect).
+async function ensureShowcaseSubmissionAudio(): Promise<void> {
+  const [submission] = await database
+    .select({
+      submissionId: assignmentSubmissions.id,
+      studentUserId: users.id,
+    })
+    .from(assignmentSubmissions)
+    .innerJoin(
+      assignments,
+      eq(assignments.id, assignmentSubmissions.assignmentId),
+    )
+    .innerJoin(
+      studentProfiles,
+      eq(studentProfiles.id, assignmentSubmissions.studentProfileId),
+    )
+    .innerJoin(users, eq(users.id, studentProfiles.userId))
+    .where(eq(assignments.title, 'Konuşma Pratiği: Kendini Tanıtma'))
+    .limit(1);
+
+  // Main block only creates the submission when there is an upcoming lesson.
+  if (!submission) return;
+
+  const [existingLink] = await database
+    .select({ id: assignmentSubmissionAttachments.id })
+    .from(assignmentSubmissionAttachments)
+    .where(
+      eq(assignmentSubmissionAttachments.submissionId, submission.submissionId),
+    )
+    .limit(1);
+  if (existingLink) {
+    console.log('Showcase ses eki zaten mevcut — atlandı.');
+    return;
+  }
+
+  const mediaId = randomUUID();
+  const relativePath = `ready/private/${mediaId}.${introAudio.extension}`;
+  const root = path.resolve(process.env.MEDIA_ROOT ?? '.data/media');
+  const absolutePath = path.join(root, relativePath);
+  await mkdir(path.dirname(absolutePath), { recursive: true });
+  await writeFile(absolutePath, Buffer.from(introAudio.base64, 'base64'));
+
+  await database.insert(mediaAssets).values({
+    id: mediaId,
+    ownerUserId: submission.studentUserId,
+    kind: 'audio',
+    visibility: 'private',
+    status: 'ready',
+    originalName: introAudio.originalName,
+    outputPath: relativePath,
+    mimeType: introAudio.mimeType,
+    sizeBytes: introAudio.sizeBytes,
+  });
+  await database.insert(assignmentSubmissionAttachments).values({
+    submissionId: submission.submissionId,
+    mediaAssetId: mediaId,
+  });
+  console.log('Showcase konuşma ödevine gerçek ses eki bağlandı 🎧');
+}
+
 (async () => {
   if (process.env.NODE_ENV === 'production' && process.env.ALLOW_DEMO_SEED !== 'true') {
     console.error('Üretimde çalıştırmak için ALLOW_DEMO_SEED=true gerekli.');
@@ -232,6 +301,8 @@ async function ensureDemoAdvisor(): Promise<string | null> {
     .limit(1);
   if (existing) {
     console.log('Showcase verisi zaten yüklü — ana blok atlandı.');
+    // Still backfill the audio attachment on already-seeded (e.g. live) DBs.
+    await ensureShowcaseSubmissionAudio();
     process.exit(0);
   }
 
@@ -582,7 +653,7 @@ async function ensureDemoAdvisor(): Promise<string | null> {
           lessonSessionId: sabahNext.id,
           title: 'Konuşma Pratiği: Kendini Tanıtma',
           description:
-            'Yarınki dersimize hazırlık: kendinizi tanıtan 8-10 cümlelik bir konuşma hazırlayın ve sesli kaydını yükleyin.',
+            'Önümüzdeki dersimize hazırlık: kendinizi tanıtan 8-10 cümlelik bir konuşma hazırlayın ve sesli kaydını yükleyin.',
           requiresSubmission: true,
           maxScore: 100,
           dueAt: sabahNext.startsAt,
@@ -1111,6 +1182,9 @@ async function ensureDemoAdvisor(): Promise<string | null> {
 
   // Yeni oluşan showcase adaylarını da danışmana bağla.
   await ensureDemoAdvisor();
+
+  // Backfill the real audio attachment (fresh + already-seeded DBs).
+  await ensureShowcaseSubmissionAudio();
 
   console.log('Showcase verisi yüklendi ✅');
   process.exit(0);
