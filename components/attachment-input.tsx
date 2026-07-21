@@ -3,8 +3,14 @@
 import { useRef, useState } from 'react';
 import { Loader2, Paperclip, X } from 'lucide-react';
 import { uploadMedia } from '@/lib/media-upload-client';
+import { useApiErrorText } from '@/lib/client/api-error';
 
 export type Attachment = { mediaAssetId: string; name: string };
+
+// Mirrors the server allowlist (lib/server/media/validation.ts) so the file
+// picker only offers types the backend actually accepts.
+const ACCEPTED_FILE_TYPES =
+  'image/jpeg,image/png,image/webp,video/mp4,video/quicktime,video/webm,application/pdf,audio/mpeg,audio/wav,audio/ogg';
 
 function mediaKind(file: File): 'image' | 'video' | 'audio' | 'document' {
   if (file.type.startsWith('image/')) return 'image';
@@ -26,7 +32,8 @@ export function AttachmentInput({
 }) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [busy, setBusy] = useState(false);
-  const [error, setError] = useState(false);
+  const [error, setError] = useState('');
+  const errorText = useApiErrorText();
   // Latest value, so slow uploads merge into fresh state instead of a stale
   // closure (e.g. an attachment removed mid-upload must not reappear).
   const valueRef = useRef(value);
@@ -35,7 +42,7 @@ export function AttachmentInput({
   async function handleFiles(files: FileList | null) {
     if (!files || !files.length) return;
     setBusy(true);
-    setError(false);
+    setError('');
     try {
       const uploaded: Attachment[] = [];
       for (const file of Array.from(files)) {
@@ -45,8 +52,9 @@ export function AttachmentInput({
         uploaded.push({ mediaAssetId: id, name: file.name });
       }
       onChange([...valueRef.current, ...uploaded]);
-    } catch {
-      setError(true);
+    } catch (err) {
+      // Map the propagated server code to a specific, friendly message.
+      setError(errorText(err instanceof Error ? err.message : null));
     } finally {
       setBusy(false);
       if (inputRef.current) inputRef.current.value = '';
@@ -60,6 +68,7 @@ export function AttachmentInput({
         type="file"
         multiple
         hidden
+        accept={ACCEPTED_FILE_TYPES}
         disabled={disabled || busy}
         onChange={(event) => handleFiles(event.target.files)}
       />
@@ -77,7 +86,7 @@ export function AttachmentInput({
         {busy ? labels.uploading : labels.add}
       </button>
       {error && (
-        <p className="text-xs font-semibold text-red-600">{labels.error}</p>
+        <p className="text-xs font-semibold text-red-600">{error}</p>
       )}
       {value.length > 0 && (
         <div className="flex flex-wrap gap-2">

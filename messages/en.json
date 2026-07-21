@@ -3151,7 +3151,7 @@
     "network_error": "Couldn't reach the server. Check your connection and try again.",
     "payload_too_large": "The file is too large. Choose a smaller file.",
     "media_quota_exceeded": "Your storage quota is full. Free up space and try again.",
-    "unsupported_media_type": "This file type is not supported.",
+    "unsupported_media_type": "This file type isn't supported. You can attach an image (JPG/PNG/WebP), PDF, audio or video.",
     "upload_rejected": "The file failed the security scan and could not be uploaded.",
     "identity_operation_failed": "The account operation could not be completed. Check the details and try again.",
     "instructor_identity_conflict": "This email or phone already belongs to another instructor. Enter different details.",
@@ -3235,6 +3235,10 @@
     "submission_locked": "This assignment is closed for submissions.",
     "grade_score_invalid": "The score is invalid. Enter a value within the allowed range.",
     "submission_not_found": "Submission not found.",
-    "student_profile_not_found": "Student profile not found."
+    "student_profile_not_found": "Student profile not found.",
+    "invalid_size": "The file size is over the allowed limit. Choose a smaller file.",
+    "media_upload_failed": "The file couldn't be uploaded. Check its type and size, then try again.",
+    "media_processing_failed": "The file couldn't be processed. Try a different file.",
+    "media_not_ready": "The file couldn't be prepared in time. Please try again."
   }
 }

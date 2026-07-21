@@ -3151,7 +3151,7 @@
     "network_error": "Sunucuya ulaşılamadı. İnternet bağlantınızı kontrol edip tekrar deneyin.",
     "payload_too_large": "Dosya çok büyük. Daha küçük bir dosya seçin.",
     "media_quota_exceeded": "Depolama kotanız dolmuş. Yer açıp tekrar deneyin.",
-    "unsupported_media_type": "Bu dosya türü desteklenmiyor.",
+    "unsupported_media_type": "Bu dosya türü desteklenmiyor. Görsel (JPG/PNG/WebP), PDF, ses veya video ekleyebilirsiniz.",
     "upload_rejected": "Dosya güvenlik taramasından geçemedi ve yüklenemedi.",
     "identity_operation_failed": "Hesap işlemi tamamlanamadı. Bilgileri kontrol edip tekrar deneyin.",
     "instructor_identity_conflict": "Bu e-posta veya telefon başka bir eğitmende kayıtlı. Farklı bir bilgi girin.",
@@ -3235,6 +3235,10 @@
     "submission_locked": "Bu ödev artık gönderime kapalı.",
     "grade_score_invalid": "Puan geçersiz. İzin verilen aralıkta bir değer girin.",
     "submission_not_found": "Gönderim bulunamadı.",
-    "student_profile_not_found": "Öğrenci profili bulunamadı."
+    "student_profile_not_found": "Öğrenci profili bulunamadı.",
+    "invalid_size": "Dosya boyutu izin verilen sınırın üstünde. Daha küçük bir dosya seçin.",
+    "media_upload_failed": "Dosya yüklenemedi. Türünü ve boyutunu kontrol edip tekrar deneyin.",
+    "media_processing_failed": "Dosya işlenemedi. Farklı bir dosyayla tekrar deneyin.",
+    "media_not_ready": "Dosya hazırlanamadı, zaman aşımına uğradı. Tekrar deneyin."
   }
 }

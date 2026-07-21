@@ -27,9 +27,19 @@ export async function uploadMedia(
     },
     method: 'POST',
   });
-  const body = (await response.json().catch(() => ({}))) as { id?: string };
+  const body = (await response.json().catch(() => ({}))) as {
+    id?: string;
+    error?: string;
+  };
   if (!response.ok || !body.id) {
-    throw new Error('media_upload_failed');
+    // Propagate the real server code (unsupported_media_type, payload_too_large,
+    // invalid_size, media_quota_exceeded, rate_limited...) so callers can show a
+    // specific, friendly message instead of a generic failure.
+    throw new Error(
+      typeof body.error === 'string' && body.error
+        ? body.error
+        : 'media_upload_failed',
+    );
   }
   await waitForMediaReady(body.id, kind);
   return body.id;
