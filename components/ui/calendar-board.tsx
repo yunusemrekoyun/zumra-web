@@ -463,7 +463,7 @@ function CalendarDayPopover({
           {events.length}
         </span>
       </div>
-      <div className="mt-3 space-y-2">
+      <div className="mt-3 max-h-[16rem] space-y-2 overflow-y-auto custom-scrollbar">
         {events.map((event) => (
           <div key={event.id} className="rounded-2xl bg-[#F8F9FC] p-3">
             <div className="flex items-start justify-between gap-3">

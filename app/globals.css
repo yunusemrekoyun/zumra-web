@@ -146,8 +146,14 @@ html {
   scroll-behavior: smooth;
 }
 
-* {
-  min-width: 0;
+/* Flex/grid children default to min-width:0 so long content truncates instead
+   of forcing overflow. Kept in @layer base so explicit `min-w-*` utilities
+   (which live in the utilities layer) still win — otherwise this unlayered
+   reset would silently override every min-w-[...] in the app (Tailwind v4). */
+@layer base {
+  * {
+    min-width: 0;
+  }
 }
 
 .glass-card {

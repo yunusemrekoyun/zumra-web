@@ -231,34 +231,11 @@ function WorkspaceSidebar({
 
   if (desktopNav === 'rail') {
     return (
-      <aside className="w-20 bg-[#F8F9FC] hidden lg:flex flex-col items-center justify-between py-8 border-r border-black/[0.03] z-10 shrink-0">
-        <div className="flex flex-col items-center gap-6">
-          <WorkspaceLogo compact />
-          <nav className="flex flex-col items-center gap-2">
-            {navItems.map((item) => (
-              <RailNavLink
-                key={item.path}
-                badge={badges?.[item.path]}
-                item={item}
-                navigateWithTransition={navigateWithTransition}
-                pathname={pathname}
-                rootPath={rootPath}
-                warmRoute={warmRoute}
-              />
-            ))}
-          </nav>
-        </div>
-      </aside>
-    );
-  }
-
-  return (
-    <aside className="w-64 bg-[#F8F9FC] hidden lg:flex flex-col justify-between py-8 px-6 border-r border-black/[0.03] z-10 shrink-0">
-      <div>
-        <WorkspaceLogo />
-        <nav className="space-y-1.5">
+      <aside className="w-20 bg-[#F8F9FC] hidden lg:flex flex-col items-center py-8 border-r border-black/[0.03] z-10 shrink-0 min-h-0">
+        <WorkspaceLogo compact />
+        <nav className="flex flex-col items-center gap-2 mt-2 w-full flex-1 min-h-0 overflow-y-auto custom-scrollbar px-2">
           {navItems.map((item) => (
-            <WideNavLink
+            <RailNavLink
               key={item.path}
               badge={badges?.[item.path]}
               item={item}
@@ -269,9 +246,28 @@ function WorkspaceSidebar({
             />
           ))}
         </nav>
-      </div>
+      </aside>
+    );
+  }
 
-      <div className="space-y-1.5">
+  return (
+    <aside className="w-64 bg-[#F8F9FC] hidden lg:flex flex-col py-8 px-6 border-r border-black/[0.03] z-10 shrink-0 min-h-0">
+      <WorkspaceLogo />
+      <nav className="space-y-1.5 flex-1 min-h-0 overflow-y-auto custom-scrollbar -mx-2 px-2">
+        {navItems.map((item) => (
+          <WideNavLink
+            key={item.path}
+            badge={badges?.[item.path]}
+            item={item}
+            navigateWithTransition={navigateWithTransition}
+            pathname={pathname}
+            rootPath={rootPath}
+            warmRoute={warmRoute}
+          />
+        ))}
+      </nav>
+
+      <div className="space-y-1.5 shrink-0 pt-4">
         {accountItems.map((item) => (
           <WideNavLink
             key={item.path}
