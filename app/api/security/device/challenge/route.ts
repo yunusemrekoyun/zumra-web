@@ -34,6 +34,13 @@ export async function POST(request: Request) {
   }
 
   if (principal.role === 'admin') {
+    // A fully verified admin (mfa) reaches here only when login verification
+    // is disabled and the TOTP interception was skipped at sign-in — send them
+    // straight to the dashboard instead of bouncing back to /mfa.
+    if (principal.sessionSecurityLevel === 'mfa') {
+      return NextResponse.json({ destination: '/admin', required: false });
+    }
+
     const [adminUser] = await database
       .select({ twoFactorEnabled: users.twoFactorEnabled })
       .from(users)

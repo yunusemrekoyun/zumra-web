@@ -735,6 +735,28 @@
         "lessonChangeCutoffHours": "İptal/erteleme talep sınırı (saat)",
         "lessonChangeCutoffHoursHint": "Öğrenci, ders başlamadan en geç kaç saat öncesine kadar iptal/erteleme talebi gönderebilsin (0 = sınırsız)"
       },
+      "loginVerification": {
+        "badge": "Güvenlik",
+        "title": "Giriş doğrulaması",
+        "description": "Girişte istenen ekstra doğrulamayı yönetin: personel ve öğrenciler için yeni cihazda e-posta kodu, admin için authenticator (2FA). Anında geçerli olur.",
+        "stateOn": "Doğrulama açık",
+        "stateOnHint": "Girişler e-posta kodu ve admin için authenticator ile korunur.",
+        "stateOff": "Doğrulama kapalı",
+        "stateOffHint": "Girişler yalnızca kullanıcı adı ve şifre ile yapılır.",
+        "warning": "Doğrulama kapalıyken, şifreyi bilen herkes ikinci bir adım olmadan giriş yapabilir. Yalnızca inceleme/demo dönemi için önerilir; iş bitince tekrar açın.",
+        "note": "Bu ayarı yalnızca 2FA ile giriş yapmış admin, parolasını yeniden girerek değiştirebilir ve her değişiklik denetim kaydına yazılır. Kapatmak authenticator kaydınızı silmez; tekrar açtığınızda kurulum gerekmeden aynen çalışır.",
+        "confirmEnableBody": "Giriş doğrulaması yeniden açılacak ve güvenlik için diğer tüm açık oturumlar sonlandırılacak. Devam etmek için parolanızı girin.",
+        "passwordLabel": "Parolanız",
+        "confirm": "Onayla",
+        "cancel": "Vazgeç",
+        "confirmError": "Parola hatalı veya çok fazla deneme yapıldı. Tekrar deneyin.",
+        "successOn": "Giriş doğrulaması açıldı.",
+        "successOnRevoked": "Giriş doğrulaması açıldı. Güvenlik için diğer tüm oturumlar kapatıldı.",
+        "successOff": "Giriş doğrulaması kapatıldı.",
+        "error": "Ayar güncellenemedi. Tekrar deneyin.",
+        "loadError": "Ayar yüklenemedi. Tekrar deneyin.",
+        "retry": "Yeniden dene"
+      },
       "mailMode": {
         "badge": "Mail",
         "title": "Mail gönderim modu",

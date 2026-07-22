@@ -18,6 +18,10 @@ const patchSchema = z
     joinLeadMinutes: z.number().int().min(0).max(120).optional(),
     lessonAutoCloseHours: z.number().int().min(1).max(48).optional(),
     lessonChangeCutoffHours: z.number().int().min(0).max(168).optional(),
+    // NOTE: loginVerificationEnabled is deliberately NOT accepted here. It is
+    // the highest-impact setting (it can drop admin TOTP + all staff/student
+    // device verification), so it is written only via
+    // /api/admin/settings/login-verification, which demands a fresh password.
     mailMode: z.enum(['live', 'test']).optional(),
     paymentReviewStaleDays: z.number().int().min(1).max(30).optional(),
   })

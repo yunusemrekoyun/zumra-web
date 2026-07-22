@@ -735,6 +735,28 @@
         "lessonChangeCutoffHours": "Change request cutoff (hours)",
         "lessonChangeCutoffHoursHint": "How many hours before a lesson students can still request a cancel/postpone (0 = no limit)"
       },
+      "loginVerification": {
+        "badge": "Security",
+        "title": "Login verification",
+        "description": "Control the extra verification asked at sign-in: an email code for staff and students on a new device, and an authenticator (2FA) for admins. Takes effect immediately.",
+        "stateOn": "Verification on",
+        "stateOnHint": "Sign-ins are protected by an email code and, for admins, an authenticator.",
+        "stateOff": "Verification off",
+        "stateOffHint": "Sign-ins use only a username and password.",
+        "warning": "While verification is off, anyone who knows the password can sign in with no second step. Recommended only for the review/demo period — turn it back on when you are done.",
+        "note": "Only an admin signed in with 2FA can change this, by re-entering their password, and every change is written to the audit log. Turning it off does not remove your authenticator enrolment; turning it back on restores it with no re-setup.",
+        "confirmEnableBody": "Login verification will be turned back on and, for security, all other open sessions will be ended. Enter your password to continue.",
+        "passwordLabel": "Your password",
+        "confirm": "Confirm",
+        "cancel": "Cancel",
+        "confirmError": "Wrong password or too many attempts. Please try again.",
+        "successOn": "Login verification turned on.",
+        "successOnRevoked": "Login verification turned on. For security, all other sessions were signed out.",
+        "successOff": "Login verification turned off.",
+        "error": "Could not update the setting. Please try again.",
+        "loadError": "Could not load the setting. Please try again.",
+        "retry": "Retry"
+      },
       "mailMode": {
         "badge": "Mail",
         "title": "Mail delivery mode",

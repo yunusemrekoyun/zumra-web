@@ -17,6 +17,7 @@ import {
 import { isValidDeviceCookie } from '@/lib/server/security/device-cookie';
 import { hashToken } from '@/lib/server/security/tokens';
 import { retireOtherPendingDeviceSessions } from '@/lib/server/services/devices';
+import { isLoginVerificationEnabled } from '@/lib/server/services/settings';
 import { notificationService } from '@/lib/server/services/notifications';
 
 const env = getAuthEnv();
@@ -258,6 +259,42 @@ export const auth = betterAuth({
         });
       }
     }),
+    after: createAuthMiddleware(async (context) => {
+      // When an admin has globally disabled login verification, keep the
+      // freshly created (already mfa-level) admin session instead of letting
+      // the two-factor plugin's sign-in hook delete it and force a TOTP
+      // prompt. Config-level after-hooks run *before* plugin after-hooks
+      // (better-auth getHooks order), so clearing twoFactorEnabled on the
+      // in-memory sign-in session makes the plugin's
+      // `if (!data.user.twoFactorEnabled) return` short-circuit and skip the
+      // interception. Only admins ever enrol TOTP, so this only affects them.
+      // The DB user row and the two_factors secret are untouched — re-enabling
+      // verification restores the TOTP prompt with no re-setup. Fails secure:
+      // isLoginVerificationEnabled() returns true on any read error, so the
+      // plugin keeps enforcing.
+      if (
+        context.path !== '/sign-in/username' &&
+        context.path !== '/sign-in/email'
+      ) {
+        return;
+      }
+
+      const newSession = context.context.newSession as
+        | { user?: { role?: string; twoFactorEnabled?: boolean } }
+        | null
+        | undefined;
+      const user = newSession?.user;
+
+      if (!user?.twoFactorEnabled) {
+        return;
+      }
+
+      if (await isLoginVerificationEnabled()) {
+        return;
+      }
+
+      user.twoFactorEnabled = false;
+    }),
   },
   advanced: {
     cookiePrefix: 'zumra',
@@ -358,10 +395,13 @@ export const auth = betterAuth({
             };
           }
 
-          const trusted = await isTrustedDevice(
-            session.userId,
-            context?.request,
-          );
+          // With verification disabled, staff/students skip the device email
+          // OTP entirely: the session is created already verified (standard)
+          // instead of pending. Admins are handled above (they stay mfa via
+          // their existing enrolment) and by the sign-in after-hook.
+          const trusted =
+            !(await isLoginVerificationEnabled()) ||
+            (await isTrustedDevice(session.userId, context?.request));
 
           return {
             data: {
